@@ -14,6 +14,7 @@ import { spacing, radius } from '../../src/theme/spacing';
 import { useNotificationStore } from '../../src/stores/notificationStore';
 import { formatRelativeDate } from '../../src/utils/formatters';
 import { SkeletonList } from '../../src/components/skeletons/Skeleton';
+import { ErrorState } from '../../src/components/shared/ErrorState';
 import type { NotificationType } from '../../src/types';
 
 const typeConfig: Record<
@@ -41,6 +42,7 @@ export default function AlertsScreen() {
   const {
     isLoading,
     isRefreshing,
+    error,
     filter,
     loadNotifications,
     refresh,
@@ -87,6 +89,15 @@ export default function AlertsScreen() {
         <View style={{ paddingHorizontal: spacing.xl }}>
           <SkeletonList count={8} />
         </View>
+      </View>
+    );
+  }
+
+  if (error && notifications.length === 0) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
+        <Text style={styles.screenTitle}>Alertas</Text>
+        <ErrorState message={error} onRetry={loadNotifications} />
       </View>
     );
   }

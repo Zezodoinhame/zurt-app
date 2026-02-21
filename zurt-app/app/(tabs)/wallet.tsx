@@ -18,6 +18,7 @@ import { AssetCard } from '../../src/components/cards/AssetCard';
 import { BottomSheet } from '../../src/components/shared/BottomSheet';
 import { MiniLineChart } from '../../src/components/charts/MiniLineChart';
 import { SkeletonList } from '../../src/components/skeletons/Skeleton';
+import { ErrorState } from '../../src/components/shared/ErrorState';
 import { formatBRL, formatPct, maskValue } from '../../src/utils/formatters';
 import type { Asset, AssetClass, InstitutionId } from '../../src/types';
 
@@ -58,6 +59,7 @@ export default function WalletScreen() {
     institutions,
     isLoading,
     isRefreshing,
+    error,
     loadPortfolio,
     refresh,
   } = usePortfolioStore();
@@ -464,6 +466,8 @@ export default function WalletScreen() {
         <View style={styles.skeletonContainer}>
           <SkeletonList count={6} />
         </View>
+      ) : error && assets.length === 0 ? (
+        <ErrorState message={error} onRetry={loadPortfolio} />
       ) : (
         <ScrollView
           style={styles.scrollView}

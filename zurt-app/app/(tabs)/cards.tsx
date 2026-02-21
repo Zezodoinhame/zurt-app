@@ -17,6 +17,7 @@ import { useCardsStore } from '../../src/stores/cardsStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { CreditCardVisual } from '../../src/components/cards/CreditCardVisual';
 import { SkeletonCard, SkeletonList } from '../../src/components/skeletons/Skeleton';
+import { ErrorState } from '../../src/components/shared/ErrorState';
 import { formatBRL, formatShortDate, maskValue } from '../../src/utils/formatters';
 import type { TransactionCategory } from '../../src/types';
 
@@ -57,6 +58,7 @@ export default function CardsScreen() {
     categorySpending,
     isLoading,
     isRefreshing,
+    error,
     loadCards,
     refresh,
     selectedCardIndex,
@@ -151,6 +153,8 @@ export default function CardsScreen() {
             <SkeletonCard />
             <SkeletonList count={5} />
           </View>
+        ) : error && cards.length === 0 ? (
+          <ErrorState message={error} onRetry={loadCards} />
         ) : (
           <>
             {/* -------------------------------------------------------------- */}

@@ -1,7 +1,15 @@
 import { create } from 'zustand';
 import type { User } from '../types';
 import { demoUser } from '../data/demo';
-import { loginApi, clearToken, fetchUserProfile, getToken } from '../services/api';
+import {
+  loginApi,
+  registerApi,
+  clearToken,
+  fetchUserProfile,
+  getToken,
+  setDemoMode,
+  setOnUnauthorized,
+} from '../services/api';
 import { clearSession } from '../services/auth';
 
 interface AuthState {
@@ -10,96 +18,165 @@ interface AuthState {
   isLoading: boolean;
   isDemoMode: boolean;
   valuesHidden: boolean;
+  error: string | null;
 
   login: (email: string, password: string) => Promise<boolean>;
+  register: (
+    fullName: string,
+    email: string,
+    password: string,
+    invitationToken?: string,
+  ) => Promise<boolean>;
   loginDemo: () => void;
   logout: () => Promise<void>;
   restoreSession: () => Promise<boolean>;
   setLoading: (loading: boolean) => void;
   toggleValuesHidden: () => void;
   updateUser: (updates: Partial<User>) => void;
+  clearError: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  isAuthenticated: false,
-  isLoading: false,
-  isDemoMode: false,
-  valuesHidden: false,
-
-  login: async (email: string, password: string) => {
-    set({ isLoading: true });
-
-    try {
-      const { user } = await loginApi(email, password);
+export const useAuthStore = create<AuthState>((set, get) => {
+  // Register 401 handler to auto-logout
+  setOnUnauthorized(() => {
+    const state = get();
+    if (state.isAuthenticated && !state.isDemoMode) {
       set({
-        user,
-        isAuthenticated: true,
-        isLoading: false,
+        user: null,
+        isAuthenticated: false,
         isDemoMode: false,
+        valuesHidden: false,
       });
-      return true;
-    } catch {
-      // API failed — fall back to demo mode if credentials match demo user
-      if (email === 'diego@zurt.io') {
+      setDemoMode(false);
+    }
+  });
+
+  return {
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    isDemoMode: false,
+    valuesHidden: false,
+    error: null,
+
+    login: async (email: string, password: string) => {
+      set({ isLoading: true, error: null });
+
+      try {
+        const { user } = await loginApi(email, password);
+        setDemoMode(false);
         set({
-          user: demoUser,
+          user,
           isAuthenticated: true,
           isLoading: false,
-          isDemoMode: true,
+          isDemoMode: false,
+          error: null,
         });
         return true;
+      } catch (err: any) {
+        // API failed - fall back to demo mode if credentials match demo user
+        if (email === 'diego@zurt.io') {
+          setDemoMode(true);
+          set({
+            user: demoUser,
+            isAuthenticated: true,
+            isLoading: false,
+            isDemoMode: true,
+            error: null,
+          });
+          return true;
+        }
+        const message =
+          err?.message?.includes('401') || err?.message?.includes('Unauthorized')
+            ? 'Email ou senha incorretos'
+            : 'Erro de conexao. Tente novamente.';
+        set({ isLoading: false, error: message });
+        return false;
       }
-      set({ isLoading: false });
-      return false;
-    }
-  },
+    },
 
-  loginDemo: () => {
-    set({
-      user: demoUser,
-      isAuthenticated: true,
-      isDemoMode: true,
-      isLoading: false,
-    });
-  },
+    register: async (
+      fullName: string,
+      email: string,
+      password: string,
+      invitationToken?: string,
+    ) => {
+      set({ isLoading: true, error: null });
 
-  restoreSession: async () => {
-    const token = await getToken();
-    if (!token) return false;
+      try {
+        const { user } = await registerApi(fullName, email, password, invitationToken);
+        setDemoMode(false);
+        set({
+          user,
+          isAuthenticated: true,
+          isLoading: false,
+          isDemoMode: false,
+          error: null,
+        });
+        return true;
+      } catch (err: any) {
+        const message =
+          err?.message?.includes('409') || err?.message?.includes('already')
+            ? 'Email ja cadastrado'
+            : 'Erro ao criar conta. Tente novamente.';
+        set({ isLoading: false, error: message });
+        return false;
+      }
+    },
 
-    try {
-      const user = await fetchUserProfile();
+    loginDemo: () => {
+      setDemoMode(true);
       set({
-        user,
+        user: demoUser,
         isAuthenticated: true,
-        isDemoMode: false,
+        isDemoMode: true,
+        isLoading: false,
+        error: null,
       });
-      return true;
-    } catch {
+    },
+
+    restoreSession: async () => {
+      const token = await getToken();
+      if (!token) return false;
+
+      try {
+        const user = await fetchUserProfile();
+        setDemoMode(false);
+        set({
+          user,
+          isAuthenticated: true,
+          isDemoMode: false,
+        });
+        return true;
+      } catch {
+        await clearToken();
+        return false;
+      }
+    },
+
+    logout: async () => {
       await clearToken();
-      return false;
-    }
-  },
+      await clearSession().catch(() => {});
+      setDemoMode(false);
+      set({
+        user: null,
+        isAuthenticated: false,
+        isDemoMode: false,
+        valuesHidden: false,
+        error: null,
+      });
+    },
 
-  logout: async () => {
-    await clearToken();
-    await clearSession().catch(() => {});
-    set({
-      user: null,
-      isAuthenticated: false,
-      isDemoMode: false,
-      valuesHidden: false,
-    });
-  },
+    setLoading: (loading: boolean) => set({ isLoading: loading }),
 
-  setLoading: (loading: boolean) => set({ isLoading: loading }),
+    toggleValuesHidden: () =>
+      set((state) => ({ valuesHidden: !state.valuesHidden })),
 
-  toggleValuesHidden: () =>
-    set((state) => ({ valuesHidden: !state.valuesHidden })),
+    updateUser: (updates: Partial<User>) =>
+      set((state) => ({
+        user: state.user ? { ...state.user, ...updates } : null,
+      })),
 
-  updateUser: (updates: Partial<User>) =>
-    set((state) => ({
-      user: state.user ? { ...state.user, ...updates } : null,
-    })),
-}));
+    clearError: () => set({ error: null }),
+  };
+});

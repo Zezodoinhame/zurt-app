@@ -10,6 +10,7 @@ import { usePortfolioStore } from '../../src/stores/portfolioStore';
 import { Toggle } from '../../src/components/ui/Toggle';
 import { Card } from '../../src/components/ui/Card';
 import { formatBRL, formatDate } from '../../src/utils/formatters';
+import { changePassword } from '../../src/services/api';
 
 interface SettingRowProps {
   icon: string;
@@ -34,13 +35,13 @@ function SettingRow({ icon, label, value, onPress, rightElement, danger }: Setti
       {value && <Text style={styles.settingValue}>{value}</Text>}
       {rightElement}
       {onPress && !rightElement && (
-        <Text style={styles.chevron}>›</Text>
+        <Text style={styles.chevron}>{'\u203A'}</Text>
       )}
     </TouchableOpacity>
   );
 }
 
-function SectionTitle({ title, delay = 0 }: { title: string; delay?: number }) {
+function SectionTitle({ title }: { title: string }) {
   return (
     <View>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -51,7 +52,7 @@ function SectionTitle({ title, delay = 0 }: { title: string; delay?: number }) {
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user, logout, updateUser } = useAuthStore();
+  const { user, logout, updateUser, isDemoMode } = useAuthStore();
   const { institutions } = usePortfolioStore();
 
   const handleLogout = useCallback(() => {
@@ -68,6 +69,18 @@ export default function ProfileScreen() {
       },
     ]);
   }, [logout, router]);
+
+  const handleChangePassword = useCallback(() => {
+    if (isDemoMode) {
+      Alert.alert('Demo', 'Indisponivel no modo demonstracao');
+      return;
+    }
+    Alert.prompt(
+      'Alterar senha',
+      'Funcionalidade disponivel em breve',
+      [{ text: 'OK' }],
+    );
+  }, [isDemoMode]);
 
   const toggleBiometric = useCallback(
     (value: boolean) => {
@@ -110,19 +123,22 @@ export default function ProfileScreen() {
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{user.name}</Text>
             <Text style={styles.userEmail}>{user.email}</Text>
+            {isDemoMode && (
+              <Text style={styles.demoLabel}>Modo demonstracao</Text>
+            )}
           </View>
           <TouchableOpacity style={styles.editButton} accessibilityLabel="Editar perfil">
-            <Text style={styles.editIcon}>✏️</Text>
+            <Text style={styles.editIcon}>{'\u270F\uFE0F'}</Text>
           </TouchableOpacity>
         </View>
       </Card>
 
       {/* Security */}
-      <SectionTitle title="🔐 Segurança" delay={100} />
+      <SectionTitle title={'\uD83D\uDD10 Seguranca'} />
       <View>
         <View style={styles.section}>
           <SettingRow
-            icon="👆"
+            icon={'\uD83D\uDC46'}
             label="Biometria"
             rightElement={
               <Toggle
@@ -132,28 +148,28 @@ export default function ProfileScreen() {
               />
             }
           />
-          <SettingRow icon="🔑" label="Alterar senha" onPress={() => {}} />
-          <SettingRow icon="🔢" label="Alterar PIN" onPress={() => {}} />
+          <SettingRow icon={'\uD83D\uDD11'} label="Alterar senha" onPress={handleChangePassword} />
+          <SettingRow icon={'\uD83D\uDD22'} label="Alterar PIN" onPress={() => {}} />
         </View>
       </View>
 
       {/* Preferences */}
-      <SectionTitle title="⚙️ Preferências" delay={200} />
+      <SectionTitle title={'\u2699\uFE0F Preferencias'} />
       <View>
         <View style={styles.section}>
           <SettingRow
-            icon="🔔"
-            label="Notificações push"
+            icon={'\uD83D\uDD14'}
+            label="Notificacoes push"
             rightElement={
               <Toggle
                 value={user.pushEnabled}
                 onValueChange={togglePush}
-                accessibilityLabel="Ativar notificações"
+                accessibilityLabel="Ativar notificacoes"
               />
             }
           />
           <SettingRow
-            icon="👁️"
+            icon={'\uD83D\uDC41\uFE0F'}
             label="Ocultar valores ao abrir"
             rightElement={
               <Toggle
@@ -163,13 +179,13 @@ export default function ProfileScreen() {
               />
             }
           />
-          <SettingRow icon="🌐" label="Idioma" value="Português" onPress={() => {}} />
-          <SettingRow icon="💰" label="Moeda padrão" value="BRL" onPress={() => {}} />
+          <SettingRow icon={'\uD83C\uDF10'} label="Idioma" value="Portugues" onPress={() => {}} />
+          <SettingRow icon={'\uD83D\uDCB0'} label="Moeda padrao" value="BRL" onPress={() => {}} />
         </View>
       </View>
 
       {/* Connected accounts */}
-      <SectionTitle title="🏦 Contas Conectadas" delay={300} />
+      <SectionTitle title={'\uD83C\uDFE6 Contas Conectadas'} />
       <View>
         <View style={styles.section}>
           {institutions.map((inst) => {
@@ -214,7 +230,7 @@ export default function ProfileScreen() {
       </View>
 
       {/* ZURT Token */}
-      <SectionTitle title="📊 ZURT Token" delay={400} />
+      <SectionTitle title={'\uD83D\uDCCA ZURT Token'} />
       <Card variant="elevated" delay={450}>
         <View style={styles.tokenRow}>
           <View style={styles.tokenItem}>
@@ -232,28 +248,28 @@ export default function ProfileScreen() {
         </View>
         <View style={styles.tokenDivider} />
         <View style={styles.tokenDistribution}>
-          <Text style={styles.tokenLabel}>Próxima distribuição</Text>
+          <Text style={styles.tokenLabel}>Proxima distribuicao</Text>
           <Text style={styles.tokenDate}>
-            {formatDate(user.nextDistribution)}
+            {user.nextDistribution ? formatDate(user.nextDistribution) : '-'}
           </Text>
         </View>
       </Card>
 
       {/* About */}
-      <SectionTitle title="ℹ️ Sobre" delay={500} />
+      <SectionTitle title={'\u2139\uFE0F Sobre'} />
       <View>
         <View style={styles.section}>
-          <SettingRow icon="📄" label="Termos de uso" onPress={() => {}} />
-          <SettingRow icon="🔒" label="Política de privacidade" onPress={() => {}} />
-          <SettingRow icon="❓" label="Ajuda" onPress={() => {}} />
-          <SettingRow icon="💬" label="Suporte (WhatsApp)" onPress={() => {}} />
+          <SettingRow icon={'\uD83D\uDCC4'} label="Termos de uso" onPress={() => {}} />
+          <SettingRow icon={'\uD83D\uDD12'} label="Politica de privacidade" onPress={() => {}} />
+          <SettingRow icon={'\u2753'} label="Ajuda" onPress={() => {}} />
+          <SettingRow icon={'\uD83D\uDCAC'} label="Suporte (WhatsApp)" onPress={() => {}} />
         </View>
       </View>
 
       {/* Logout */}
       <View>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>🚪 Sair</Text>
+          <Text style={styles.logoutText}>{'\uD83D\uDEAA'} Sair</Text>
         </TouchableOpacity>
       </View>
 
@@ -302,6 +318,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.text.secondary,
     marginTop: 2,
+  },
+  demoLabel: {
+    fontSize: 11,
+    color: colors.warning,
+    fontWeight: '600',
+    marginTop: 4,
   },
   editButton: {
     width: 36,

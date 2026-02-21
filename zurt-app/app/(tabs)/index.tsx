@@ -27,6 +27,7 @@ import {
   SkeletonChart,
   SkeletonList,
 } from '../../src/components/skeletons/Skeleton';
+import { ErrorState } from '../../src/components/shared/ErrorState';
 
 import {
   formatBRL,
@@ -69,6 +70,7 @@ export default function HomeScreen() {
     insights,
     isLoading,
     isRefreshing,
+    error,
     loadPortfolio,
     refresh,
     selectedTimeRange,
@@ -181,6 +183,8 @@ export default function HomeScreen() {
             <SkeletonCard />
             <SkeletonList count={3} />
           </View>
+        ) : error && !summary ? (
+          <ErrorState message={error} onRetry={loadPortfolio} />
         ) : (
           <>
             {/* -------------------------------------------------------------- */}

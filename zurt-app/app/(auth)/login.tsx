@@ -18,19 +18,26 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { Button } from '../../src/components/ui/Button';
 import { Input } from '../../src/components/ui/Input';
 
+type Mode = 'login' | 'register';
+
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { login, loginDemo, isLoading } = useAuthStore();
+  const { login, register, loginDemo, isLoading, error: storeError, clearError } = useAuthStore();
 
+  const [mode, setMode] = useState<Mode>('login');
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
 
+  const displayError = error || storeError || '';
+
   const handleLogin = useCallback(async () => {
     Keyboard.dismiss();
     setError('');
+    clearError();
 
     if (!email.trim()) {
       setError('Digite seu email');
@@ -48,19 +55,56 @@ export default function LoginScreen() {
         router.replace('/(tabs)');
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        setError('Email ou senha incorretos');
       }
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setError('Erro de conexão. Tente novamente.');
+      setError('Erro de conexao. Tente novamente.');
     }
-  }, [email, password, login, router]);
+  }, [email, password, login, router, clearError]);
+
+  const handleRegister = useCallback(async () => {
+    Keyboard.dismiss();
+    setError('');
+    clearError();
+
+    if (!fullName.trim()) {
+      setError('Digite seu nome completo');
+      return;
+    }
+    if (!email.trim()) {
+      setError('Digite seu email');
+      return;
+    }
+    if (!password.trim() || password.length < 6) {
+      setError('Senha deve ter no minimo 6 caracteres');
+      return;
+    }
+
+    try {
+      const success = await register(fullName.trim(), email.trim(), password);
+      if (success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        router.replace('/(tabs)');
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setError('Erro ao criar conta. Tente novamente.');
+    }
+  }, [fullName, email, password, register, router, clearError]);
 
   const handleDemo = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     loginDemo();
     router.replace('/(tabs)');
   }, [loginDemo, router]);
+
+  const toggleMode = useCallback(() => {
+    setError('');
+    clearError();
+    setMode((m) => (m === 'login' ? 'register' : 'login'));
+  }, [clearError]);
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -84,6 +128,21 @@ export default function LoginScreen() {
 
           {/* Form */}
           <View style={styles.form}>
+            {mode === 'register' && (
+              <Input
+                label="Nome completo"
+                placeholder="Seu nome"
+                value={fullName}
+                onChangeText={(text) => {
+                  setFullName(text);
+                  setError('');
+                }}
+                autoCapitalize="words"
+                autoCorrect={false}
+                returnKeyType="next"
+              />
+            )}
+
             <Input
               label="Email"
               placeholder="seu@email.com"
@@ -109,45 +168,55 @@ export default function LoginScreen() {
               secureTextEntry={!showPassword}
               autoCapitalize="none"
               returnKeyType="done"
-              onSubmitEditing={handleLogin}
+              onSubmitEditing={mode === 'login' ? handleLogin : handleRegister}
               rightIcon={
                 <Text style={styles.eyeIcon}>
-                  {showPassword ? '👁️' : '👁️‍🗨️'}
+                  {showPassword ? '\uD83D\uDC41\uFE0F' : '\uD83D\uDC41\uFE0F\u200D\uD83D\uDDE8\uFE0F'}
                 </Text>
               }
               onRightIconPress={() => setShowPassword(!showPassword)}
             />
 
-            {error ? (
+            {displayError ? (
               <Text style={styles.error}>
-                {error}
+                {displayError}
               </Text>
             ) : null}
 
             <View style={styles.buttonContainer}>
               <Button
-                title="Acessar"
-                onPress={handleLogin}
+                title={mode === 'login' ? 'Acessar' : 'Criar conta'}
+                onPress={mode === 'login' ? handleLogin : handleRegister}
                 loading={isLoading}
                 size="lg"
               />
             </View>
 
-            <TouchableOpacity
-              style={styles.biometricButton}
-              activeOpacity={0.7}
-              accessibilityLabel="Autenticar com biometria"
-            >
-              <View style={styles.biometricCircle}>
-                <Text style={styles.biometricIcon}>👆</Text>
-              </View>
+            <TouchableOpacity onPress={toggleMode} style={styles.switchMode}>
+              <Text style={styles.switchModeText}>
+                {mode === 'login'
+                  ? 'Nao tem conta? Cadastre-se'
+                  : 'Ja tem conta? Entrar'}
+              </Text>
             </TouchableOpacity>
+
+            {mode === 'login' && (
+              <TouchableOpacity
+                style={styles.biometricButton}
+                activeOpacity={0.7}
+                accessibilityLabel="Autenticar com biometria"
+              >
+                <View style={styles.biometricCircle}>
+                  <Text style={styles.biometricIcon}>{'\uD83D\uDC46'}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Demo link */}
           <View style={styles.demoContainer}>
             <TouchableOpacity onPress={handleDemo} style={styles.demoButton}>
-              <Text style={styles.demoText}>Modo demonstração</Text>
+              <Text style={styles.demoText}>Modo demonstracao</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -212,6 +281,15 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginTop: spacing.sm,
+  },
+  switchMode: {
+    alignItems: 'center',
+    marginTop: spacing.lg,
+  },
+  switchModeText: {
+    fontSize: 14,
+    color: colors.accent,
+    fontWeight: '500',
   },
   biometricButton: {
     alignItems: 'center',

@@ -8,6 +8,7 @@ interface CardsState {
   selectedCardIndex: number;
   isLoading: boolean;
   isRefreshing: boolean;
+  error: string | null;
 
   loadCards: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -21,32 +22,41 @@ export const useCardsStore = create<CardsState>((set, get) => ({
   selectedCardIndex: 0,
   isLoading: false,
   isRefreshing: false,
+  error: null,
 
   loadCards: async () => {
-    set({ isLoading: true });
+    set({ isLoading: true, error: null });
     try {
       const data = await fetchCardsApi();
       set({
         cards: data.cards,
         categorySpending: data.categorySpending,
         isLoading: false,
+        error: null,
       });
-    } catch {
-      set({ isLoading: false });
+    } catch (err: any) {
+      set({
+        isLoading: false,
+        error: err?.message ?? 'Erro ao carregar cartoes',
+      });
     }
   },
 
   refresh: async () => {
-    set({ isRefreshing: true });
+    set({ isRefreshing: true, error: null });
     try {
       const data = await fetchCardsApi();
       set({
         cards: data.cards,
         categorySpending: data.categorySpending,
         isRefreshing: false,
+        error: null,
       });
-    } catch {
-      set({ isRefreshing: false });
+    } catch (err: any) {
+      set({
+        isRefreshing: false,
+        error: err?.message ?? 'Erro ao atualizar cartoes',
+      });
     }
   },
 
