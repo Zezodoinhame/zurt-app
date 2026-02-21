@@ -1,11 +1,10 @@
 // =============================================================================
 // ZURT Wealth Intelligence - API Service
-// Real backend calls with MMKV caching and demo data fallback
+// Real backend calls with AsyncStorage caching and demo data fallback
 // =============================================================================
 
 import * as SecureStore from 'expo-secure-store';
-import { createMMKV } from 'react-native-mmkv';
-import type { MMKV } from 'react-native-mmkv';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   demoUser,
   portfolioSummary,
@@ -39,21 +38,12 @@ const REQUEST_TIMEOUT = 15000; // 15s
 const MAX_RETRIES = 1;
 
 // =============================================================================
-// MMKV Cache
+// AsyncStorage Cache
 // =============================================================================
 
-let _storage: MMKV | null = null;
-
-function getStorage(): MMKV {
-  if (!_storage) {
-    _storage = createMMKV({ id: 'zurt-cache' });
-  }
-  return _storage;
-}
-
-export function getCached<T>(key: string): T | null {
+export async function getCached<T>(key: string): Promise<T | null> {
   try {
-    const raw = getStorage().getString(`cache:${key}`);
+    const raw = await AsyncStorage.getItem(`cache:${key}`);
     if (raw) return JSON.parse(raw) as T;
   } catch {
     // ignore parse errors
@@ -61,9 +51,9 @@ export function getCached<T>(key: string): T | null {
   return null;
 }
 
-export function setCache(key: string, data: unknown): void {
+export async function setCache(key: string, data: unknown): Promise<void> {
   try {
-    getStorage().set(`cache:${key}`, JSON.stringify(data));
+    await AsyncStorage.setItem(`cache:${key}`, JSON.stringify(data));
   } catch {
     // ignore write errors
   }
@@ -180,10 +170,10 @@ async function fetchWithFallback<T>(
   try {
     const data = await apiRequest<any>(path, options);
     const result = transform(data);
-    setCache(cacheKey, result);
+    await setCache(cacheKey, result);
     return result;
   } catch {
-    const cached = getCached<T>(cacheKey);
+    const cached = await getCached<T>(cacheKey);
     if (cached) return cached;
     return demoFallback;
   }
@@ -285,7 +275,7 @@ export async function updateUserProfile(
     body: JSON.stringify(updates),
   });
   const user = mapUser(data.user ?? data);
-  setCache('user:profile', user);
+  await setCache('user:profile', user);
   return user;
 }
 
