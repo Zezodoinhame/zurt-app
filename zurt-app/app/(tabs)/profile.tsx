@@ -846,6 +846,19 @@ export default function ProfileScreen() {
         </View>
       </Card>
 
+      {/* Report */}
+      <SectionTitle title={`\uD83D\uDCCA ${t('report.title')}`} />
+      <View>
+        <View style={styles.section}>
+          <SettingRow
+            icon={'\uD83D\uDCC4'}
+            label={t('report.title')}
+            value={t('report.subtitle')}
+            onPress={() => router.push('/report')}
+          />
+        </View>
+      </View>
+
       {/* About */}
       <SectionTitle title={`\u2139\uFE0F ${t('profile.about')}`} />
       <View>

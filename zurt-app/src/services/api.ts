@@ -914,10 +914,19 @@ export async function fetchReports(): Promise<any[]> {
   );
 }
 
-export async function generateReport(type: string, parameters: any): Promise<any> {
-  return apiRequest('/reports/generate', {
+export async function generateReportApi(period: string): Promise<any> {
+  if (_isDemoMode) {
+    return {
+      analysis: 'Relatório demonstrativo. Conecte suas contas para gerar um relatório real com análise personalizada da IA.\n\n1. RESUMO EXECUTIVO\nNo modo demonstração, não temos acesso aos seus dados reais.\n\n2. ANALISE DO PATRIMONIO\nConecte suas instituições financeiras para uma análise completa.\n\n3. CARTEIRA DE INVESTIMENTOS\nSeus investimentos aparecerão aqui após conectar suas contas.\n\n4. CARTOES E GASTOS\nSeus cartões e gastos serão analisados após a conexão.\n\n5. CENARIO DE MERCADO\nIBOV em alta, Selic em 13,25%, Dólar estável.\n\n6. RECOMENDACOES\n1. Conecte suas contas reais para análise personalizada\n2. Diversifique seus investimentos\n3. Mantenha uma reserva de emergência\n\n7. PERSPECTIVAS\nAguardamos a conexão das suas contas para fornecer perspectivas personalizadas.',
+      portfolio: { contas: [], investimentos: [], cartoes: [] },
+      market: {},
+      generatedAt: new Date().toISOString(),
+      investorName: 'Investidor Demo',
+    };
+  }
+  return apiRequest('/ai/report', {
     method: 'POST',
-    body: JSON.stringify({ type, parameters }),
+    body: JSON.stringify({ period }),
   });
 }
 
