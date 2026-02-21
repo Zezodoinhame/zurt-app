@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import Svg, { Rect, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { colors } from '../../theme/colors';
 import { spacing, radius } from '../../theme/spacing';
-import { formatBRL } from '../../utils/formatters';
+import { formatCurrency } from '../../utils/formatters';
+import { useSettingsStore } from '../../stores/settingsStore';
 import type { CreditCard } from '../../types';
 
 const CARD_WIDTH = Dimensions.get('window').width - 64;
@@ -34,10 +35,20 @@ function VisaLogo() {
 }
 
 export function CreditCardVisual({ card }: CreditCardVisualProps) {
-  const utilization = (card.used / card.limit) * 100;
+  const { currency } = useSettingsStore();
+
+  const hasLimit = card.limit > 0;
+  const utilization = hasLimit ? (card.used / card.limit) * 100 : 0;
   const utilizationColor =
     utilization > 80 ? colors.negative :
     utilization > 60 ? colors.warning : colors.accent;
+
+  const formatDueDate = (dueDate: string | undefined | null): string => {
+    if (!dueDate || dueDate === '') return '-';
+    const d = new Date(dueDate);
+    if (isNaN(d.getTime())) return '-';
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  };
 
   return (
     <View
@@ -87,16 +98,11 @@ export function CreditCardVisual({ card }: CreditCardVisualProps) {
         <View style={styles.footer}>
           <View>
             <Text style={styles.footerLabel}>Fatura atual</Text>
-            <Text style={styles.footerValue}>{formatBRL(card.currentInvoice)}</Text>
+            <Text style={styles.footerValue}>{formatCurrency(card.currentInvoice, currency)}</Text>
           </View>
           <View style={styles.footerRight}>
             <Text style={styles.footerLabel}>Vencimento</Text>
-            <Text style={styles.footerValue}>
-              {new Date(card.dueDate).toLocaleDateString('pt-BR', {
-                day: '2-digit',
-                month: '2-digit',
-              })}
-            </Text>
+            <Text style={styles.footerValue}>{formatDueDate(card.dueDate)}</Text>
           </View>
         </View>
 
@@ -114,7 +120,7 @@ export function CreditCardVisual({ card }: CreditCardVisualProps) {
             />
           </View>
           <Text style={styles.utilizationText}>
-            {formatBRL(card.used)} / {formatBRL(card.limit)}
+            {formatCurrency(card.used, currency)}{hasLimit ? ` / ${formatCurrency(card.limit, currency)}` : ''}
           </Text>
         </View>
       </View>

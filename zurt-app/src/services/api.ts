@@ -386,7 +386,7 @@ export async function fetchDashboardSummary(): Promise<{
       for (const [name, accs] of accountsByInst) {
         const id = name.toLowerCase().replace(/\s+/g, '-');
         const totalValue = accs.reduce(
-          (sum: number, a: any) => sum + Math.abs(a.balance ?? a.currentBalance ?? a.value ?? 0),
+          (sum: number, a: any) => sum + Math.abs(parseFloat(a.current_balance ?? a.balance ?? a.currentBalance ?? a.value ?? '0') || 0),
           0,
         );
         const colors = getInstColors(name);
@@ -420,14 +420,14 @@ export async function fetchDashboardSummary(): Promise<{
           name: c.institution_name ?? c.name ?? '',
           lastFour: c.last4 ?? c.lastFour ?? c.last_four ?? '',
           brand,
-          limit: c.limit ?? c.credit_limit ?? 0,
-          used: c.openDebt ?? c.used ?? 0,
+          limit: parseFloat(c.limit ?? c.credit_limit ?? '0') || 0,
+          used: parseFloat(c.openDebt ?? c.used ?? '0') || 0,
           dueDate: c.dueDate ?? c.due_date ?? '',
           closingDate: c.closingDate ?? c.closing_date ?? '',
           color: c.color ?? (brand === 'mastercard' ? '#1A1A1A' : '#1A1F71'),
           secondaryColor: c.secondaryColor ?? (brand === 'mastercard' ? '#EB001B' : '#F7B600'),
-          currentInvoice: c.openDebt ?? c.currentInvoice ?? c.current_invoice ?? 0,
-          nextInvoice: c.nextInvoice ?? c.next_invoice ?? 0,
+          currentInvoice: parseFloat(c.openDebt ?? c.currentInvoice ?? c.current_invoice ?? '0') || 0,
+          nextInvoice: parseFloat(c.nextInvoice ?? c.next_invoice ?? '0') || 0,
           transactions: (c.transactions ?? []).map((t: any) => ({
             id: String(t.id),
             date: t.date,
