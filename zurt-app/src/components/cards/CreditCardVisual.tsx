@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import Svg, { Rect, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
-import { colors } from '../../theme/colors';
+import { type ThemeColors } from '../../theme/colors';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { spacing, radius } from '../../theme/spacing';
 import { formatCurrency } from '../../utils/formatters';
-import { useSettingsStore } from '../../stores/settingsStore';
 import type { CreditCard } from '../../types';
 
 const CARD_WIDTH = Dimensions.get('window').width - 64;
@@ -35,7 +35,9 @@ function VisaLogo() {
 }
 
 export function CreditCardVisual({ card }: CreditCardVisualProps) {
+  const colors = useSettingsStore((s) => s.colors);
   const { currency } = useSettingsStore();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const hasLimit = card.limit > 0;
   const utilization = hasLimit ? (card.used / card.limit) * 100 : 0;
@@ -128,7 +130,7 @@ export function CreditCardVisual({ card }: CreditCardVisualProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     borderRadius: 16,
     overflow: 'hidden',

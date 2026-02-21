@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 
-import { colors } from '../../src/theme/colors';
+import { type ThemeColors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { usePortfolioStore } from '../../src/stores/portfolioStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -67,7 +67,11 @@ export default function WalletScreen() {
   } = usePortfolioStore();
   const { valuesHidden } = useAuthStore();
   const { t, currency } = useSettingsStore();
+  const colors = useSettingsStore((s) => s.colors);
   const router = useRouter();
+
+  // Memoised styles
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   // Local state
   const [viewMode, setViewMode] = useState<ViewMode>('class');
@@ -527,228 +531,229 @@ export default function WalletScreen() {
 // Styles
 // ---------------------------------------------------------------------------
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.text.primary,
-  },
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      alignItems: 'center',
+      paddingVertical: spacing.lg,
+      paddingHorizontal: spacing.xl,
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.text.primary,
+    },
 
-  // Toggle
-  toggleContainer: {
-    flexDirection: 'row',
-    marginHorizontal: spacing.xl,
-    marginBottom: spacing.lg,
-    backgroundColor: colors.elevated,
-    borderRadius: radius.md,
-    padding: spacing.xs,
-  },
-  toggleButton: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderRadius: radius.sm,
-  },
-  toggleButtonActive: {
-    backgroundColor: colors.accent,
-  },
-  toggleText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text.secondary,
-  },
-  toggleTextActive: {
-    color: colors.background,
-  },
+    // Toggle
+    toggleContainer: {
+      flexDirection: 'row',
+      marginHorizontal: spacing.xl,
+      marginBottom: spacing.lg,
+      backgroundColor: colors.elevated,
+      borderRadius: radius.md,
+      padding: spacing.xs,
+    },
+    toggleButton: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+      borderRadius: radius.sm,
+    },
+    toggleButtonActive: {
+      backgroundColor: colors.accent,
+    },
+    toggleText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text.secondary,
+    },
+    toggleTextActive: {
+      color: colors.background,
+    },
 
-  // Scroll
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: 100,
-  },
+    // Scroll
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: spacing.xl,
+      paddingBottom: 100,
+    },
 
-  // Skeleton
-  skeletonContainer: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-  },
+    // Skeleton
+    skeletonContainer: {
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.lg,
+    },
 
-  // Group header
-  groupHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  groupHeaderLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  colorDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: spacing.md,
-  },
-  institutionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  institutionIconText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  groupHeaderInfo: {
-    flex: 1,
-  },
-  groupHeaderTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  groupLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text.primary,
-  },
-  groupCount: {
-    fontSize: 12,
-    color: colors.text.muted,
-  },
-  groupHeaderBottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing.xs,
-  },
-  groupValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text.secondary,
-    fontVariant: ['tabular-nums'],
-  },
-  groupPercentage: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text.muted,
-    fontVariant: ['tabular-nums'],
-  },
-  expandIndicator: {
-    fontSize: 12,
-    color: colors.text.muted,
-    marginLeft: spacing.sm,
-  },
+    // Group header
+    groupHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      marginBottom: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    groupHeaderLeft: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    colorDot: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      marginRight: spacing.md,
+    },
+    institutionIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: radius.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: spacing.md,
+    },
+    institutionIconText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    groupHeaderInfo: {
+      flex: 1,
+    },
+    groupHeaderTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    groupLabel: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text.primary,
+    },
+    groupCount: {
+      fontSize: 12,
+      color: colors.text.muted,
+    },
+    groupHeaderBottomRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: spacing.xs,
+    },
+    groupValue: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text.secondary,
+      fontVariant: ['tabular-nums'],
+    },
+    groupPercentage: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.text.muted,
+      fontVariant: ['tabular-nums'],
+    },
+    expandIndicator: {
+      fontSize: 12,
+      color: colors.text.muted,
+      marginLeft: spacing.sm,
+    },
 
-  // Bottom sheet detail
-  detailContent: {
-    paddingBottom: spacing.xl,
-  },
-  detailTickerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  detailTicker: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text.primary,
-  },
-  classBadge: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-  },
-  classBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  detailChartContainer: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
-  },
-  detailInfoGrid: {
-    gap: spacing.xs,
-  },
-  detailInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border + '40',
-  },
-  detailInfoLabel: {
-    fontSize: 14,
-    color: colors.text.secondary,
-  },
-  detailInfoValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text.primary,
-    fontVariant: ['tabular-nums'],
-  },
+    // Bottom sheet detail
+    detailContent: {
+      paddingBottom: spacing.xl,
+    },
+    detailTickerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    detailTicker: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: colors.text.primary,
+    },
+    classBadge: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.sm,
+    },
+    classBadgeText: {
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    detailChartContainer: {
+      alignItems: 'center',
+      marginBottom: spacing.xl,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+    },
+    detailInfoGrid: {
+      gap: spacing.xs,
+    },
+    detailInfoRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border + '40',
+    },
+    detailInfoLabel: {
+      fontSize: 14,
+      color: colors.text.secondary,
+    },
+    detailInfoValue: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text.primary,
+      fontVariant: ['tabular-nums'],
+    },
 
-  // Empty state
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 80,
-    paddingHorizontal: spacing.xl,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: spacing.lg,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text.primary,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  emptyDescription: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-  },
-  emptyButton: {
-    backgroundColor: colors.accent,
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-  },
-  emptyButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.background,
-  },
-});
+    // Empty state
+    emptyState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 80,
+      paddingHorizontal: spacing.xl,
+    },
+    emptyIcon: {
+      fontSize: 48,
+      marginBottom: spacing.lg,
+    },
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text.primary,
+      textAlign: 'center',
+      marginBottom: spacing.sm,
+    },
+    emptyDescription: {
+      fontSize: 14,
+      color: colors.text.secondary,
+      textAlign: 'center',
+      marginBottom: spacing.xl,
+    },
+    emptyButton: {
+      backgroundColor: colors.accent,
+      paddingHorizontal: spacing.xxl,
+      paddingVertical: spacing.md,
+      borderRadius: radius.md,
+    },
+    emptyButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.background,
+    },
+  });

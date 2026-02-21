@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors } from '../../theme/colors';
-import { spacing, radius } from '../../theme/spacing';
+import { type ThemeColors } from '../../theme/colors';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { spacing, radius } from '../../theme/spacing';
 
 interface ErrorStateProps {
   message?: string;
@@ -13,7 +13,9 @@ export function ErrorState({
   message,
   onRetry,
 }: ErrorStateProps) {
+  const colors = useSettingsStore((s) => s.colors);
   const t = useSettingsStore((s) => s.t);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <View style={styles.container}>
@@ -28,7 +30,7 @@ export function ErrorState({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',

@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { View, StyleSheet, ViewStyle, Animated, Easing } from 'react-native';
-import { colors } from '../../theme/colors';
+import { type ThemeColors } from '../../theme/colors';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { radius } from '../../theme/spacing';
 
 interface SkeletonProps {
@@ -16,6 +17,7 @@ export function Skeleton({
   borderRadius = radius.sm,
   style,
 }: SkeletonProps) {
+  const colors = useSettingsStore((s) => s.colors);
   const shimmer = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -51,28 +53,34 @@ export function Skeleton({
 }
 
 export function SkeletonCard({ style }: { style?: ViewStyle }) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createSkeletonStyles(colors), [colors]);
+
   return (
-    <View style={[skeletonStyles.card, style]}>
+    <View style={[styles.card, style]}>
       <Skeleton width="60%" height={20} />
-      <View style={skeletonStyles.spacer} />
+      <View style={styles.spacer} />
       <Skeleton width="40%" height={32} />
-      <View style={skeletonStyles.spacer} />
+      <View style={styles.spacer} />
       <Skeleton width="80%" height={14} />
-      <View style={skeletonStyles.smallSpacer} />
+      <View style={styles.smallSpacer} />
       <Skeleton width="50%" height={14} />
     </View>
   );
 }
 
 export function SkeletonList({ count = 5 }: { count?: number }) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createSkeletonStyles(colors), [colors]);
+
   return (
     <View>
       {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={skeletonStyles.listItem}>
+        <View key={i} style={styles.listItem}>
           <Skeleton width={40} height={40} borderRadius={20} />
-          <View style={skeletonStyles.listContent}>
+          <View style={styles.listContent}>
             <Skeleton width="70%" height={14} />
-            <View style={skeletonStyles.smallSpacer} />
+            <View style={styles.smallSpacer} />
             <Skeleton width="40%" height={12} />
           </View>
           <Skeleton width={80} height={16} />
@@ -83,14 +91,17 @@ export function SkeletonList({ count = 5 }: { count?: number }) {
 }
 
 export function SkeletonChart() {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createSkeletonStyles(colors), [colors]);
+
   return (
-    <View style={skeletonStyles.chart}>
+    <View style={styles.chart}>
       <Skeleton width="100%" height={200} borderRadius={radius.md} />
     </View>
   );
 }
 
-const skeletonStyles = StyleSheet.create({
+const createSkeletonStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderRadius: radius.lg,

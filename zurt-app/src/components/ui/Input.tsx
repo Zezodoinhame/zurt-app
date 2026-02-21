@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   TextInput,
@@ -7,7 +7,8 @@ import {
   StyleSheet,
   TextInputProps,
 } from 'react-native';
-import { colors } from '../../theme/colors';
+import { type ThemeColors } from '../../theme/colors';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { spacing, radius } from '../../theme/spacing';
 
 interface InputProps extends TextInputProps {
@@ -27,6 +28,8 @@ export function Input({
   style,
   ...props
 }: InputProps) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [isFocused, setIsFocused] = useState(false);
 
   const borderColor = error
@@ -77,7 +80,7 @@ export function Input({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   wrapper: {
     marginBottom: spacing.lg,
   },

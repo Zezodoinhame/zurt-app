@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { colors } from '../../theme/colors';
+import { type ThemeColors } from '../../theme/colors';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { spacing, radius } from '../../theme/spacing';
 
 interface BadgeProps {
@@ -16,7 +17,9 @@ export function Badge({
   size = 'md',
   style,
 }: BadgeProps) {
-  const variantStyle = variantStyles[variant];
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const variantStyle = createVariantStyles(colors)[variant];
   const sizeStyle = sizeStyles[size];
 
   return (
@@ -41,6 +44,9 @@ interface DotBadgeProps {
 }
 
 export function DotBadge({ count, style }: DotBadgeProps) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   if (count !== undefined && count <= 0) return null;
 
   return (
@@ -54,7 +60,7 @@ export function DotBadge({ count, style }: DotBadgeProps) {
   );
 }
 
-const variantStyles = {
+const createVariantStyles = (colors: ThemeColors) => ({
   positive: {
     container: { backgroundColor: colors.positive + '20' } as ViewStyle,
     text: { color: colors.positive },
@@ -75,7 +81,7 @@ const variantStyles = {
     container: { backgroundColor: colors.elevated } as ViewStyle,
     text: { color: colors.text.secondary },
   },
-};
+});
 
 const sizeStyles = {
   sm: {
@@ -96,7 +102,7 @@ const sizeStyles = {
   },
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   base: {
     alignSelf: 'flex-start',
   },
@@ -111,7 +117,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   dotText: {
-    color: '#060A0F',
+    color: colors.text.inverse,
     fontSize: 10,
     fontWeight: '700',
   },

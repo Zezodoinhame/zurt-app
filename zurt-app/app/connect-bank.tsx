@@ -2,7 +2,7 @@
 // ZURT - Connect Bank via Open Finance / Pluggy
 // =============================================================================
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   FlatList, ActivityIndicator, Alert, Platform, Image, Keyboard,
@@ -14,7 +14,7 @@ import type { WebViewNavigation } from 'react-native-webview';
 import {
   searchInstitutions, getConnectToken, createConnection, syncAllFinance,
 } from '../src/services/api';
-import { colors } from '../src/theme/colors';
+import { type ThemeColors } from '../src/theme/colors';
 import { spacing, radius } from '../src/theme/spacing';
 import { useSettingsStore } from '../src/stores/settingsStore';
 
@@ -35,6 +35,8 @@ type ScreenState = 'search' | 'connecting' | 'webview' | 'syncing' | 'success' |
 export default function ConnectBankScreen() {
   const router = useRouter();
   const { t } = useSettingsStore();
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [screenState, setScreenState] = useState<ScreenState>('search');
   const [searchText, setSearchText] = useState('');
@@ -406,7 +408,7 @@ export default function ConnectBankScreen() {
 // Styles
 // =============================================================================
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', alignItems: 'center',

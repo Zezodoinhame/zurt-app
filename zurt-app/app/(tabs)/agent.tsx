@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useState } from 'react';
+import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,43 +13,47 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Markdown from 'react-native-markdown-display';
-import { colors } from '../../src/theme/colors';
+import { type ThemeColors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useAgentStore, type ChatMessage } from '../../src/stores/agentStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 
 // ===========================================================================
-// Markdown Styles (dark theme)
+// Markdown Styles (dynamic theme)
 // ===========================================================================
 
-const markdownStyles = StyleSheet.create({
-  body: { color: colors.text.primary, fontSize: 14, lineHeight: 22 },
-  heading1: { color: '#FFFFFF', fontSize: 20, fontWeight: '700' as const, marginBottom: 8 },
-  heading2: { color: '#FFFFFF', fontSize: 18, fontWeight: '600' as const, marginBottom: 6 },
-  heading3: { color: colors.accent, fontSize: 16, fontWeight: '600' as const, marginBottom: 4 },
-  strong: { color: '#FFFFFF', fontWeight: '700' as const },
-  em: { color: '#B0B0B0', fontStyle: 'italic' as const },
-  bullet_list: { marginLeft: 8 },
-  ordered_list: { marginLeft: 8 },
-  list_item: { marginBottom: 4 },
-  code_inline: { backgroundColor: '#1A2332', color: colors.accent, paddingHorizontal: 4, borderRadius: 4, fontSize: 13 },
-  code_block: { backgroundColor: '#1A2332', padding: 12, borderRadius: 8, marginVertical: 8 },
-  fence: { backgroundColor: '#1A2332', padding: 12, borderRadius: 8, marginVertical: 8 },
-  blockquote: { borderLeftColor: colors.accent, borderLeftWidth: 3, paddingLeft: 12, marginVertical: 8, backgroundColor: '#0D1520' },
-  link: { color: colors.accent },
-  hr: { backgroundColor: '#2A3A4A', height: 1, marginVertical: 12 },
-  table: { borderColor: '#2A3A4A' },
-  thead: { backgroundColor: '#1A2332' },
-  th: { color: '#FFFFFF', fontWeight: '600' as const, padding: 8 },
-  td: { color: colors.text.primary, padding: 8, borderColor: '#2A3A4A' },
-  paragraph: { marginTop: 0, marginBottom: 8 },
-});
+const createMarkdownStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    body: { color: colors.text.primary, fontSize: 14, lineHeight: 22 },
+    heading1: { color: colors.text.primary, fontSize: 20, fontWeight: '700' as const, marginBottom: 8 },
+    heading2: { color: colors.text.primary, fontSize: 18, fontWeight: '600' as const, marginBottom: 6 },
+    heading3: { color: colors.accent, fontSize: 16, fontWeight: '600' as const, marginBottom: 4 },
+    strong: { color: colors.text.primary, fontWeight: '700' as const },
+    em: { color: colors.text.secondary, fontStyle: 'italic' as const },
+    bullet_list: { marginLeft: 8 },
+    ordered_list: { marginLeft: 8 },
+    list_item: { marginBottom: 4 },
+    code_inline: { backgroundColor: colors.cardAlt, color: colors.accent, paddingHorizontal: 4, borderRadius: 4, fontSize: 13 },
+    code_block: { backgroundColor: colors.cardAlt, padding: 12, borderRadius: 8, marginVertical: 8 },
+    fence: { backgroundColor: colors.cardAlt, padding: 12, borderRadius: 8, marginVertical: 8 },
+    blockquote: { borderLeftColor: colors.accent, borderLeftWidth: 3, paddingLeft: 12, marginVertical: 8, backgroundColor: colors.card },
+    link: { color: colors.accent },
+    hr: { backgroundColor: colors.border, height: 1, marginVertical: 12 },
+    table: { borderColor: colors.border },
+    thead: { backgroundColor: colors.cardAlt },
+    th: { color: colors.text.primary, fontWeight: '600' as const, padding: 8 },
+    td: { color: colors.text.primary, padding: 8, borderColor: colors.border },
+    paragraph: { marginTop: 0, marginBottom: 8 },
+  });
 
 // ===========================================================================
 // Typing Indicator (pulsing dots)
 // ===========================================================================
 
 function TypingIndicator() {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const dot1 = useRef(new Animated.Value(0)).current;
   const dot2 = useRef(new Animated.Value(0)).current;
   const dot3 = useRef(new Animated.Value(0)).current;
@@ -101,6 +105,9 @@ function TypingIndicator() {
 // ===========================================================================
 
 function EmptyState({ t, onSuggestion }: { t: (k: string) => string; onSuggestion: (s: string) => void }) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const fadeAnim = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
@@ -160,6 +167,10 @@ function MessageBubble({ message, onSuggestionPress, isLast }: {
   onSuggestionPress: (text: string) => void;
   isLast: boolean;
 }) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const markdownStyles = useMemo(() => createMarkdownStyles(colors), [colors]);
+
   const isUser = message.role === 'user';
 
   return (
@@ -219,6 +230,8 @@ export default function AgentScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const [inputText, setInputText] = useState('');
   const { t } = useSettingsStore();
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const {
     messages,
@@ -378,207 +391,208 @@ export default function AgentScreen() {
 // Styles
 // ===========================================================================
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
-  flex1: { flex: 1 },
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.background },
+    flex1: { flex: 1 },
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
-    borderBottomWidth: 0.5,
-    borderBottomColor: colors.border,
-  },
-  headerIcon: { fontSize: 28, marginRight: spacing.md },
-  headerCenter: { flex: 1 },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: colors.text.primary },
-  headerSubtitle: { fontSize: 12, color: colors.text.secondary, marginTop: 2 },
-  clearButton: { padding: spacing.xs },
-  clearIcon: { fontSize: 20 },
+    // Header
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.lg,
+      borderBottomWidth: 0.5,
+      borderBottomColor: colors.border,
+    },
+    headerIcon: { fontSize: 28, marginRight: spacing.md },
+    headerCenter: { flex: 1 },
+    headerTitle: { fontSize: 20, fontWeight: '700', color: colors.text.primary },
+    headerSubtitle: { fontSize: 12, color: colors.text.secondary, marginTop: 2 },
+    clearButton: { padding: spacing.xs },
+    clearIcon: { fontSize: 20 },
 
-  // Messages
-  messagesContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.md,
-    flexGrow: 1,
-  },
-  messageRow: {
-    flexDirection: 'row',
-    marginBottom: spacing.lg,
-    maxWidth: '88%',
-  },
-  messageRowUser: { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
+    // Messages
+    messagesContent: {
+      padding: spacing.lg,
+      paddingBottom: spacing.md,
+      flexGrow: 1,
+    },
+    messageRow: {
+      flexDirection: 'row',
+      marginBottom: spacing.lg,
+      maxWidth: '88%',
+    },
+    messageRowUser: { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
 
-  // Avatar
-  avatarCol: { marginRight: spacing.sm, paddingTop: 2 },
-  avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.accent + '20',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { fontSize: 14 },
+    // Avatar
+    avatarCol: { marginRight: spacing.sm, paddingTop: 2 },
+    avatar: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: colors.accent + '20',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarText: { fontSize: 14 },
 
-  // Bubble column
-  bubbleCol: { flex: 1 },
+    // Bubble column
+    bubbleCol: { flex: 1 },
 
-  // AI bubble
-  aiBubble: {
-    backgroundColor: colors.card,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.accent,
-    padding: spacing.lg,
-  },
+    // AI bubble
+    aiBubble: {
+      backgroundColor: colors.card,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.accent,
+      padding: spacing.lg,
+    },
 
-  // User bubble
-  userBubble: {
-    backgroundColor: colors.accent,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-  },
-  userMessageText: { fontSize: 14, color: colors.background, lineHeight: 22 },
+    // User bubble
+    userBubble: {
+      backgroundColor: colors.accent,
+      borderRadius: radius.lg,
+      padding: spacing.lg,
+    },
+    userMessageText: { fontSize: 14, color: colors.background, lineHeight: 22 },
 
-  // Timestamp
-  timestamp: {
-    fontSize: 10,
-    color: colors.text.muted,
-    marginTop: 4,
-    marginLeft: spacing.sm,
-  },
-  timestampUser: { textAlign: 'right', marginRight: spacing.sm, marginLeft: 0 },
+    // Timestamp
+    timestamp: {
+      fontSize: 10,
+      color: colors.text.muted,
+      marginTop: 4,
+      marginLeft: spacing.sm,
+    },
+    timestampUser: { textAlign: 'right', marginRight: spacing.sm, marginLeft: 0 },
 
-  // Suggestions
-  suggestionsScroll: { marginTop: spacing.sm },
-  suggestionsRow: { gap: spacing.xs, paddingRight: spacing.md },
-  suggestionChip: {
-    borderWidth: 1,
-    borderColor: colors.accent,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
-  },
-  suggestionText: { fontSize: 12, color: colors.accent, fontWeight: '500' },
+    // Suggestions
+    suggestionsScroll: { marginTop: spacing.sm },
+    suggestionsRow: { gap: spacing.xs, paddingRight: spacing.md },
+    suggestionChip: {
+      borderWidth: 1,
+      borderColor: colors.accent,
+      borderRadius: radius.full,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs + 2,
+    },
+    suggestionText: { fontSize: 12, color: colors.accent, fontWeight: '500' },
 
-  // Typing indicator
-  typingDots: { flexDirection: 'row', gap: 6 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
+    // Typing indicator
+    typingDots: { flexDirection: 'row', gap: 6 },
+    dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
 
-  // Empty state
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyIcon: { fontSize: 56, marginBottom: spacing.xl },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.text.primary,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  emptyDescription: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: spacing.xl,
-    marginBottom: spacing.xl,
-  },
-  initialSuggestions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  initialChip: {
-    borderWidth: 1,
-    borderColor: colors.accent,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.accent + '10',
-  },
-  initialChipText: { fontSize: 13, color: colors.accent, fontWeight: '500' },
+    // Empty state
+    emptyState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 60,
+    },
+    emptyIcon: { fontSize: 56, marginBottom: spacing.xl },
+    emptyTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.text.primary,
+      textAlign: 'center',
+      marginBottom: spacing.sm,
+    },
+    emptyDescription: {
+      fontSize: 14,
+      color: colors.text.secondary,
+      textAlign: 'center',
+      lineHeight: 22,
+      paddingHorizontal: spacing.xl,
+      marginBottom: spacing.xl,
+    },
+    initialSuggestions: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.lg,
+    },
+    initialChip: {
+      borderWidth: 1,
+      borderColor: colors.accent,
+      borderRadius: radius.full,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+      backgroundColor: colors.accent + '10',
+    },
+    initialChipText: { fontSize: 13, color: colors.accent, fontWeight: '500' },
 
-  // Rate limit
-  rateLimitCard: {
-    backgroundColor: colors.card,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.warning,
-    padding: spacing.xl,
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  rateLimitIcon: { fontSize: 32, marginBottom: spacing.md },
-  rateLimitText: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
+    // Rate limit
+    rateLimitCard: {
+      backgroundColor: colors.card,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.warning,
+      padding: spacing.xl,
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+    rateLimitIcon: { fontSize: 32, marginBottom: spacing.md },
+    rateLimitText: {
+      fontSize: 14,
+      color: colors.text.secondary,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
 
-  // Error
-  errorCard: {
-    backgroundColor: colors.card,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.negative,
-    padding: spacing.xl,
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  errorText: { fontSize: 14, color: colors.text.secondary, textAlign: 'center', marginBottom: spacing.md },
-  retryButton: {
-    backgroundColor: colors.accent,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-  },
-  retryText: { fontSize: 14, fontWeight: '600', color: colors.background },
+    // Error
+    errorCard: {
+      backgroundColor: colors.card,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.negative,
+      padding: spacing.xl,
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+    errorText: { fontSize: 14, color: colors.text.secondary, textAlign: 'center', marginBottom: spacing.md },
+    retryButton: {
+      backgroundColor: colors.accent,
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.md,
+    },
+    retryText: { fontSize: 14, fontWeight: '600', color: colors.background },
 
-  // Input bar
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    borderTopWidth: 0.5,
-    borderTopColor: colors.border,
-    backgroundColor: colors.background,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: colors.input,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    fontSize: 14,
-    color: colors.text.primary,
-    maxHeight: 100,
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: spacing.sm,
-  },
-  sendButtonDisabled: { opacity: 0.4 },
-  sendIcon: { fontSize: 18, color: colors.background },
-});
+    // Input bar
+    inputBar: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.sm,
+      borderTopWidth: 0.5,
+      borderTopColor: colors.border,
+      backgroundColor: colors.background,
+    },
+    input: {
+      flex: 1,
+      backgroundColor: colors.input,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      fontSize: 14,
+      color: colors.text.primary,
+      maxHeight: 100,
+    },
+    sendButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: spacing.sm,
+    },
+    sendButtonDisabled: { opacity: 0.4 },
+    sendIcon: { fontSize: 18, color: colors.background },
+  });

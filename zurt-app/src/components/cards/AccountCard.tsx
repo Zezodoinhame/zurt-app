@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors } from '../../theme/colors';
+import { type ThemeColors } from '../../theme/colors';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { spacing, radius } from '../../theme/spacing';
 import { formatBRL } from '../../utils/formatters';
 import type { Institution } from '../../types';
@@ -12,6 +13,9 @@ interface AccountCardProps {
 }
 
 export function AccountCard({ institution, index, onPress }: AccountCardProps) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const statusColor =
     institution.status === 'connected'
       ? colors.positive
@@ -66,7 +70,7 @@ export function AccountCard({ institution, index, onPress }: AccountCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',

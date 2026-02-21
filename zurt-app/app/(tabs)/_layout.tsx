@@ -2,31 +2,32 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { colors } from '../../src/theme/colors';
 import { useNotificationStore } from '../../src/stores/notificationStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import type { ThemeColors } from '../../src/theme/colors';
 
 interface TabIconProps {
   icon: string;
   label: string;
   focused: boolean;
   badge?: number;
+  colors: ThemeColors;
 }
 
-function TabIcon({ icon, label, focused, badge }: TabIconProps) {
+function TabIcon({ icon, label, focused, badge, colors }: TabIconProps) {
   return (
-    <View style={styles.tabItem}>
-      <View style={styles.iconContainer}>
-        <Text style={[styles.icon, focused && styles.iconFocused]}>{icon}</Text>
+    <View style={tabStyles.tabItem}>
+      <View style={tabStyles.iconContainer}>
+        <Text style={[tabStyles.icon, focused && tabStyles.iconFocused]}>{icon}</Text>
         {badge !== undefined && badge > 0 && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>
+          <View style={[tabStyles.badge, { backgroundColor: colors.negative }]}>
+            <Text style={tabStyles.badgeText}>
               {badge > 99 ? '99+' : badge}
             </Text>
           </View>
         )}
       </View>
-      <Text style={[styles.label, focused && styles.labelFocused]}>
+      <Text style={[tabStyles.label, { color: colors.text.muted }, focused && { color: colors.accent, fontWeight: '600' as const }]}>
         {label}
       </Text>
     </View>
@@ -36,12 +37,22 @@ function TabIcon({ icon, label, focused, badge }: TabIconProps) {
 export default function TabLayout() {
   const getUnreadCount = useNotificationStore((s) => s.getUnreadCount);
   const t = useSettingsStore((s) => s.t);
+  const colors = useSettingsStore((s) => s.colors);
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: {
+          backgroundColor: colors.tabBar,
+          borderTopColor: colors.tabBarBorder,
+          borderTopWidth: 0.5,
+          height: 85,
+          paddingTop: 8,
+          paddingBottom: 20,
+          elevation: 0,
+          shadowOpacity: 0,
+        },
         tabBarShowLabel: false,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.text.muted,
@@ -56,7 +67,7 @@ export default function TabLayout() {
         name="index"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="🏠" label={t('tab.home')} focused={focused} />
+            <TabIcon icon="🏠" label={t('tab.home')} focused={focused} colors={colors} />
           ),
         }}
       />
@@ -64,7 +75,7 @@ export default function TabLayout() {
         name="wallet"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="💼" label={t('tab.wallet')} focused={focused} />
+            <TabIcon icon="💼" label={t('tab.wallet')} focused={focused} colors={colors} />
           ),
         }}
       />
@@ -72,7 +83,7 @@ export default function TabLayout() {
         name="agent"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="✨" label={t('tab.agent')} focused={focused} />
+            <TabIcon icon="✨" label={t('tab.agent')} focused={focused} colors={colors} />
           ),
         }}
       />
@@ -80,7 +91,7 @@ export default function TabLayout() {
         name="cards"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="💳" label={t('tab.cards')} focused={focused} />
+            <TabIcon icon="💳" label={t('tab.cards')} focused={focused} colors={colors} />
           ),
         }}
       />
@@ -93,6 +104,7 @@ export default function TabLayout() {
               label={t('tab.alerts')}
               focused={focused}
               badge={getUnreadCount()}
+              colors={colors}
             />
           ),
         }}
@@ -101,7 +113,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="👤" label={t('tab.profile')} focused={focused} />
+            <TabIcon icon="👤" label={t('tab.profile')} focused={focused} colors={colors} />
           ),
         }}
       />
@@ -109,17 +121,7 @@ export default function TabLayout() {
   );
 }
 
-const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: colors.card,
-    borderTopColor: colors.border,
-    borderTopWidth: 0.5,
-    height: 85,
-    paddingTop: 8,
-    paddingBottom: 20,
-    elevation: 0,
-    shadowOpacity: 0,
-  },
+const tabStyles = StyleSheet.create({
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -137,19 +139,13 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 10,
-    color: colors.text.muted,
     marginTop: 4,
     fontWeight: '500',
-  },
-  labelFocused: {
-    color: colors.accent,
-    fontWeight: '600',
   },
   badge: {
     position: 'absolute',
     top: -4,
     right: -10,
-    backgroundColor: colors.negative,
     minWidth: 16,
     height: 16,
     borderRadius: 8,

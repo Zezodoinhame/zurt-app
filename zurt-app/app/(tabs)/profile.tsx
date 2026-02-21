@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,13 +16,13 @@ import * as Haptics from 'expo-haptics';
 import * as LocalAuthentication from 'expo-local-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { colors } from '../../src/theme/colors';
+import { type ThemeColors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePortfolioStore } from '../../src/stores/portfolioStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import type { Language } from '../../src/i18n/translations';
-import type { Currency } from '../../src/stores/settingsStore';
+import type { Currency, ThemeMode } from '../../src/stores/settingsStore';
 import { Toggle } from '../../src/components/ui/Toggle';
 import { Card } from '../../src/components/ui/Card';
 import { formatDate, formatCurrency } from '../../src/utils/formatters';
@@ -56,6 +56,16 @@ const currencyOptions: Array<{ key: Currency; flag: string; label: string }> = [
 ];
 
 // ---------------------------------------------------------------------------
+// Theme options
+// ---------------------------------------------------------------------------
+
+const themeOptions: Array<{ key: ThemeMode; emoji: string; labelKey: string }> = [
+  { key: 'dark', emoji: '\uD83C\uDF19', labelKey: 'profile.themeDark' },
+  { key: 'light', emoji: '\u2600\uFE0F', labelKey: 'profile.themeLight' },
+  { key: 'system', emoji: '\uD83D\uDCF1', labelKey: 'profile.themeSystem' },
+];
+
+// ---------------------------------------------------------------------------
 // FAQ items
 // ---------------------------------------------------------------------------
 
@@ -80,6 +90,9 @@ interface SettingRowProps {
 }
 
 function SettingRow({ icon, label, value, onPress, rightElement, danger }: SettingRowProps) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   return (
     <TouchableOpacity
       style={styles.settingRow}
@@ -100,6 +113,9 @@ function SettingRow({ icon, label, value, onPress, rightElement, danger }: Setti
 }
 
 function SectionTitle({ title }: { title: string }) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   return (
     <View>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -128,6 +144,9 @@ function PickerModal<T extends string>({
   onSelect,
   onClose,
 }: PickerModalProps<T>) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity
@@ -184,6 +203,9 @@ function PasswordModal({
   onClose: () => void;
   isDemoMode: boolean;
 }) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
@@ -309,6 +331,9 @@ function EditProfileModal({
   t: (key: string) => string;
   onSuccess: (updates: { name: string; email: string; initials: string }) => void;
 }) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const [fullName, setFullName] = useState(currentName);
   const [email, setEmail] = useState(currentEmail);
   const [isLoading, setIsLoading] = useState(false);
@@ -418,6 +443,9 @@ function HelpModal({
   onClose: () => void;
   t: (key: string) => string;
 }) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const [expanded, setExpanded] = useState<number | null>(null);
 
   const toggleItem = (index: number) => {
@@ -476,6 +504,11 @@ export default function ProfileScreen() {
   const { user, logout, updateUser, isDemoMode } = useAuthStore();
   const { institutions } = usePortfolioStore();
   const { language, currency, setLanguage, setCurrency, t } = useSettingsStore();
+  const colors = useSettingsStore((s) => s.colors);
+  const theme = useSettingsStore((s) => s.theme);
+  const setTheme = useSettingsStore((s) => s.setTheme);
+
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   // Modal states
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
@@ -568,6 +601,15 @@ export default function ProfileScreen() {
       updateUser({ hideValuesOnOpen: value });
     },
     [updateUser]
+  );
+
+  // -- Theme handler --------------------------------------------------------
+  const handleThemeSelect = useCallback(
+    (selected: ThemeMode) => {
+      Haptics.selectionAsync();
+      setTheme(selected);
+    },
+    [setTheme]
   );
 
   // -- About section handlers -----------------------------------------------
@@ -697,6 +739,39 @@ export default function ProfileScreen() {
             value={currentCurrencyLabel}
             onPress={() => setShowCurrencyPicker(true)}
           />
+        </View>
+      </View>
+
+      {/* Appearance (Theme Selector) */}
+      <SectionTitle title={`\uD83C\uDFA8 ${t('profile.appearance')}`} />
+      <View>
+        <View style={styles.section}>
+          <View style={styles.themeRow}>
+            {themeOptions.map((opt) => {
+              const isSelected = theme === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[
+                    styles.themeButton,
+                    isSelected && styles.themeButtonSelected,
+                  ]}
+                  onPress={() => handleThemeSelect(opt.key)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.themeEmoji}>{opt.emoji}</Text>
+                  <Text
+                    style={[
+                      styles.themeLabel,
+                      isSelected && styles.themeLabelSelected,
+                    ]}
+                  >
+                    {t(opt.labelKey)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
       </View>
 
@@ -835,7 +910,7 @@ export default function ProfileScreen() {
 // Styles
 // ===========================================================================
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -860,7 +935,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#060A0F',
+    color: colors.text.inverse,
   },
   userInfo: {
     flex: 1,
@@ -1010,6 +1085,41 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text.primary,
   },
+
+  // -- Theme selector styles ------------------------------------------------
+  themeRow: {
+    flexDirection: 'row',
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  themeButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  themeButtonSelected: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accent + '15',
+  },
+  themeEmoji: {
+    fontSize: 22,
+    marginBottom: 4,
+  },
+  themeLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.text.secondary,
+  },
+  themeLabelSelected: {
+    color: colors.accent,
+    fontWeight: '700',
+  },
+
   logoutButton: {
     backgroundColor: colors.negative + '15',
     borderRadius: radius.md,

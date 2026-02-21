@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -9,7 +9,8 @@ import {
   Animated,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { colors } from '../../theme/colors';
+import { type ThemeColors } from '../../theme/colors';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { spacing, radius } from '../../theme/spacing';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
@@ -39,6 +40,8 @@ export function Button({
   textStyle,
   fullWidth = true,
 }: ButtonProps) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const scale = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -68,7 +71,8 @@ export function Button({
     }
   };
 
-  const variantStyles = variants[variant];
+  const variantDefs = createVariants(colors);
+  const variantStyles = variantDefs[variant];
   const sizeStyles = sizes[size];
 
   return (
@@ -115,13 +119,13 @@ export function Button({
   );
 }
 
-const variants = {
+const createVariants = (colors: ThemeColors) => ({
   primary: {
     container: {
       backgroundColor: colors.accent,
     } as ViewStyle,
     text: {
-      color: '#060A0F',
+      color: colors.text.inverse,
       fontWeight: '700' as const,
     } as TextStyle,
   },
@@ -154,7 +158,7 @@ const variants = {
       fontWeight: '700' as const,
     } as TextStyle,
   },
-};
+});
 
 const sizes = {
   sm: {
@@ -183,7 +187,7 @@ const sizes = {
   },
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   base: {
     flexDirection: 'row',
     alignItems: 'center',

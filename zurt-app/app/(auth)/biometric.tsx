@@ -1,9 +1,9 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { colors } from '../../src/theme/colors';
+import { type ThemeColors } from '../../src/theme/colors';
 import { spacing } from '../../src/theme/spacing';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
@@ -17,6 +17,8 @@ export default function BiometricScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { t } = useSettingsStore();
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const authenticate = useCallback(async () => {
     try {
@@ -82,7 +84,7 @@ export default function BiometricScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -109,7 +111,7 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 32,
     fontWeight: '900',
-    color: '#060A0F',
+    color: colors.text.inverse,
   },
   title: {
     fontSize: 24,

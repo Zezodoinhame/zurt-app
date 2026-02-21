@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,8 @@ import {
   Dimensions,
   Pressable,
 } from 'react-native';
-import { colors } from '../../theme/colors';
+import { type ThemeColors } from '../../theme/colors';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { spacing, radius } from '../../theme/spacing';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -29,6 +30,9 @@ export function BottomSheet({
   children,
   height = SCREEN_HEIGHT * 0.65,
 }: BottomSheetProps) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   if (!visible) return null;
 
   return (
@@ -75,7 +79,7 @@ export function BottomSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',

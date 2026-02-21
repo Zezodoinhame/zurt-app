@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, Line, Circle } from 'react-native-svg';
-import { colors } from '../../theme/colors';
+import { type ThemeColors } from '../../theme/colors';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { spacing } from '../../theme/spacing';
 import { formatBRL } from '../../utils/formatters';
 
@@ -24,11 +25,15 @@ export function LineChart({
   data,
   width: propWidth,
   height = 200,
-  color = colors.accent,
+  color,
   showGradient = true,
   referenceValue,
   onPointSelect,
 }: LineChartProps) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const lineColor = color ?? colors.accent;
+
   const screenWidth = Dimensions.get('window').width;
   const chartWidth = propWidth ?? screenWidth - 80;
   const padding = { top: 20, right: 10, bottom: 30, left: 10 };
@@ -80,8 +85,8 @@ export function LineChart({
         <Svg width={chartWidth} height={height}>
           <Defs>
             <LinearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={color} stopOpacity="0.3" />
-              <Stop offset="1" stopColor={color} stopOpacity="0" />
+              <Stop offset="0" stopColor={lineColor} stopOpacity="0.3" />
+              <Stop offset="1" stopColor={lineColor} stopOpacity="0" />
             </LinearGradient>
           </Defs>
 
@@ -107,7 +112,7 @@ export function LineChart({
           {/* Main line */}
           <Path
             d={linePath}
-            stroke={color}
+            stroke={lineColor}
             strokeWidth={2.5}
             fill="none"
             strokeLinecap="round"
@@ -131,7 +136,7 @@ export function LineChart({
                 cx={points[selectedIndex].x}
                 cy={points[selectedIndex].y}
                 r={6}
-                fill={color}
+                fill={lineColor}
                 stroke={colors.background}
                 strokeWidth={3}
               />
@@ -197,7 +202,7 @@ export function LineChart({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     position: 'relative',
   },

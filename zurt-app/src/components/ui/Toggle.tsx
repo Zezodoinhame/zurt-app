@@ -1,7 +1,8 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import { TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { colors } from '../../theme/colors';
+import { type ThemeColors } from '../../theme/colors';
+import { useSettingsStore } from '../../stores/settingsStore';
 
 interface ToggleProps {
   value: boolean;
@@ -16,6 +17,8 @@ export function Toggle({
   disabled = false,
   accessibilityLabel,
 }: ToggleProps) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const progress = useRef(new Animated.Value(value ? 1 : 0)).current;
 
   useEffect(() => {
@@ -59,7 +62,7 @@ export function Toggle({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   track: {
     width: 48,
     height: 28,

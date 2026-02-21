@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors } from '../../theme/colors';
+import { type ThemeColors } from '../../theme/colors';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { spacing } from '../../theme/spacing';
 import { formatBRL, formatPct } from '../../utils/formatters';
 import { MiniLineChart } from '../charts/MiniLineChart';
@@ -27,6 +28,8 @@ export function AssetCard({
   onPress,
   showInstitution = true,
 }: AssetCardProps) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const isPositive = asset.variation >= 0;
 
   return (
@@ -77,7 +80,7 @@ export function AssetCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',

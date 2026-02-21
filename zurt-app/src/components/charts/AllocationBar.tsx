@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors } from '../../theme/colors';
+import { type ThemeColors } from '../../theme/colors';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { spacing, radius } from '../../theme/spacing';
 import { formatBRL, formatPct } from '../../utils/formatters';
 import type { Allocation } from '../../types';
@@ -11,6 +12,8 @@ interface AllocationBarProps {
 }
 
 export function AllocationBar({ allocations, onSelectClass }: AllocationBarProps) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const total = allocations.reduce((sum, a) => sum + a.value, 0);
 
   return (
@@ -61,7 +64,7 @@ export function AllocationBar({ allocations, onSelectClass }: AllocationBarProps
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {},
   barContainer: {
     flexDirection: 'row',

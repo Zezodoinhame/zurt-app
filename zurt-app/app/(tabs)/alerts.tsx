@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { colors } from '../../src/theme/colors';
+import { type ThemeColors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useNotificationStore } from '../../src/stores/notificationStore';
 import { formatRelativeDate } from '../../src/utils/formatters';
@@ -19,23 +19,6 @@ import { SkeletonList } from '../../src/components/skeletons/Skeleton';
 import { ErrorState } from '../../src/components/shared/ErrorState';
 import { fetchAIAlerts, type AIAlert } from '../../src/services/api';
 import type { NotificationType } from '../../src/types';
-
-const typeConfig: Record<
-  NotificationType,
-  { icon: string; color: string }
-> = {
-  distribution: { icon: '💎', color: colors.accent },
-  maturity: { icon: '⚠️', color: colors.warning },
-  invoice: { icon: '💳', color: colors.info },
-  insight: { icon: '💡', color: '#A855F7' },
-  system: { icon: '🔔', color: colors.text.secondary },
-};
-
-const aiAlertConfig: Record<string, { icon: string; color: string }> = {
-  warning: { icon: '⚠️', color: colors.warning },
-  opportunity: { icon: '🚀', color: colors.positive },
-  info: { icon: '💡', color: colors.info },
-};
 
 const filterOptions: Array<{ key: NotificationType | 'all'; label: string }> = [
   { key: 'all', label: 'Todos' },
@@ -63,6 +46,26 @@ export default function AlertsScreen() {
     getFilteredNotifications,
   } = useNotificationStore();
   const { t } = useSettingsStore();
+  const colors = useSettingsStore((s) => s.colors);
+
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
+  const typeConfig: Record<
+    NotificationType,
+    { icon: string; color: string }
+  > = useMemo(() => ({
+    distribution: { icon: '💎', color: colors.accent },
+    maturity: { icon: '⚠️', color: colors.warning },
+    invoice: { icon: '💳', color: colors.info },
+    insight: { icon: '💡', color: '#A855F7' },
+    system: { icon: '🔔', color: colors.text.secondary },
+  }), [colors]);
+
+  const aiAlertConfig: Record<string, { icon: string; color: string }> = useMemo(() => ({
+    warning: { icon: '⚠️', color: colors.warning },
+    opportunity: { icon: '🚀', color: colors.positive },
+    info: { icon: '💡', color: colors.info },
+  }), [colors]);
 
   const [aiAlerts, setAiAlerts] = useState<AIAlert[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
@@ -314,7 +317,7 @@ export default function AlertsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

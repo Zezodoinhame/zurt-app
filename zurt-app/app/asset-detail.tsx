@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Svg, { Path, Line } from 'react-native-svg';
-import { colors } from '../src/theme/colors';
+import { type ThemeColors } from '../src/theme/colors';
 import { spacing, radius } from '../src/theme/spacing';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { fetchAssetDetail } from '../src/services/api';
@@ -69,7 +69,9 @@ type ChartRange = '1M' | '3M' | '6M' | '1A';
 // Chart Component (SVG)
 // ===========================================================================
 
-function PriceChart({ data, width, height }: { data: number[]; width: number; height: number }) {
+function PriceChart({ data, width, height, colors }: { data: number[]; width: number; height: number; colors: ThemeColors }) {
+  const chartStyles = useMemo(() => createChartStyles(colors), [colors]);
+
   if (data.length < 2) {
     return (
       <View style={[chartStyles.empty, { width, height }]}>
@@ -124,7 +126,7 @@ function PriceChart({ data, width, height }: { data: number[]; width: number; he
   );
 }
 
-const chartStyles = StyleSheet.create({
+const createChartStyles = (colors: ThemeColors) => StyleSheet.create({
   empty: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderRadius: radius.md },
   emptyText: { color: colors.text.muted, fontSize: 13 },
 });
@@ -133,7 +135,8 @@ const chartStyles = StyleSheet.create({
 // Indicator Card
 // ===========================================================================
 
-function IndicatorCard({ label, value, good }: { label: string; value: string; good?: boolean | null }) {
+function IndicatorCard({ label, value, good, colors }: { label: string; value: string; good?: boolean | null; colors: ThemeColors }) {
+  const indicatorStyles = useMemo(() => createIndicatorStyles(colors), [colors]);
   const valueColor = good === true ? colors.positive : good === false ? colors.negative : colors.text.primary;
   return (
     <View style={indicatorStyles.card}>
@@ -143,7 +146,7 @@ function IndicatorCard({ label, value, good }: { label: string; value: string; g
   );
 }
 
-const indicatorStyles = StyleSheet.create({
+const createIndicatorStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     flex: 1,
     backgroundColor: colors.card,
@@ -168,6 +171,8 @@ export default function AssetDetailScreen() {
   // expo-router may return string | string[] — normalize to string
   const ticker = Array.isArray(params.ticker) ? params.ticker[0] : params.ticker;
   const { t, currency } = useSettingsStore();
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [data, setData] = useState<AssetData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -208,7 +213,7 @@ export default function AssetDetailScreen() {
   }, [loadData]);
 
   // Filter chart data by range
-  const chartData = React.useMemo(() => {
+  const chartData = useMemo(() => {
     if (!data?.historicalDataPrice) return [];
     const history = data.historicalDataPrice;
     const now = Date.now();
@@ -225,7 +230,7 @@ export default function AssetDetailScreen() {
   }, [data?.historicalDataPrice, chartRange]);
 
   // Dividends (last 12)
-  const dividends = React.useMemo(() => {
+  const dividends = useMemo(() => {
     if (!data?.dividendsData?.cashDividends) return [];
     return data.dividendsData.cashDividends.slice(0, 12);
   }, [data?.dividendsData]);
@@ -375,41 +380,49 @@ export default function AssetDetailScreen() {
               label="P/L"
               value={data.priceEarnings ? formatNumber(data.priceEarnings, 1) : '-'}
               good={data.priceEarnings ? (data.priceEarnings <= 15 ? true : data.priceEarnings > 30 ? false : null) : null}
+              colors={colors}
             />
             <IndicatorCard
               label="P/VP"
               value={data.priceToBook ? formatNumber(data.priceToBook, 2) : '-'}
               good={data.priceToBook ? (data.priceToBook <= 1.5 ? true : data.priceToBook > 3 ? false : null) : null}
+              colors={colors}
             />
             <IndicatorCard
               label="ROE"
               value={roe != null ? `${formatNumber(roe, 1)}%` : '-'}
               good={roe != null ? (roe >= 15 ? true : roe < 5 ? false : null) : null}
+              colors={colors}
             />
             <IndicatorCard
               label="Dividend Yield"
               value={dy != null ? `${formatNumber(dy, 2)}%` : '-'}
               good={dy != null ? (dy >= 6 ? true : dy < 1 ? false : null) : null}
+              colors={colors}
             />
             <IndicatorCard
               label="LPA"
               value={data.earningsPerShare ? formatNumber(data.earningsPerShare, 2) : '-'}
               good={data.earningsPerShare ? (data.earningsPerShare > 0 ? true : false) : null}
+              colors={colors}
             />
             <IndicatorCard
               label="VPA"
               value={data.bookValuePerShare ? formatNumber(data.bookValuePerShare, 2) : '-'}
               good={null}
+              colors={colors}
             />
             <IndicatorCard
               label={t('asset.netMargin')}
               value={marginNet != null ? `${formatNumber(marginNet, 1)}%` : '-'}
               good={marginNet != null ? (marginNet >= 15 ? true : marginNet < 0 ? false : null) : null}
+              colors={colors}
             />
             <IndicatorCard
               label={t('asset.debtEbitda')}
               value={debtEbitda != null ? `${formatNumber(debtEbitda, 1)}x` : '-'}
               good={debtEbitda != null ? (debtEbitda <= 2 ? true : debtEbitda > 4 ? false : null) : null}
+              colors={colors}
             />
           </View>
         </View>
@@ -431,7 +444,7 @@ export default function AssetDetailScreen() {
             ))}
           </View>
           <View style={styles.chartContainer}>
-            <PriceChart data={chartData} width={320} height={160} />
+            <PriceChart data={chartData} width={320} height={160} colors={colors} />
           </View>
         </View>
 
@@ -514,7 +527,7 @@ export default function AssetDetailScreen() {
 // Styles
 // ===========================================================================
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
 
   // Header bar

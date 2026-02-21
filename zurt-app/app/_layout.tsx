@@ -4,7 +4,6 @@ import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
-import { colors } from '../src/theme/colors';
 import { useAuthStore } from '../src/stores/authStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
 
@@ -13,6 +12,8 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const restoreSession = useAuthStore((s) => s.restoreSession);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
+  const colors = useSettingsStore((s) => s.colors);
+  const isDark = useSettingsStore((s) => s.isDark);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -35,7 +36,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
       <SafeAreaProvider>
-        <StatusBar style="light" backgroundColor={colors.background} />
+        <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={colors.background} />
         <Stack
           screenOptions={{
             headerShown: false,
@@ -45,6 +46,10 @@ export default function RootLayout() {
         >
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="onboarding"
+            options={{ animation: 'fade' }}
+          />
           <Stack.Screen
             name="connect-bank"
             options={{ animation: 'slide_from_right' }}

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { colors } from '../../theme/colors';
+import { type ThemeColors } from '../../theme/colors';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { spacing, radius } from '../../theme/spacing';
 
 interface CardProps {
@@ -18,7 +19,9 @@ export function Card({
   delay = 0,
   animated = true,
 }: CardProps) {
-  const variantStyle = variantStyles[variant];
+  const colors = useSettingsStore((s) => s.colors);
+  const variantStyle = createVariantStyles(colors)[variant];
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <View style={[styles.base, variantStyle, style]}>
@@ -27,7 +30,7 @@ export function Card({
   );
 }
 
-const variantStyles = {
+const createVariantStyles = (colors: ThemeColors) => ({
   default: {
     backgroundColor: colors.card,
     borderWidth: 1,
@@ -48,9 +51,9 @@ const variantStyles = {
     shadowRadius: 20,
     elevation: 8,
   } as ViewStyle,
-};
+});
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   base: {
     borderRadius: radius.lg,
     padding: spacing.xl,

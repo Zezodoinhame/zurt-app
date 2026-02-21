@@ -1,19 +1,9 @@
-export const colors = {
-  background: '#060A0F',
-  card: '#0A1018',
-  elevated: '#0F1820',
-  input: '#121A24',
-  border: '#1E2A3A',
-  accent: '#00D4AA',
-  positive: '#00D4AA',
-  negative: '#FF4757',
-  warning: '#FFBE0B',
-  info: '#3A86FF',
-  text: {
-    primary: '#E8ECF1',
-    secondary: '#8B95A5',
-    muted: '#5A6577',
-  },
+// ===========================================================================
+// ZURT Theme Colors — Dark & Light
+// ===========================================================================
+
+// Brand / semantic colors shared across themes
+const sharedColors = {
   institutions: {
     nubank: '#8A05BE',
     itau: '#003399',
@@ -46,4 +36,84 @@ export const colors = {
   },
 } as const;
 
-export type Colors = typeof colors;
+export const darkColors = {
+  ...sharedColors,
+  background: '#080D14',
+  card: '#0D1520',
+  cardAlt: '#111B2A',
+  elevated: '#0F1820',
+  input: '#121A24',
+  border: '#1A2A3A',
+  surface: '#0F1923',
+  text: {
+    primary: '#FFFFFF',
+    secondary: '#A0AEC0',
+    muted: '#64748B',
+    inverse: '#080D14',
+  },
+  accent: '#00D4AA',
+  accentLight: '#00D4AA20',
+  positive: '#00D4AA',
+  negative: '#FF6B6B',
+  warning: '#FFD93D',
+  success: '#00D4AA',
+  info: '#3A86FF',
+  tabBar: '#080D14',
+  tabBarBorder: '#1A2A3A',
+  statusBar: 'light' as const,
+} as const;
+
+export const lightColors = {
+  ...sharedColors,
+  background: '#F5F7FA',
+  card: '#FFFFFF',
+  cardAlt: '#F0F2F5',
+  elevated: '#F0F2F5',
+  input: '#FFFFFF',
+  border: '#E2E8F0',
+  surface: '#FFFFFF',
+  text: {
+    primary: '#1A202C',
+    secondary: '#4A5568',
+    muted: '#A0AEC0',
+    inverse: '#FFFFFF',
+  },
+  accent: '#00B894',
+  accentLight: '#00B89420',
+  positive: '#00B894',
+  negative: '#E74C3C',
+  warning: '#F39C12',
+  success: '#00B894',
+  info: '#3A86FF',
+  tabBar: '#FFFFFF',
+  tabBarBorder: '#E2E8F0',
+  statusBar: 'dark' as const,
+} as const;
+
+export type ThemeColors = {
+  institutions: typeof sharedColors['institutions'];
+  categories: typeof sharedColors['categories'];
+  assetClasses: typeof sharedColors['assetClasses'];
+  background: string;
+  card: string;
+  cardAlt: string;
+  elevated: string;
+  input: string;
+  border: string;
+  surface: string;
+  text: { primary: string; secondary: string; muted: string; inverse: string };
+  accent: string;
+  accentLight: string;
+  positive: string;
+  negative: string;
+  warning: string;
+  success: string;
+  info: string;
+  tabBar: string;
+  tabBarBorder: string;
+  statusBar: 'light' | 'dark';
+};
+
+// Backward-compatible default export (dark theme)
+export const colors = darkColors;
+export type Colors = ThemeColors;

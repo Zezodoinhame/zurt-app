@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import { colors } from '../../src/theme/colors';
+import { type ThemeColors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useAuthStore } from '../../src/stores/authStore';
 import { Button } from '../../src/components/ui/Button';
@@ -44,6 +44,8 @@ export default function LoginScreen() {
   const router = useRouter();
   const { login, register, loginDemo, restoreSession, isLoading, error: storeError, clearError } = useAuthStore();
   const { t } = useSettingsStore();
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [mode, setMode] = useState<Mode>('login');
   const [fullName, setFullName] = useState('');
@@ -429,7 +431,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -460,7 +462,7 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 36,
     fontWeight: '900',
-    color: '#060A0F',
+    color: colors.text.inverse,
   },
   brandName: {
     fontSize: 32,

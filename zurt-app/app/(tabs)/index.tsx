@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 
-import { colors } from '../../src/theme/colors';
+import { type ThemeColors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePortfolioStore } from '../../src/stores/portfolioStore';
@@ -43,16 +43,6 @@ import { useSettingsStore } from '../../src/stores/settingsStore';
 const TIME_RANGES = ['1M', '3M', '6M', '1A', 'MAX'] as const;
 type TimeRange = (typeof TIME_RANGES)[number];
 
-// ---------------------------------------------------------------------------
-// Insight type-to-color mapping
-// ---------------------------------------------------------------------------
-
-const INSIGHT_COLORS: Record<string, string> = {
-  warning: colors.warning,
-  info: colors.info,
-  opportunity: colors.accent,
-};
-
 // ===========================================================================
 // HomeScreen
 // ===========================================================================
@@ -78,6 +68,19 @@ export default function HomeScreen() {
   } = usePortfolioStore();
   const { getUnreadCount, loadNotifications } = useNotificationStore();
   const { t, currency } = useSettingsStore();
+  const colors = useSettingsStore((s) => s.colors);
+
+  // ---- Memoised styles & constants ----------------------------------------
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const INSIGHT_COLORS: Record<string, string> = useMemo(
+    () => ({
+      warning: colors.warning,
+      info: colors.info,
+      opportunity: colors.accent,
+    }),
+    [colors],
+  );
 
   // ---- Effects ------------------------------------------------------------
   useEffect(() => {
@@ -410,226 +413,227 @@ export default function HomeScreen() {
 // Styles
 // ===========================================================================
 
-const styles = StyleSheet.create({
-  // -- Layout ---------------------------------------------------------------
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
-    paddingHorizontal: spacing.xl,
-  },
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    // -- Layout ---------------------------------------------------------------
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContent: {
+      paddingHorizontal: spacing.xl,
+    },
 
-  // -- Header ---------------------------------------------------------------
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xl,
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  greeting: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.text.primary,
-  },
-  bellContainer: {
-    position: 'relative',
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bellIcon: {
-    fontSize: 22,
-  },
-  dotBadge: {
-    position: 'absolute',
-    top: 2,
-    right: 0,
-  },
+    // -- Header ---------------------------------------------------------------
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingTop: spacing.md,
+      paddingBottom: spacing.xl,
+    },
+    headerLeft: {
+      flex: 1,
+    },
+    greeting: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: colors.text.primary,
+    },
+    bellContainer: {
+      position: 'relative',
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    bellIcon: {
+      fontSize: 22,
+    },
+    dotBadge: {
+      position: 'absolute',
+      top: 2,
+      right: 0,
+    },
 
-  // -- Hero Card ------------------------------------------------------------
-  heroLabel: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    marginBottom: spacing.xs,
-  },
-  heroValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-  },
-  heroValue: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: colors.text.primary,
-    fontVariant: ['tabular-nums'],
-  },
-  eyeIcon: {
-    fontSize: 22,
-    marginLeft: spacing.md,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  badgeSpacing: {
-    marginLeft: spacing.sm,
-  },
-  heroDivider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginBottom: spacing.lg,
-  },
-  heroSubRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  heroSubItem: {
-    flex: 1,
-  },
-  heroSubSeparator: {
-    width: 1,
-    height: 36,
-    backgroundColor: colors.border,
-    marginHorizontal: spacing.lg,
-  },
-  heroSubLabel: {
-    fontSize: 12,
-    color: colors.text.secondary,
-    marginBottom: spacing.xs,
-  },
-  heroSubValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text.primary,
-    fontVariant: ['tabular-nums'],
-  },
+    // -- Hero Card ------------------------------------------------------------
+    heroLabel: {
+      fontSize: 14,
+      color: colors.text.secondary,
+      marginBottom: spacing.xs,
+    },
+    heroValueRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: spacing.sm,
+    },
+    heroValue: {
+      fontSize: 32,
+      fontWeight: '700',
+      color: colors.text.primary,
+      fontVariant: ['tabular-nums'],
+    },
+    eyeIcon: {
+      fontSize: 22,
+      marginLeft: spacing.md,
+    },
+    badgeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+    badgeSpacing: {
+      marginLeft: spacing.sm,
+    },
+    heroDivider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginBottom: spacing.lg,
+    },
+    heroSubRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
+    heroSubItem: {
+      flex: 1,
+    },
+    heroSubSeparator: {
+      width: 1,
+      height: 36,
+      backgroundColor: colors.border,
+      marginHorizontal: spacing.lg,
+    },
+    heroSubLabel: {
+      fontSize: 12,
+      color: colors.text.secondary,
+      marginBottom: spacing.xs,
+    },
+    heroSubValue: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text.primary,
+      fontVariant: ['tabular-nums'],
+    },
 
-  // -- Section titles -------------------------------------------------------
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text.primary,
-    marginBottom: spacing.md,
-    marginTop: spacing.xl,
-  },
-  sectionTitleInCard: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text.primary,
-    marginBottom: spacing.md,
-  },
+    // -- Section titles -------------------------------------------------------
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text.primary,
+      marginBottom: spacing.md,
+      marginTop: spacing.xl,
+    },
+    sectionTitleInCard: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text.primary,
+      marginBottom: spacing.md,
+    },
 
-  // -- Time range pills -----------------------------------------------------
-  timeRangeRow: {
-    flexDirection: 'row',
-    marginBottom: spacing.lg,
-  },
-  timeRangePill: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginRight: spacing.sm,
-  },
-  timeRangePillSelected: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  timeRangeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.text.secondary,
-  },
-  timeRangeTextSelected: {
-    color: colors.background,
-  },
+    // -- Time range pills -----------------------------------------------------
+    timeRangeRow: {
+      flexDirection: 'row',
+      marginBottom: spacing.lg,
+    },
+    timeRangePill: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs + 2,
+      borderRadius: radius.full,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginRight: spacing.sm,
+    },
+    timeRangePillSelected: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    timeRangeText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.text.secondary,
+    },
+    timeRangeTextSelected: {
+      color: colors.background,
+    },
 
-  // -- Connect institution button -------------------------------------------
-  connectButton: {
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderStyle: 'dashed',
-    borderRadius: radius.md,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.xs,
-  },
-  connectButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text.secondary,
-  },
+    // -- Connect institution button -------------------------------------------
+    connectButton: {
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      borderStyle: 'dashed',
+      borderRadius: radius.md,
+      paddingVertical: spacing.lg,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: spacing.xs,
+    },
+    connectButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text.secondary,
+    },
 
-  // -- Insight cards --------------------------------------------------------
-  insightCard: {
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderLeftWidth: 4,
-    padding: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  insightContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: spacing.md,
-  },
-  insightIcon: {
-    fontSize: 20,
-    marginRight: spacing.md,
-    marginTop: 2,
-  },
-  insightText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.text.primary,
-    lineHeight: 20,
-  },
-  insightAction: {
-    alignSelf: 'flex-end',
-  },
-  insightActionText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
+    // -- Insight cards --------------------------------------------------------
+    insightCard: {
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderLeftWidth: 4,
+      padding: spacing.lg,
+      marginBottom: spacing.sm,
+    },
+    insightContent: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      marginBottom: spacing.md,
+    },
+    insightIcon: {
+      fontSize: 20,
+      marginRight: spacing.md,
+      marginTop: 2,
+    },
+    insightText: {
+      flex: 1,
+      fontSize: 14,
+      color: colors.text.primary,
+      lineHeight: 20,
+    },
+    insightAction: {
+      alignSelf: 'flex-end',
+    },
+    insightActionText: {
+      fontSize: 13,
+      fontWeight: '600',
+    },
 
-  // -- Empty state -----------------------------------------------------------
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: spacing.lg,
-  },
-  emptyText: {
-    fontSize: 15,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: spacing.xl,
-    paddingHorizontal: spacing.md,
-  },
-  emptyButton: {
-    backgroundColor: colors.accent,
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-  },
-  emptyButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.background,
-  },
-});
+    // -- Empty state -----------------------------------------------------------
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+    },
+    emptyIcon: {
+      fontSize: 48,
+      marginBottom: spacing.lg,
+    },
+    emptyText: {
+      fontSize: 15,
+      color: colors.text.secondary,
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: spacing.xl,
+      paddingHorizontal: spacing.md,
+    },
+    emptyButton: {
+      backgroundColor: colors.accent,
+      paddingHorizontal: spacing.xxl,
+      paddingVertical: spacing.md,
+      borderRadius: radius.md,
+    },
+    emptyButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.background,
+    },
+  });

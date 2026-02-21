@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { colors } from '../../theme/colors';
+import { useSettingsStore } from '../../stores/settingsStore';
 
 interface MiniLineChartProps {
   data: number[];
@@ -18,6 +18,8 @@ export function MiniLineChart({
   color,
   strokeWidth = 1.5,
 }: MiniLineChartProps) {
+  const colors = useSettingsStore((s) => s.colors);
+
   if (data.length < 2) return null;
 
   const isPositive = data[data.length - 1] >= data[0];

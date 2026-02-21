@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
-import { colors } from '../../src/theme/colors';
+import { type ThemeColors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useCardsStore } from '../../src/stores/cardsStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -60,6 +60,8 @@ export default function CardsScreen() {
 
   const { valuesHidden } = useAuthStore();
   const { t, currency } = useSettingsStore();
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
 
   // ---- Effects ------------------------------------------------------------
@@ -399,72 +401,73 @@ function cleanDescription(desc: string): string {
 // Styles
 // ===========================================================================
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { paddingBottom: 100 },
-  contentPadding: { paddingHorizontal: spacing.xl },
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.background },
+    scrollContent: { paddingBottom: 100 },
+    contentPadding: { paddingHorizontal: spacing.xl },
 
-  // Header
-  header: { paddingTop: spacing.md, paddingBottom: spacing.xl, alignItems: 'center' },
-  headerTitle: { fontSize: 24, fontWeight: '700', color: colors.text.primary },
+    // Header
+    header: { paddingTop: spacing.md, paddingBottom: spacing.xl, alignItems: 'center' },
+    headerTitle: { fontSize: 24, fontWeight: '700', color: colors.text.primary },
 
-  // Carousel
-  carouselContent: { paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2 },
-  cardWrapper: { width: CARD_WIDTH, marginHorizontal: 8 },
+    // Carousel
+    carouselContent: { paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2 },
+    cardWrapper: { width: CARD_WIDTH, marginHorizontal: 8 },
 
-  // Page dots
-  dotsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: spacing.md, marginBottom: spacing.xl },
-  dot: { width: 6, height: 6, borderRadius: 3, marginHorizontal: 4 },
+    // Page dots
+    dotsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: spacing.md, marginBottom: spacing.xl },
+    dot: { width: 6, height: 6, borderRadius: 3, marginHorizontal: 4 },
 
-  // Invoice
-  invoiceCard: {
-    backgroundColor: colors.card, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
-    padding: spacing.xl, marginBottom: spacing.xl,
-  },
-  invoiceColumns: { flexDirection: 'row', justifyContent: 'space-between' },
-  invoiceColumn: { flex: 1 },
-  invoiceLabel: { fontSize: 12, color: colors.text.secondary, marginBottom: spacing.xs },
-  invoiceValueLarge: { fontSize: 22, fontWeight: '700', color: colors.text.primary, fontVariant: ['tabular-nums'] },
-  invoiceValueSecondary: { fontSize: 18, fontWeight: '600', color: colors.text.secondary, fontVariant: ['tabular-nums'] },
+    // Invoice
+    invoiceCard: {
+      backgroundColor: colors.card, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+      padding: spacing.xl, marginBottom: spacing.xl,
+    },
+    invoiceColumns: { flexDirection: 'row', justifyContent: 'space-between' },
+    invoiceColumn: { flex: 1 },
+    invoiceLabel: { fontSize: 12, color: colors.text.secondary, marginBottom: spacing.xs },
+    invoiceValueLarge: { fontSize: 22, fontWeight: '700', color: colors.text.primary, fontVariant: ['tabular-nums'] },
+    invoiceValueSecondary: { fontSize: 18, fontWeight: '600', color: colors.text.secondary, fontVariant: ['tabular-nums'] },
 
-  // Section title
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.text.primary, marginBottom: spacing.md, marginTop: spacing.sm },
+    // Section title
+    sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.text.primary, marginBottom: spacing.md, marginTop: spacing.sm },
 
-  // Category spending
-  categoryRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
-  catIconCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm },
-  catEmoji: { fontSize: 16 },
-  categoryLabel: { fontSize: 14, color: colors.text.primary, width: 90 },
-  categoryBarTrack: { flex: 1, height: 6, backgroundColor: colors.elevated, borderRadius: 3, marginHorizontal: spacing.sm, overflow: 'hidden' },
-  categoryBarFill: { height: '100%', borderRadius: 3 },
-  categoryValue: { fontSize: 13, fontWeight: '600', color: colors.text.secondary, fontVariant: ['tabular-nums'], textAlign: 'right', minWidth: 80 },
+    // Category spending
+    categoryRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
+    catIconCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm },
+    catEmoji: { fontSize: 16 },
+    categoryLabel: { fontSize: 14, color: colors.text.primary, width: 90 },
+    categoryBarTrack: { flex: 1, height: 6, backgroundColor: colors.elevated, borderRadius: 3, marginHorizontal: spacing.sm, overflow: 'hidden' },
+    categoryBarFill: { height: '100%', borderRadius: 3 },
+    categoryValue: { fontSize: 13, fontWeight: '600', color: colors.text.secondary, fontVariant: ['tabular-nums'], textAlign: 'right', minWidth: 80 },
 
-  // Transactions
-  txGroup: { marginBottom: spacing.lg },
-  txDateHeader: { fontSize: 13, fontWeight: '600', color: colors.text.secondary, marginBottom: spacing.sm },
-  txRow: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.card, borderRadius: radius.md,
-    padding: spacing.md, marginBottom: spacing.xs,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  txIconCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md },
-  txEmoji: { fontSize: 18 },
-  txInfo: { flex: 1 },
-  txDescription: { fontSize: 14, fontWeight: '500', color: colors.text.primary },
-  txSubtext: { fontSize: 12, color: colors.text.muted, marginTop: 2 },
-  txAmount: { fontSize: 14, fontWeight: '600', color: '#FF6B6B', fontVariant: ['tabular-nums'], textAlign: 'right', minWidth: 80 },
+    // Transactions
+    txGroup: { marginBottom: spacing.lg },
+    txDateHeader: { fontSize: 13, fontWeight: '600', color: colors.text.secondary, marginBottom: spacing.sm },
+    txRow: {
+      flexDirection: 'row', alignItems: 'center',
+      backgroundColor: colors.card, borderRadius: radius.md,
+      padding: spacing.md, marginBottom: spacing.xs,
+      borderWidth: 1, borderColor: colors.border,
+    },
+    txIconCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md },
+    txEmoji: { fontSize: 18 },
+    txInfo: { flex: 1 },
+    txDescription: { fontSize: 14, fontWeight: '500', color: colors.text.primary },
+    txSubtext: { fontSize: 12, color: colors.text.muted, marginTop: 2 },
+    txAmount: { fontSize: 14, fontWeight: '600', color: colors.negative, fontVariant: ['tabular-nums'], textAlign: 'right', minWidth: 80 },
 
-  // Transaction empty state
-  txEmptyState: { alignItems: 'center', paddingVertical: spacing.xxxl },
-  txEmptyIcon: { fontSize: 40, marginBottom: spacing.md },
-  txEmptyText: { fontSize: 14, color: colors.text.secondary, textAlign: 'center' },
+    // Transaction empty state
+    txEmptyState: { alignItems: 'center', paddingVertical: spacing.xxxl },
+    txEmptyIcon: { fontSize: 40, marginBottom: spacing.md },
+    txEmptyText: { fontSize: 14, color: colors.text.secondary, textAlign: 'center' },
 
-  // Empty state
-  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 80, paddingHorizontal: spacing.xl },
-  emptyIcon: { fontSize: 48, marginBottom: spacing.lg },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.text.primary, textAlign: 'center', marginBottom: spacing.sm },
-  emptyDescription: { fontSize: 14, color: colors.text.secondary, textAlign: 'center', marginBottom: spacing.xl },
-  emptyButton: { backgroundColor: colors.accent, paddingHorizontal: spacing.xxl, paddingVertical: spacing.md, borderRadius: radius.md },
-  emptyButtonText: { fontSize: 14, fontWeight: '600', color: colors.background },
-});
+    // Empty state
+    emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 80, paddingHorizontal: spacing.xl },
+    emptyIcon: { fontSize: 48, marginBottom: spacing.lg },
+    emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.text.primary, textAlign: 'center', marginBottom: spacing.sm },
+    emptyDescription: { fontSize: 14, color: colors.text.secondary, textAlign: 'center', marginBottom: spacing.xl },
+    emptyButton: { backgroundColor: colors.accent, paddingHorizontal: spacing.xxl, paddingVertical: spacing.md, borderRadius: radius.md },
+    emptyButtonText: { fontSize: 14, fontWeight: '600', color: colors.background },
+  });
