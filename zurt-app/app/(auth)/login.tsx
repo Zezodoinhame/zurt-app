@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
 import { colors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -24,14 +23,10 @@ import { useSettingsStore } from '../../src/stores/settingsStore';
 import { Input } from '../../src/components/ui/Input';
 import { saveToken } from '../../src/services/api';
 
-WebBrowser.maybeCompleteAuthSession();
-
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://zurt.com.br/api';
 
-// Google OAuth - web client ID from .env
-const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
-
-const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/userinfo/v2/me';
+// Backend Google OAuth URL — opens Google consent via the backend
+const GOOGLE_AUTH_URL = `${API_BASE}/auth/google`;
 
 type Mode = 'login' | 'register';
 
@@ -52,91 +47,36 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleAvailable, setGoogleAvailable] = useState(true);
 
   const displayError = error || storeError || '';
 
   // -------------------------------------------------------------------------
-  // Google Auth via expo-auth-session (direct, no backend redirect)
+  // Google Auth via WebBrowser — opens backend /api/auth/google in browser
+  // Backend redirects to Google, user authenticates, backend redirects back
+  // with token. We try to intercept the redirect URL to extract the JWT.
   // -------------------------------------------------------------------------
-  const hasGoogleClientId = !!GOOGLE_WEB_CLIENT_ID;
-
-  const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
-    webClientId: GOOGLE_WEB_CLIENT_ID || undefined,
-    scopes: ['profile', 'email'],
-  });
-
-  // Handle Google OAuth response
-  useEffect(() => {
-    if (!googleResponse) return;
-
-    if (googleResponse.type === 'success') {
-      const auth = googleResponse.authentication;
-      if (auth) {
-        handleGoogleAuth(auth);
-      } else {
-        // No authentication object — try extracting from params (id_token flow)
-        const idToken = googleResponse.params?.id_token;
-        const accessTokenParam = googleResponse.params?.access_token;
-        if (idToken || accessTokenParam) {
-          handleGoogleAuth({ accessToken: accessTokenParam ?? '', idToken: idToken });
-        } else {
-          console.log('[ZURT Auth] Google OAuth success but no tokens');
-          setGoogleLoading(false);
-          setError(t('login.googleUnavailable'));
-        }
-      }
-    } else if (googleResponse.type === 'error') {
-      console.log('[ZURT Auth] Google OAuth error:', 'error' in googleResponse ? googleResponse.error : '');
-      setGoogleLoading(false);
-      setError(t('login.googleUnavailable'));
-    } else {
-      // cancel or dismiss
-      console.log('[ZURT Auth] Google OAuth:', googleResponse.type);
-      setGoogleLoading(false);
-    }
-  }, [googleResponse]);
-
-  const handleGoogleAuth = async (authentication: { accessToken: string; idToken?: string }) => {
-    const { accessToken } = authentication;
-    console.log('[ZURT Auth] Google auth success, accessToken:', accessToken ? 'YES' : 'NO');
+  const handleGoogleLogin = useCallback(async () => {
+    Keyboard.dismiss();
+    setError('');
+    clearError();
+    setGoogleLoading(true);
 
     try {
-      // Step 1: Get Google user email
-      let googleEmail = '';
+      // Open the backend's Google OAuth flow in an in-app browser.
+      // We pass our custom scheme so the browser closes if the backend
+      // ever redirects to zurt://...
+      const result = await WebBrowser.openAuthSessionAsync(
+        GOOGLE_AUTH_URL,
+        'zurt://',
+      );
 
-      if (accessToken) {
-        try {
-          const res = await fetch(GOOGLE_USERINFO_URL, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
-          if (res.ok) {
-            const info = await res.json();
-            googleEmail = info.email ?? '';
-            console.log('[ZURT Auth] Google user email:', googleEmail);
-          }
-        } catch (err: any) {
-          console.log('[ZURT Auth] Failed to fetch Google userinfo:', err?.message);
-        }
-      }
-
-      if (!googleEmail) {
-        setError(t('login.googleUnavailable'));
-        return;
-      }
-
-      // Step 2: Try POST /api/auth/login with Google email
-      console.log('[ZURT Auth] Trying POST /auth/login with Google email...');
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ email: googleEmail }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const jwtToken = data.token ?? data.access_token ?? data.jwt;
-        if (jwtToken) {
-          console.log('[ZURT Auth] Login with Google email success');
+      if (result.type === 'success' && result.url) {
+        // Try to extract JWT token from the redirect URL
+        const tokenMatch = result.url.match(/[?&]token=([^&]+)/);
+        if (tokenMatch) {
+          const jwtToken = decodeURIComponent(tokenMatch[1]);
+          console.log('[ZURT Auth] Got JWT from Google redirect');
           await saveToken(jwtToken);
           const restored = await restoreSession();
           if (restored) {
@@ -145,32 +85,21 @@ export default function LoginScreen() {
             return;
           }
         }
+        // Redirect happened but no token found
+        console.log('[ZURT Auth] Redirect URL had no token:', result.url);
+        Alert.alert(t('common.error'), t('login.googleCreateAccount'));
+      } else {
+        // User cancelled / dismissed the browser
+        console.log('[ZURT Auth] Google auth browser:', result.type);
       }
-
-      // User doesn't exist in backend — show "create account first" message
-      console.log('[ZURT Auth] User not found in backend, status:', res.status);
-      Alert.alert(t('common.error'), t('login.googleCreateAccount'));
     } catch (err: any) {
-      console.log('[ZURT Auth] handleGoogleAuth error:', err?.message ?? err);
-      setError(t('login.googleUnavailable'));
+      console.log('[ZURT Auth] Google WebBrowser error:', err?.message ?? err);
+      // Browser approach failed — disable Google button gracefully
+      setGoogleAvailable(false);
     } finally {
       setGoogleLoading(false);
     }
-  };
-
-  const handleGoogleLogin = useCallback(() => {
-    Keyboard.dismiss();
-    setError('');
-    clearError();
-
-    if (!hasGoogleClientId || !googleRequest) {
-      Alert.alert(t('common.error'), t('login.googleUnavailable'));
-      return;
-    }
-
-    setGoogleLoading(true);
-    googlePromptAsync();
-  }, [hasGoogleClientId, googleRequest, googlePromptAsync, clearError, t]);
+  }, [clearError, t, restoreSession, router]);
 
   // -------------------------------------------------------------------------
   // Email/password auth
@@ -267,17 +196,19 @@ export default function LoginScreen() {
           <View style={styles.form}>
             {/* Google login button */}
             <TouchableOpacity
-              style={[styles.googleButton, googleLoading && styles.googleButtonDisabled]}
+              style={[styles.googleButton, (!googleAvailable || googleLoading) && styles.googleButtonDisabled]}
               onPress={handleGoogleLogin}
               activeOpacity={0.7}
-              disabled={googleLoading || isLoading}
+              disabled={!googleAvailable || googleLoading || isLoading}
             >
               {googleLoading ? (
                 <ActivityIndicator size="small" color="#4285F4" style={{ marginRight: spacing.sm }} />
               ) : (
-                <Text style={styles.googleIcon}>G</Text>
+                <Text style={[styles.googleIcon, !googleAvailable && { color: '#999' }]}>G</Text>
               )}
-              <Text style={styles.googleButtonText}>{t('login.googleLogin')}</Text>
+              <Text style={[styles.googleButtonText, !googleAvailable && { color: '#999' }]}>
+                {googleAvailable ? t('login.googleLogin') : t('login.googleFinalVersion')}
+              </Text>
             </TouchableOpacity>
 
             {/* Divider */}
