@@ -971,3 +971,59 @@ export async function fetchInvestmentSummary(): Promise<any> {
     null,
   );
 }
+
+// =============================================================================
+// AI Agent
+// =============================================================================
+
+export async function fetchAIInsights(message?: string): Promise<{
+  message: string;
+  suggestions: string[];
+}> {
+  if (_isDemoMode) {
+    return {
+      message:
+        'Olá! Sou o ZURT Agent, seu consultor financeiro inteligente. ' +
+        'No modo demonstração, não tenho acesso a dados reais. ' +
+        'Faça login com sua conta para receber insights personalizados sobre seu portfólio.',
+      suggestions: ['Como funciona?', 'Quais análises você faz?'],
+    };
+  }
+
+  const data = await apiRequest<any>('/ai/insights', {
+    method: 'POST',
+    body: JSON.stringify({ message: message ?? undefined }),
+  });
+
+  return {
+    message: data.message ?? '',
+    suggestions: data.suggestions ?? [],
+  };
+}
+
+export async function sendAIChat(
+  message: string,
+  conversationId?: string,
+): Promise<{
+  message: string;
+  conversationId: string;
+  suggestions?: string[];
+}> {
+  if (_isDemoMode) {
+    return {
+      message: 'No modo demonstração, o ZURT Agent não está disponível. Faça login para usar.',
+      conversationId: 'demo',
+    };
+  }
+
+  const data = await apiRequest<any>('/ai/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message, conversationId }),
+  });
+
+  return {
+    message: data.message ?? '',
+    conversationId: data.conversationId ?? conversationId ?? '',
+    suggestions: data.suggestions,
+  };
+}

@@ -5,6 +5,7 @@ export const translations: Record<Language, Record<string, string>> = {
     // Tabs
     'tab.home': 'Home',
     'tab.wallet': 'Carteira',
+    'tab.agent': 'Agent',
     'tab.cards': 'Cartões',
     'tab.alerts': 'Alertas',
     'tab.profile': 'Perfil',
@@ -231,11 +232,20 @@ export const translations: Record<Language, Record<string, string>> = {
     // Biometric
     'biometric.enablePrompt': 'Autentique-se para ativar a biometria',
     'biometric.notAvailable': 'Biometria não disponível neste dispositivo',
+
+    // Agent
+    'agent.title': 'ZURT Agent',
+    'agent.subtitle': 'Seu consultor financeiro inteligente',
+    'agent.emptyTitle': 'Seu assistente financeiro',
+    'agent.emptyDescription': 'Analiso seu portfólio real e gero insights personalizados com inteligência artificial.',
+    'agent.inputPlaceholder': 'Pergunte sobre seus investimentos...',
+    'agent.rateLimited': 'Você atingiu o limite de consultas do seu plano. Faça upgrade para continuar.',
   },
   en: {
     // Tabs
     'tab.home': 'Home',
     'tab.wallet': 'Wallet',
+    'tab.agent': 'Agent',
     'tab.cards': 'Cards',
     'tab.alerts': 'Alerts',
     'tab.profile': 'Profile',
@@ -462,11 +472,20 @@ export const translations: Record<Language, Record<string, string>> = {
     // Biometric
     'biometric.enablePrompt': 'Authenticate to enable biometrics',
     'biometric.notAvailable': 'Biometrics not available on this device',
+
+    // Agent
+    'agent.title': 'ZURT Agent',
+    'agent.subtitle': 'Your intelligent financial advisor',
+    'agent.emptyTitle': 'Your financial assistant',
+    'agent.emptyDescription': 'I analyze your real portfolio and generate personalized insights with artificial intelligence.',
+    'agent.inputPlaceholder': 'Ask about your investments...',
+    'agent.rateLimited': 'You have reached your plan\'s query limit. Upgrade to continue.',
   },
   zh: {
     // Tabs
     'tab.home': '首页',
     'tab.wallet': '钱包',
+    'tab.agent': '助手',
     'tab.cards': '卡片',
     'tab.alerts': '提醒',
     'tab.profile': '个人资料',
@@ -693,11 +712,20 @@ export const translations: Record<Language, Record<string, string>> = {
     // Biometric
     'biometric.enablePrompt': '验证以启用生物识别',
     'biometric.notAvailable': '此设备不支持生物识别',
+
+    // Agent
+    'agent.title': 'ZURT Agent',
+    'agent.subtitle': '您的智能金融顾问',
+    'agent.emptyTitle': '您的金融助手',
+    'agent.emptyDescription': '我分析您的真实投资组合，利用人工智能生成个性化洞察。',
+    'agent.inputPlaceholder': '询问您的投资...',
+    'agent.rateLimited': '您已达到计划的查询上限。升级以继续。',
   },
   ar: {
     // Tabs
     'tab.home': 'الرئيسية',
     'tab.wallet': 'المحفظة',
+    'tab.agent': 'المساعد',
     'tab.cards': 'البطاقات',
     'tab.alerts': 'التنبيهات',
     'tab.profile': 'الملف الشخصي',
@@ -924,5 +952,13 @@ export const translations: Record<Language, Record<string, string>> = {
     // Biometric
     'biometric.enablePrompt': 'المصادقة لتفعيل القياسات الحيوية',
     'biometric.notAvailable': 'القياسات الحيوية غير متاحة على هذا الجهاز',
+
+    // Agent
+    'agent.title': 'ZURT Agent',
+    'agent.subtitle': 'مستشارك المالي الذكي',
+    'agent.emptyTitle': 'مساعدك المالي',
+    'agent.emptyDescription': 'أحلل محفظتك الحقيقية وأقدم رؤى مخصصة باستخدام الذكاء الاصطناعي.',
+    'agent.inputPlaceholder': 'اسأل عن استثماراتك...',
+    'agent.rateLimited': 'لقد وصلت إلى حد الاستفسارات في خطتك. قم بالترقية للمتابعة.',
   },
 };

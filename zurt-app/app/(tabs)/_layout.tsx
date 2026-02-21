@@ -69,6 +69,14 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="agent"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="✨" label={t('tab.agent')} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="cards"
         options={{
           tabBarIcon: ({ focused }) => (
