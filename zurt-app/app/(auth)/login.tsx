@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,11 +9,13 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
 import { colors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -25,9 +27,103 @@ import { saveToken } from '../../src/services/api';
 WebBrowser.maybeCompleteAuthSession();
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://zurt.com.br/api';
-const GOOGLE_CALLBACK_URL = 'zurt://auth-callback';
+
+// Google OAuth client IDs - configure these in .env
+// EXPO_PUBLIC_GOOGLE_CLIENT_ID     -> used in Expo Go and as default
+// EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID -> web builds
+// EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID -> standalone iOS builds
+// EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID -> standalone Android builds
+const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? '';
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
+const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '';
+const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '';
+
+const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/userinfo/v2/me';
 
 type Mode = 'login' | 'register';
+
+// ---------------------------------------------------------------------------
+// Helper: try multiple backend endpoints to exchange Google token for JWT
+// ---------------------------------------------------------------------------
+async function exchangeGoogleTokenForJWT(params: {
+  idToken?: string;
+  accessToken: string;
+  email: string;
+  name: string;
+}): Promise<string | null> {
+  const { idToken, accessToken, email, name } = params;
+
+  // Attempt 1: POST /api/auth/google/mobile  (dedicated mobile endpoint)
+  try {
+    console.log('[ZURT Auth] Trying POST /auth/google/mobile...');
+    const res = await fetch(`${API_BASE}/auth/google/mobile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ id_token: idToken, access_token: accessToken, email, name }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const token = data.token ?? data.access_token ?? data.jwt;
+      if (token) {
+        console.log('[ZURT Auth] /auth/google/mobile success');
+        return token;
+      }
+    }
+    console.log('[ZURT Auth] /auth/google/mobile status:', res.status);
+  } catch (err: any) {
+    console.log('[ZURT Auth] /auth/google/mobile error:', err?.message);
+  }
+
+  // Attempt 2: POST /api/auth/google/callback  (reuse existing callback endpoint)
+  try {
+    console.log('[ZURT Auth] Trying POST /auth/google/callback...');
+    const res = await fetch(`${API_BASE}/auth/google/callback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ id_token: idToken, access_token: accessToken, email, name }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const token = data.token ?? data.access_token ?? data.jwt;
+      if (token) {
+        console.log('[ZURT Auth] /auth/google/callback success');
+        return token;
+      }
+    }
+    console.log('[ZURT Auth] /auth/google/callback status:', res.status);
+  } catch (err: any) {
+    console.log('[ZURT Auth] /auth/google/callback error:', err?.message);
+  }
+
+  // Attempt 3: POST /api/auth/login with google_token field
+  if (email) {
+    try {
+      console.log('[ZURT Auth] Trying POST /auth/login with google_token...');
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ email, google_token: idToken || accessToken }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const token = data.token ?? data.access_token ?? data.jwt;
+        if (token) {
+          console.log('[ZURT Auth] /auth/login with google_token success');
+          return token;
+        }
+      }
+      console.log('[ZURT Auth] /auth/login with google_token status:', res.status);
+    } catch (err: any) {
+      console.log('[ZURT Auth] /auth/login with google_token error:', err?.message);
+    }
+  }
+
+  return null;
+}
+
+// ===========================================================================
+// LoginScreen
+// ===========================================================================
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -45,6 +141,121 @@ export default function LoginScreen() {
 
   const displayError = error || storeError || '';
 
+  // -------------------------------------------------------------------------
+  // Google Auth via expo-auth-session (direct, no backend redirect)
+  // -------------------------------------------------------------------------
+  const hasGoogleClientId = !!(GOOGLE_CLIENT_ID || GOOGLE_WEB_CLIENT_ID || GOOGLE_IOS_CLIENT_ID || GOOGLE_ANDROID_CLIENT_ID);
+
+  const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
+    clientId: GOOGLE_CLIENT_ID || undefined,
+    webClientId: GOOGLE_WEB_CLIENT_ID || undefined,
+    iosClientId: GOOGLE_IOS_CLIENT_ID || undefined,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID || undefined,
+    scopes: ['profile', 'email'],
+  });
+
+  // Handle Google OAuth response
+  useEffect(() => {
+    if (!googleResponse) return;
+
+    if (googleResponse.type === 'success') {
+      const auth = googleResponse.authentication;
+      if (auth) {
+        handleGoogleAuth(auth);
+      } else {
+        // No authentication object — try extracting from params (id_token flow)
+        const idToken = googleResponse.params?.id_token;
+        const accessTokenParam = googleResponse.params?.access_token;
+        if (idToken || accessTokenParam) {
+          handleGoogleAuth({ accessToken: accessTokenParam ?? '', idToken: idToken });
+        } else {
+          console.log('[ZURT Auth] Google OAuth success but no tokens');
+          setGoogleLoading(false);
+          setError(t('login.googleUnavailable'));
+        }
+      }
+    } else if (googleResponse.type === 'error') {
+      console.log('[ZURT Auth] Google OAuth error:', 'error' in googleResponse ? googleResponse.error : '');
+      setGoogleLoading(false);
+      setError(t('login.googleUnavailable'));
+    } else {
+      // cancel or dismiss
+      console.log('[ZURT Auth] Google OAuth:', googleResponse.type);
+      setGoogleLoading(false);
+    }
+  }, [googleResponse]);
+
+  const handleGoogleAuth = async (authentication: { accessToken: string; idToken?: string }) => {
+    const { accessToken, idToken } = authentication;
+    console.log('[ZURT Auth] Google auth success, idToken:', idToken ? 'YES' : 'NO', 'accessToken:', accessToken ? 'YES' : 'NO');
+
+    try {
+      // Step 1: Get Google user info (email + name)
+      let googleEmail = '';
+      let googleName = '';
+
+      if (accessToken) {
+        try {
+          const res = await fetch(GOOGLE_USERINFO_URL, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          if (res.ok) {
+            const info = await res.json();
+            googleEmail = info.email ?? '';
+            googleName = info.name ?? '';
+            console.log('[ZURT Auth] Google user:', googleEmail, googleName);
+          }
+        } catch (err: any) {
+          console.log('[ZURT Auth] Failed to fetch Google userinfo:', err?.message);
+        }
+      }
+
+      // Step 2: Try to exchange Google token for ZURT JWT via backend
+      const jwtToken = await exchangeGoogleTokenForJWT({
+        idToken,
+        accessToken,
+        email: googleEmail,
+        name: googleName,
+      });
+
+      if (jwtToken) {
+        await saveToken(jwtToken);
+        const restored = await restoreSession();
+        if (restored) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          router.replace('/(tabs)');
+          return;
+        }
+      }
+
+      // Step 3: All backend endpoints failed - show error
+      console.log('[ZURT Auth] All Google token exchange attempts failed');
+      setError(t('login.googleUnavailable'));
+    } catch (err: any) {
+      console.log('[ZURT Auth] handleGoogleAuth error:', err?.message ?? err);
+      setError(t('login.googleUnavailable'));
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = useCallback(() => {
+    Keyboard.dismiss();
+    setError('');
+    clearError();
+
+    if (!hasGoogleClientId || !googleRequest) {
+      Alert.alert(t('common.error'), t('login.googleUnavailable'));
+      return;
+    }
+
+    setGoogleLoading(true);
+    googlePromptAsync();
+  }, [hasGoogleClientId, googleRequest, googlePromptAsync, clearError, t]);
+
+  // -------------------------------------------------------------------------
+  // Email/password auth
+  // -------------------------------------------------------------------------
   const handleLogin = useCallback(async () => {
     Keyboard.dismiss();
     setError('');
@@ -105,60 +316,6 @@ export default function LoginScreen() {
     }
   }, [fullName, email, password, register, router, clearError, t]);
 
-  const handleGoogleLogin = useCallback(async () => {
-    setError('');
-    clearError();
-    setGoogleLoading(true);
-
-    try {
-      // Open backend OAuth with zurt:// deep link as callback
-      const authUrl = `${API_BASE}/auth/google?redirect_uri=${encodeURIComponent(GOOGLE_CALLBACK_URL)}`;
-      console.log('[ZURT Auth] Opening Google OAuth:', authUrl);
-      console.log('[ZURT Auth] Expecting callback at:', GOOGLE_CALLBACK_URL);
-
-      // openAuthSessionAsync listens for GOOGLE_CALLBACK_URL to close the browser
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, GOOGLE_CALLBACK_URL);
-      console.log('[ZURT Auth] WebBrowser result type:', result.type);
-
-      if (result.type === 'success' && result.url) {
-        console.log('[ZURT Auth] Callback URL received:', result.url);
-
-        // Extract token from zurt://auth-callback?token=xxx
-        // new URL() may not work with custom schemes, so parse manually
-        let token: string | null = null;
-        const tokenMatch = result.url.match(/[?&]token=([^&]+)/);
-        if (tokenMatch) {
-          token = decodeURIComponent(tokenMatch[1]);
-        }
-
-        if (token) {
-          console.log('[ZURT Auth] Token extracted, saving and restoring session...');
-          await saveToken(token);
-
-          // restoreSession calls GET /auth/me and sets full auth state
-          const restored = await restoreSession();
-          if (restored) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            router.replace('/(tabs)');
-          } else {
-            setError(t('login.connectionError'));
-          }
-        } else {
-          console.log('[ZURT Auth] No token found in callback URL');
-          setError(t('login.connectionError'));
-        }
-      } else if (result.type === 'cancel' || result.type === 'dismiss') {
-        console.log('[ZURT Auth] Google login cancelled by user');
-        // User cancelled, do nothing
-      }
-    } catch (err: any) {
-      console.log('[ZURT Auth] Google login error:', err?.message ?? err);
-      Alert.alert(t('common.error'), t('login.googleUnavailable'));
-    } finally {
-      setGoogleLoading(false);
-    }
-  }, [clearError, restoreSession, router, t]);
-
   const handleDemo = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     loginDemo();
@@ -183,24 +340,24 @@ export default function LoginScreen() {
             <View style={styles.logoCircle}>
               <Text style={styles.logoText}>Z</Text>
             </View>
-            <Text style={styles.brandName}>
-              ZURT
-            </Text>
-            <Text style={styles.brandSub}>
-              Wealth Intelligence
-            </Text>
+            <Text style={styles.brandName}>ZURT</Text>
+            <Text style={styles.brandSub}>Wealth Intelligence</Text>
           </View>
 
           {/* Form */}
           <View style={styles.form}>
             {/* Google login button */}
             <TouchableOpacity
-              style={styles.googleButton}
+              style={[styles.googleButton, googleLoading && styles.googleButtonDisabled]}
               onPress={handleGoogleLogin}
               activeOpacity={0.7}
               disabled={googleLoading || isLoading}
             >
-              <Text style={styles.googleIcon}>G</Text>
+              {googleLoading ? (
+                <ActivityIndicator size="small" color="#4285F4" style={{ marginRight: spacing.sm }} />
+              ) : (
+                <Text style={styles.googleIcon}>G</Text>
+              )}
               <Text style={styles.googleButtonText}>{t('login.googleLogin')}</Text>
             </TouchableOpacity>
 
@@ -261,9 +418,7 @@ export default function LoginScreen() {
             />
 
             {displayError ? (
-              <Text style={styles.error}>
-                {displayError}
-              </Text>
+              <Text style={styles.error}>{displayError}</Text>
             ) : null}
 
             <View style={styles.buttonContainer}>
@@ -277,9 +432,7 @@ export default function LoginScreen() {
 
             <TouchableOpacity onPress={toggleMode} style={styles.switchMode}>
               <Text style={styles.switchModeText}>
-                {mode === 'login'
-                  ? t('login.noAccount')
-                  : t('login.hasAccount')}
+                {mode === 'login' ? t('login.noAccount') : t('login.hasAccount')}
               </Text>
             </TouchableOpacity>
 
@@ -368,6 +521,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     borderWidth: 1,
     borderColor: '#DADCE0',
+  },
+  googleButtonDisabled: {
+    opacity: 0.7,
   },
   googleIcon: {
     fontSize: 20,
