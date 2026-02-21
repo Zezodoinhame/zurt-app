@@ -202,6 +202,33 @@ export const translations: Record<Language, Record<string, string>> = {
     'currency.BRL': 'BRL (R$)',
     'currency.USD': 'USD ($)',
     'currency.EUR': 'EUR (€)',
+
+    // Profile - About & Edit
+    'profile.editProfile': 'Editar perfil',
+    'profile.fullName': 'Nome completo',
+    'profile.saveProfile': 'Salvar',
+    'profile.editSuccess': 'Perfil atualizado com sucesso!',
+    'profile.editError': 'Erro ao atualizar perfil',
+    'profile.termsPlaceholder': 'Os termos de uso estão sendo elaborados e serão disponibilizados em breve.',
+    'profile.privacyPlaceholder': 'A política de privacidade está sendo elaborada e será disponibilizada em breve.',
+    'profile.helpTitle': 'Ajuda / FAQ',
+    'profile.faqConnectBank': 'Como conectar meu banco?',
+    'profile.faqConnectBankAnswer': 'Através do Open Finance, regulado pelo Banco Central, você pode conectar suas instituições financeiras de forma segura. Acesse Perfil > Contas conectadas > Conectar via Open Finance.',
+    'profile.faqChangePassword': 'Como alterar minha senha?',
+    'profile.faqChangePasswordAnswer': 'Acesse Perfil > Segurança > Alterar senha. Informe sua senha atual e a nova senha.',
+    'profile.faqZurtToken': 'Como funciona o ZURT Token?',
+    'profile.faqZurtTokenAnswer': 'O ZURT Token é um token de participação na receita da plataforma. Quanto mais você utiliza o ZURT, mais tokens acumula e maior é sua participação na receita distribuída.',
+    'profile.faqDataSecurity': 'Meus dados estão seguros?',
+    'profile.faqDataSecurityAnswer': 'Sim! Utilizamos criptografia de nível bancário, conexões via Open Finance reguladas pelo Banco Central, e seus dados nunca são compartilhados com terceiros.',
+
+    // Login - Google
+    'login.googleLogin': 'Continuar com Google',
+    'login.googleUnavailable': 'Login com Google indisponível no momento',
+    'login.or': 'ou',
+
+    // Biometric
+    'biometric.enablePrompt': 'Autentique-se para ativar a biometria',
+    'biometric.notAvailable': 'Biometria não disponível neste dispositivo',
   },
   en: {
     // Tabs
@@ -404,6 +431,33 @@ export const translations: Record<Language, Record<string, string>> = {
     'currency.BRL': 'BRL (R$)',
     'currency.USD': 'USD ($)',
     'currency.EUR': 'EUR (€)',
+
+    // Profile - About & Edit
+    'profile.editProfile': 'Edit profile',
+    'profile.fullName': 'Full name',
+    'profile.saveProfile': 'Save',
+    'profile.editSuccess': 'Profile updated successfully!',
+    'profile.editError': 'Error updating profile',
+    'profile.termsPlaceholder': 'The terms of use are being prepared and will be available soon.',
+    'profile.privacyPlaceholder': 'The privacy policy is being prepared and will be available soon.',
+    'profile.helpTitle': 'Help / FAQ',
+    'profile.faqConnectBank': 'How do I connect my bank?',
+    'profile.faqConnectBankAnswer': 'Through Open Finance, regulated by the Central Bank, you can connect your financial institutions securely. Go to Profile > Connected accounts > Connect via Open Finance.',
+    'profile.faqChangePassword': 'How do I change my password?',
+    'profile.faqChangePasswordAnswer': 'Go to Profile > Security > Change password. Enter your current password and the new password.',
+    'profile.faqZurtToken': 'How does the ZURT Token work?',
+    'profile.faqZurtTokenAnswer': 'The ZURT Token is a revenue share token. The more you use ZURT, the more tokens you accumulate and the greater your share in the distributed revenue.',
+    'profile.faqDataSecurity': 'Is my data secure?',
+    'profile.faqDataSecurityAnswer': 'Yes! We use bank-grade encryption, Open Finance connections regulated by the Central Bank, and your data is never shared with third parties.',
+
+    // Login - Google
+    'login.googleLogin': 'Continue with Google',
+    'login.googleUnavailable': 'Google login is currently unavailable',
+    'login.or': 'or',
+
+    // Biometric
+    'biometric.enablePrompt': 'Authenticate to enable biometrics',
+    'biometric.notAvailable': 'Biometrics not available on this device',
   },
   zh: {
     // Tabs
@@ -606,6 +660,33 @@ export const translations: Record<Language, Record<string, string>> = {
     'currency.BRL': 'BRL (R$)',
     'currency.USD': 'USD ($)',
     'currency.EUR': 'EUR (€)',
+
+    // Profile - About & Edit
+    'profile.editProfile': '编辑个人资料',
+    'profile.fullName': '全名',
+    'profile.saveProfile': '保存',
+    'profile.editSuccess': '个人资料更新成功！',
+    'profile.editError': '更新个人资料出错',
+    'profile.termsPlaceholder': '使用条款正在准备中，将很快提供。',
+    'profile.privacyPlaceholder': '隐私政策正在准备中，将很快提供。',
+    'profile.helpTitle': '帮助 / 常见问题',
+    'profile.faqConnectBank': '如何连接我的银行？',
+    'profile.faqConnectBankAnswer': '通过央行监管的Open Finance，您可以安全地连接您的金融机构。前往个人资料 > 已连接账户 > 通过Open Finance连接。',
+    'profile.faqChangePassword': '如何修改密码？',
+    'profile.faqChangePasswordAnswer': '前往个人资料 > 安全 > 修改密码。输入当前密码和新密码。',
+    'profile.faqZurtToken': 'ZURT Token如何运作？',
+    'profile.faqZurtTokenAnswer': 'ZURT Token是平台收益分享代币。您使用ZURT越多，积累的代币越多，在分配收益中的份额就越大。',
+    'profile.faqDataSecurity': '我的数据安全吗？',
+    'profile.faqDataSecurityAnswer': '是的！我们使用银行级加密、央行监管的Open Finance连接，您的数据永远不会与第三方共享。',
+
+    // Login - Google
+    'login.googleLogin': '使用Google继续',
+    'login.googleUnavailable': 'Google登录暂时不可用',
+    'login.or': '或',
+
+    // Biometric
+    'biometric.enablePrompt': '验证以启用生物识别',
+    'biometric.notAvailable': '此设备不支持生物识别',
   },
   ar: {
     // Tabs
@@ -808,5 +889,32 @@ export const translations: Record<Language, Record<string, string>> = {
     'currency.BRL': 'BRL (R$)',
     'currency.USD': 'USD ($)',
     'currency.EUR': 'EUR (€)',
+
+    // Profile - About & Edit
+    'profile.editProfile': 'تعديل الملف الشخصي',
+    'profile.fullName': 'الاسم الكامل',
+    'profile.saveProfile': 'حفظ',
+    'profile.editSuccess': 'تم تحديث الملف الشخصي بنجاح!',
+    'profile.editError': 'خطأ في تحديث الملف الشخصي',
+    'profile.termsPlaceholder': 'شروط الاستخدام قيد الإعداد وستكون متاحة قريباً.',
+    'profile.privacyPlaceholder': 'سياسة الخصوصية قيد الإعداد وستكون متاحة قريباً.',
+    'profile.helpTitle': 'المساعدة / الأسئلة الشائعة',
+    'profile.faqConnectBank': 'كيف أربط بنكي؟',
+    'profile.faqConnectBankAnswer': 'من خلال Open Finance المنظم من البنك المركزي، يمكنك ربط مؤسساتك المالية بأمان. انتقل إلى الملف الشخصي > الحسابات المتصلة > الاتصال عبر Open Finance.',
+    'profile.faqChangePassword': 'كيف أغير كلمة المرور؟',
+    'profile.faqChangePasswordAnswer': 'انتقل إلى الملف الشخصي > الأمان > تغيير كلمة المرور. أدخل كلمة المرور الحالية والجديدة.',
+    'profile.faqZurtToken': 'كيف يعمل ZURT Token؟',
+    'profile.faqZurtTokenAnswer': 'ZURT Token هو رمز مشاركة في إيرادات المنصة. كلما استخدمت ZURT أكثر، زادت الرموز المتراكمة وحصتك في الإيرادات الموزعة.',
+    'profile.faqDataSecurity': 'هل بياناتي آمنة؟',
+    'profile.faqDataSecurityAnswer': 'نعم! نستخدم تشفير بنكي، واتصالات Open Finance المنظمة من البنك المركزي، ولا تتم مشاركة بياناتك مع أطراف ثالثة.',
+
+    // Login - Google
+    'login.googleLogin': 'المتابعة مع Google',
+    'login.googleUnavailable': 'تسجيل الدخول بـ Google غير متاح حالياً',
+    'login.or': 'أو',
+
+    // Biometric
+    'biometric.enablePrompt': 'المصادقة لتفعيل القياسات الحيوية',
+    'biometric.notAvailable': 'القياسات الحيوية غير متاحة على هذا الجهاز',
   },
 };

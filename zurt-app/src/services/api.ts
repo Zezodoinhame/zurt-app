@@ -630,7 +630,42 @@ export async function searchInstitutions(search: string): Promise<any[]> {
     const data = await apiRequest<any>(
       `/connections/institutions?search=${encodeURIComponent(search)}`,
     );
-    return data.institutions ?? data ?? [];
+    console.log('[ZURT API] searchInstitutions raw response:', JSON.stringify(data).slice(0, 500));
+
+    // Handle all possible response shapes
+    let results: any[] = [];
+    if (Array.isArray(data)) {
+      results = data;
+    } else if (data?.institutions && Array.isArray(data.institutions)) {
+      results = data.institutions;
+    } else if (data?.data && Array.isArray(data.data)) {
+      results = data.data;
+    } else if (data?.results && Array.isArray(data.results)) {
+      results = data.results;
+    }
+
+    // Sort by relevance: exact name match first, then startsWith, then contains
+    const searchLower = search.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    results.sort((a: any, b: any) => {
+      const nameA = (a.name ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const nameB = (b.name ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+      const exactA = nameA === searchLower ? 0 : 1;
+      const exactB = nameB === searchLower ? 0 : 1;
+      if (exactA !== exactB) return exactA - exactB;
+
+      const startsA = nameA.startsWith(searchLower) ? 0 : 1;
+      const startsB = nameB.startsWith(searchLower) ? 0 : 1;
+      if (startsA !== startsB) return startsA - startsB;
+
+      const containsA = nameA.includes(searchLower) ? 0 : 1;
+      const containsB = nameB.includes(searchLower) ? 0 : 1;
+      if (containsA !== containsB) return containsA - containsB;
+
+      return nameA.localeCompare(nameB);
+    });
+
+    return results;
   } catch {
     return [];
   }

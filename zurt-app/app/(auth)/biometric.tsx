@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { colors } from '../../src/theme/colors';
 import { spacing } from '../../src/theme/spacing';
 import { useAuthStore } from '../../src/stores/authStore';
+import { useSettingsStore } from '../../src/stores/settingsStore';
 import {
   authenticateWithBiometrics,
   checkBiometricAvailability,
@@ -15,6 +16,7 @@ export default function BiometricScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useAuthStore();
+  const { t } = useSettingsStore();
 
   const authenticate = useCallback(async () => {
     try {
@@ -51,29 +53,29 @@ export default function BiometricScreen() {
         </View>
 
         <Text style={styles.title}>
-          {user ? `Olá, ${user.name.split(' ')[0]}` : 'ZURT'}
+          {user ? `${t('greeting.morning').split(' ')[0] || 'Ol\u00E1'}, ${user.name.split(' ')[0]}` : 'ZURT'}
         </Text>
 
         <TouchableOpacity
           onPress={authenticate}
           style={styles.biometricButton}
           activeOpacity={0.7}
-          accessibilityLabel="Autenticar com biometria"
+          accessibilityLabel={t('biometric.enablePrompt')}
         >
           <View style={styles.fingerprint}>
-            <Text style={styles.fingerprintIcon}>👆</Text>
+            <Text style={styles.fingerprintIcon}>{'\uD83D\uDC46'}</Text>
           </View>
         </TouchableOpacity>
 
         <Text style={styles.hint}>
-          Toque para autenticar
+          {t('common.loading').replace('...', '') || 'Toque para autenticar'}
         </Text>
 
         <TouchableOpacity
           onPress={() => router.replace('/(auth)/login')}
           style={styles.fallback}
         >
-          <Text style={styles.fallbackText}>Usar senha</Text>
+          <Text style={styles.fallbackText}>{t('biometric.usePassword') || 'Usar senha'}</Text>
         </TouchableOpacity>
       </View>
     </View>

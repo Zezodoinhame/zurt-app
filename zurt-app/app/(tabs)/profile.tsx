@@ -9,9 +9,12 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import * as LocalAuthentication from 'expo-local-authentication';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { colors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
@@ -23,23 +26,44 @@ import type { Currency } from '../../src/stores/settingsStore';
 import { Toggle } from '../../src/components/ui/Toggle';
 import { Card } from '../../src/components/ui/Card';
 import { formatDate, formatCurrency } from '../../src/utils/formatters';
-import { changePassword } from '../../src/services/api';
+import { changePassword, updateUserProfile } from '../../src/services/api';
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const WHATSAPP_SUPPORT_NUMBER = '5592991234567';
+const WHATSAPP_URL = `https://wa.me/${WHATSAPP_SUPPORT_NUMBER}`;
+const TERMS_URL = 'https://zurt.com.br/termos';
+const PRIVACY_URL = 'https://zurt.com.br/privacidade';
+const BIOMETRIC_STORAGE_KEY = 'biometric_enabled';
 
 // ---------------------------------------------------------------------------
 // Language & Currency options
 // ---------------------------------------------------------------------------
 
 const languageOptions: Array<{ key: Language; flag: string; label: string }> = [
-  { key: 'pt', flag: '🇧🇷', label: 'Português' },
-  { key: 'en', flag: '🇺🇸', label: 'English' },
-  { key: 'zh', flag: '🇨🇳', label: '中文' },
-  { key: 'ar', flag: '🇸🇦', label: 'العربية' },
+  { key: 'pt', flag: '\u{1F1E7}\u{1F1F7}', label: 'Portugu\u00EAs' },
+  { key: 'en', flag: '\u{1F1FA}\u{1F1F8}', label: 'English' },
+  { key: 'zh', flag: '\u{1F1E8}\u{1F1F3}', label: '\u4E2D\u6587' },
+  { key: 'ar', flag: '\u{1F1F8}\u{1F1E6}', label: '\u0627\u0644\u0639\u0631\u0628\u064A\u0629' },
 ];
 
 const currencyOptions: Array<{ key: Currency; flag: string; label: string }> = [
-  { key: 'BRL', flag: '🇧🇷', label: 'BRL (R$)' },
-  { key: 'USD', flag: '🇺🇸', label: 'USD ($)' },
-  { key: 'EUR', flag: '🇪🇺', label: 'EUR (€)' },
+  { key: 'BRL', flag: '\u{1F1E7}\u{1F1F7}', label: 'BRL (R$)' },
+  { key: 'USD', flag: '\u{1F1FA}\u{1F1F8}', label: 'USD ($)' },
+  { key: 'EUR', flag: '\u{1F1EA}\u{1F1FA}', label: 'EUR (\u20AC)' },
+];
+
+// ---------------------------------------------------------------------------
+// FAQ items
+// ---------------------------------------------------------------------------
+
+const FAQ_KEYS = [
+  { q: 'profile.faqConnectBank', a: 'profile.faqConnectBankAnswer' },
+  { q: 'profile.faqChangePassword', a: 'profile.faqChangePasswordAnswer' },
+  { q: 'profile.faqZurtToken', a: 'profile.faqZurtTokenAnswer' },
+  { q: 'profile.faqDataSecurity', a: 'profile.faqDataSecurityAnswer' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -69,7 +93,7 @@ function SettingRow({ icon, label, value, onPress, rightElement, danger }: Setti
       {value && <Text style={styles.settingValue}>{value}</Text>}
       {rightElement}
       {onPress && !rightElement && (
-        <Text style={styles.chevron}>›</Text>
+        <Text style={styles.chevron}>{'\u203A'}</Text>
       )}
     </TouchableOpacity>
   );
@@ -134,7 +158,7 @@ function PickerModal<T extends string>({
                 {opt.label}
               </Text>
               {selected === opt.key && (
-                <Text style={styles.modalCheck}>✓</Text>
+                <Text style={styles.modalCheck}>{'\u2713'}</Text>
               )}
             </TouchableOpacity>
           ))}
@@ -173,7 +197,7 @@ function PasswordModal({
       return;
     }
     if (newPw !== confirmPw) {
-      setError('As senhas não coincidem');
+      setError('As senhas n\u00E3o coincidem');
       return;
     }
     if (newPw.length < 6) {
@@ -264,6 +288,184 @@ function PasswordModal({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Edit Profile Modal
+// ---------------------------------------------------------------------------
+
+function EditProfileModal({
+  visible,
+  onClose,
+  currentName,
+  currentEmail,
+  isDemoMode,
+  t,
+  onSuccess,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  currentName: string;
+  currentEmail: string;
+  isDemoMode: boolean;
+  t: (key: string) => string;
+  onSuccess: (updates: { name: string; email: string; initials: string }) => void;
+}) {
+  const [fullName, setFullName] = useState(currentName);
+  const [email, setEmail] = useState(currentEmail);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSave = async () => {
+    setError('');
+    if (!fullName.trim()) {
+      setError(t('login.nameError'));
+      return;
+    }
+    if (isDemoMode) {
+      Alert.alert('Demo', t('profile.demoUnavailable'));
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const updatedUser = await updateUserProfile({
+        full_name: fullName.trim(),
+        email: email.trim(),
+      });
+      onSuccess({
+        name: updatedUser.name,
+        email: updatedUser.email,
+        initials: updatedUser.initials,
+      });
+      Alert.alert(t('common.ok'), t('profile.editSuccess'));
+      onClose();
+    } catch (err: any) {
+      setError(err?.message ?? t('profile.editError'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClose = () => {
+    setFullName(currentName);
+    setEmail(currentEmail);
+    setError('');
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
+      <TouchableOpacity
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={handleClose}
+      >
+        <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+          <Text style={styles.modalTitle}>{t('profile.editProfile')}</Text>
+
+          <Text style={styles.inputLabel}>{t('profile.fullName')}</Text>
+          <TextInput
+            style={styles.passwordInput}
+            placeholder={t('login.yourName')}
+            placeholderTextColor={colors.text.muted}
+            value={fullName}
+            onChangeText={setFullName}
+            autoCapitalize="words"
+          />
+
+          <Text style={styles.inputLabel}>{t('login.email')}</Text>
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="email@exemplo.com"
+            placeholderTextColor={colors.text.muted}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+          <TouchableOpacity
+            style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color={colors.background} size="small" />
+            ) : (
+              <Text style={styles.saveButtonText}>{t('profile.saveProfile')}</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.modalClose} onPress={handleClose}>
+            <Text style={styles.modalCloseText}>{t('common.cancel')}</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Help / FAQ Modal
+// ---------------------------------------------------------------------------
+
+function HelpModal({
+  visible,
+  onClose,
+  t,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  t: (key: string) => string;
+}) {
+  const [expanded, setExpanded] = useState<number | null>(null);
+
+  const toggleItem = (index: number) => {
+    Haptics.selectionAsync();
+    setExpanded((prev) => (prev === index ? null : index));
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <TouchableOpacity
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <View style={styles.helpModalContent} onStartShouldSetResponder={() => true}>
+          <Text style={styles.modalTitle}>{t('profile.helpTitle')}</Text>
+
+          <ScrollView style={styles.faqScrollView} showsVerticalScrollIndicator={false}>
+            {FAQ_KEYS.map((faq, index) => (
+              <View key={faq.q}>
+                <TouchableOpacity
+                  style={styles.faqQuestion}
+                  onPress={() => toggleItem(index)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.faqQuestionText}>{t(faq.q)}</Text>
+                  <Text style={styles.faqChevron}>
+                    {expanded === index ? '\u2303' : '\u2304'}
+                  </Text>
+                </TouchableOpacity>
+                {expanded === index && (
+                  <View style={styles.faqAnswer}>
+                    <Text style={styles.faqAnswerText}>{t(faq.a)}</Text>
+                  </View>
+                )}
+              </View>
+            ))}
+          </ScrollView>
+
+          <TouchableOpacity style={styles.modalClose} onPress={onClose}>
+            <Text style={styles.modalCloseText}>{t('common.close')}</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
 // ===========================================================================
 // ProfileScreen
 // ===========================================================================
@@ -279,8 +481,10 @@ export default function ProfileScreen() {
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
-  const currentLanguageLabel = languageOptions.find((l) => l.key === language)?.label ?? 'Português';
+  const currentLanguageLabel = languageOptions.find((l) => l.key === language)?.label ?? 'Portugu\u00EAs';
   const currentCurrencyLabel = currencyOptions.find((c) => c.key === currency)?.label ?? 'BRL (R$)';
 
   const handleLogout = useCallback(() => {
@@ -314,12 +518,40 @@ export default function ProfileScreen() {
     router.push('/connect-bank');
   }, [isDemoMode, router, t]);
 
+  // -- Biometric toggle with actual authentication --------------------------
   const toggleBiometric = useCallback(
-    (value: boolean) => {
+    async (value: boolean) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      updateUser({ biometricEnabled: value });
+
+      if (value) {
+        // Enabling: verify device supports biometrics first
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+
+        if (!hasHardware || !isEnrolled) {
+          Alert.alert(t('common.error'), t('biometric.notAvailable'));
+          return;
+        }
+
+        // Authenticate to confirm
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: t('biometric.enablePrompt'),
+          cancelLabel: t('common.cancel'),
+          disableDeviceFallback: false,
+        });
+
+        if (!result.success) return;
+
+        // Save preference
+        await AsyncStorage.setItem(BIOMETRIC_STORAGE_KEY, 'true');
+        updateUser({ biometricEnabled: true });
+      } else {
+        // Disabling: just remove preference
+        await AsyncStorage.removeItem(BIOMETRIC_STORAGE_KEY);
+        updateUser({ biometricEnabled: false });
+      }
     },
-    [updateUser]
+    [updateUser, t]
   );
 
   const togglePush = useCallback(
@@ -334,6 +566,45 @@ export default function ProfileScreen() {
     (value: boolean) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       updateUser({ hideValuesOnOpen: value });
+    },
+    [updateUser]
+  );
+
+  // -- About section handlers -----------------------------------------------
+  const handleTerms = useCallback(() => {
+    Linking.openURL(TERMS_URL).catch(() => {
+      Alert.alert(t('profile.terms'), t('profile.termsPlaceholder'));
+    });
+  }, [t]);
+
+  const handlePrivacy = useCallback(() => {
+    Linking.openURL(PRIVACY_URL).catch(() => {
+      Alert.alert(t('profile.privacy'), t('profile.privacyPlaceholder'));
+    });
+  }, [t]);
+
+  const handleHelp = useCallback(() => {
+    setShowHelpModal(true);
+  }, []);
+
+  const handleSupport = useCallback(() => {
+    Linking.openURL(WHATSAPP_URL).catch(() => {
+      Alert.alert(t('common.error'), t('profile.demoUnavailable'));
+    });
+  }, [t]);
+
+  // -- Edit profile handler -------------------------------------------------
+  const handleEditProfile = useCallback(() => {
+    if (isDemoMode) {
+      Alert.alert('Demo', t('profile.demoUnavailable'));
+      return;
+    }
+    setShowEditProfileModal(true);
+  }, [isDemoMode, t]);
+
+  const handleEditProfileSuccess = useCallback(
+    (updates: { name: string; email: string; initials: string }) => {
+      updateUser(updates);
     },
     [updateUser]
   );
@@ -359,18 +630,22 @@ export default function ProfileScreen() {
               <Text style={styles.demoLabel}>{t('profile.demoMode')}</Text>
             )}
           </View>
-          <TouchableOpacity style={styles.editButton} accessibilityLabel="Editar perfil">
-            <Text style={styles.editIcon}>✏️</Text>
+          <TouchableOpacity
+            style={styles.editButton}
+            accessibilityLabel={t('profile.editProfile')}
+            onPress={handleEditProfile}
+          >
+            <Text style={styles.editIcon}>{'\u270F\uFE0F'}</Text>
           </TouchableOpacity>
         </View>
       </Card>
 
       {/* Security */}
-      <SectionTitle title={`🔐 ${t('profile.security')}`} />
+      <SectionTitle title={`\uD83D\uDD10 ${t('profile.security')}`} />
       <View>
         <View style={styles.section}>
           <SettingRow
-            icon="👆"
+            icon={'\uD83D\uDC46'}
             label={t('profile.biometric')}
             rightElement={
               <Toggle
@@ -380,17 +655,16 @@ export default function ProfileScreen() {
               />
             }
           />
-          <SettingRow icon="🔑" label={t('profile.changePassword')} onPress={handleChangePassword} />
-          <SettingRow icon="🔢" label={t('profile.changePin')} onPress={() => {}} />
+          <SettingRow icon={'\uD83D\uDD11'} label={t('profile.changePassword')} onPress={handleChangePassword} />
         </View>
       </View>
 
       {/* Preferences */}
-      <SectionTitle title={`⚙️ ${t('profile.preferences')}`} />
+      <SectionTitle title={`\u2699\uFE0F ${t('profile.preferences')}`} />
       <View>
         <View style={styles.section}>
           <SettingRow
-            icon="🔔"
+            icon={'\uD83D\uDD14'}
             label={t('profile.pushNotifications')}
             rightElement={
               <Toggle
@@ -401,7 +675,7 @@ export default function ProfileScreen() {
             }
           />
           <SettingRow
-            icon="👁️"
+            icon={'\uD83D\uDC41\uFE0F'}
             label={t('profile.hideValuesOnOpen')}
             rightElement={
               <Toggle
@@ -412,13 +686,13 @@ export default function ProfileScreen() {
             }
           />
           <SettingRow
-            icon="🌐"
+            icon={'\uD83C\uDF10'}
             label={t('profile.language')}
             value={currentLanguageLabel}
             onPress={() => setShowLanguagePicker(true)}
           />
           <SettingRow
-            icon="💰"
+            icon={'\uD83D\uDCB0'}
             label={t('profile.defaultCurrency')}
             value={currentCurrencyLabel}
             onPress={() => setShowCurrencyPicker(true)}
@@ -427,7 +701,7 @@ export default function ProfileScreen() {
       </View>
 
       {/* Connected accounts */}
-      <SectionTitle title={`🏦 ${t('profile.connectedAccounts')}`} />
+      <SectionTitle title={`\uD83C\uDFE6 ${t('profile.connectedAccounts')}`} />
       <View>
         <View style={styles.section}>
           {institutions.map((inst) => {
@@ -472,7 +746,7 @@ export default function ProfileScreen() {
       </View>
 
       {/* ZURT Token */}
-      <SectionTitle title={`📊 ${t('profile.zurtToken')}`} />
+      <SectionTitle title={`\uD83D\uDCCA ${t('profile.zurtToken')}`} />
       <Card variant="elevated" delay={450}>
         <View style={styles.tokenRow}>
           <View style={styles.tokenItem}>
@@ -498,20 +772,20 @@ export default function ProfileScreen() {
       </Card>
 
       {/* About */}
-      <SectionTitle title={`ℹ️ ${t('profile.about')}`} />
+      <SectionTitle title={`\u2139\uFE0F ${t('profile.about')}`} />
       <View>
         <View style={styles.section}>
-          <SettingRow icon="📄" label={t('profile.terms')} onPress={() => {}} />
-          <SettingRow icon="🔒" label={t('profile.privacy')} onPress={() => {}} />
-          <SettingRow icon="❓" label={t('profile.help')} onPress={() => {}} />
-          <SettingRow icon="💬" label={t('profile.support')} onPress={() => {}} />
+          <SettingRow icon={'\uD83D\uDCC4'} label={t('profile.terms')} onPress={handleTerms} />
+          <SettingRow icon={'\uD83D\uDD12'} label={t('profile.privacy')} onPress={handlePrivacy} />
+          <SettingRow icon={'\u2753'} label={t('profile.help')} onPress={handleHelp} />
+          <SettingRow icon={'\uD83D\uDCAC'} label={t('profile.support')} onPress={handleSupport} />
         </View>
       </View>
 
       {/* Logout */}
       <View>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>🚪 {t('profile.logout')}</Text>
+          <Text style={styles.logoutText}>{'\uD83D\uDEAA'} {t('profile.logout')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -538,6 +812,20 @@ export default function ProfileScreen() {
         visible={showPasswordModal}
         onClose={() => setShowPasswordModal(false)}
         isDemoMode={isDemoMode}
+      />
+      <EditProfileModal
+        visible={showEditProfileModal}
+        onClose={() => setShowEditProfileModal(false)}
+        currentName={user.name}
+        currentEmail={user.email}
+        isDemoMode={isDemoMode}
+        t={t}
+        onSuccess={handleEditProfileSuccess}
+      />
+      <HelpModal
+        visible={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+        t={t}
       />
     </ScrollView>
   );
@@ -758,6 +1046,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  helpModalContent: {
+    width: '90%',
+    maxHeight: '75%',
+    backgroundColor: colors.card,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
@@ -804,7 +1101,13 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
   },
 
-  // -- Password modal styles -----------------------------------------------
+  // -- Password / edit modal styles ----------------------------------------
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text.secondary,
+    marginBottom: spacing.xs,
+  },
   passwordInput: {
     backgroundColor: colors.input,
     borderRadius: radius.md,
@@ -836,5 +1139,39 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: colors.background,
+  },
+
+  // -- FAQ styles ----------------------------------------------------------
+  faqScrollView: {
+    maxHeight: 400,
+  },
+  faqQuestion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border + '50',
+  },
+  faqQuestionText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text.primary,
+  },
+  faqChevron: {
+    fontSize: 16,
+    color: colors.text.muted,
+    marginLeft: spacing.sm,
+  },
+  faqAnswer: {
+    paddingVertical: spacing.md,
+    paddingLeft: spacing.sm,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border + '50',
+  },
+  faqAnswerText: {
+    fontSize: 13,
+    color: colors.text.secondary,
+    lineHeight: 20,
   },
 });

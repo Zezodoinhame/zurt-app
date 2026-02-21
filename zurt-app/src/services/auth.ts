@@ -13,8 +13,8 @@ export async function checkBiometricAvailability(): Promise<boolean> {
 export async function authenticateWithBiometrics(): Promise<boolean> {
   const result = await LocalAuthentication.authenticateAsync({
     promptMessage: 'Autentique-se para acessar o ZURT',
-    cancelLabel: 'Usar PIN',
-    disableDeviceFallback: true,
+    cancelLabel: 'Usar senha',
+    disableDeviceFallback: false,
   });
   return result.success;
 }

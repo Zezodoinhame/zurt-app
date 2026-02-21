@@ -45,6 +45,7 @@ export default function ConnectBankScreen() {
   const [errorMessage, setErrorMessage] = useState('');
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchCounterRef = useRef(0);
   const webViewRef = useRef<WebView>(null);
 
   const handleSearch = useCallback((text: string) => {
@@ -52,15 +53,27 @@ export default function ConnectBankScreen() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (text.trim().length < 2) { setInstitutions([]); setIsSearching(false); return; }
     setIsSearching(true);
+    const currentCount = ++searchCounterRef.current;
     debounceRef.current = setTimeout(async () => {
       try {
+        console.log('[ConnectBank] Searching for:', text.trim());
         const results = await searchInstitutions(text.trim());
-        setInstitutions(results ?? []);
+        // Only update if this is still the latest search
+        if (currentCount === searchCounterRef.current) {
+          console.log('[ConnectBank] Results count:', results?.length ?? 0, 'for query:', text.trim());
+          setInstitutions(results ?? []);
+        }
       } catch (err) {
         console.log('[ConnectBank] Search error:', err);
-        setInstitutions([]);
-      } finally { setIsSearching(false); }
-    }, 400);
+        if (currentCount === searchCounterRef.current) {
+          setInstitutions([]);
+        }
+      } finally {
+        if (currentCount === searchCounterRef.current) {
+          setIsSearching(false);
+        }
+      }
+    }, 300);
   }, []);
 
   useEffect(() => {

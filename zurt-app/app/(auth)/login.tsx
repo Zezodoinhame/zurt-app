@@ -8,23 +8,31 @@ import {
   TouchableOpacity,
   Keyboard,
   TouchableWithoutFeedback,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
 import { colors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useAuthStore } from '../../src/stores/authStore';
 import { Button } from '../../src/components/ui/Button';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { Input } from '../../src/components/ui/Input';
+import { saveToken, fetchUserProfile } from '../../src/services/api';
+
+WebBrowser.maybeCompleteAuthSession();
+
+const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://zurt.com.br/api';
 
 type Mode = 'login' | 'register';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { login, register, loginDemo, isLoading, error: storeError, clearError } = useAuthStore();
+  const { login, register, loginDemo, isLoading, error: storeError, clearError, updateUser } = useAuthStore();
   const { t } = useSettingsStore();
 
   const [mode, setMode] = useState<Mode>('login');
@@ -33,6 +41,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const displayError = error || storeError || '';
 
@@ -62,7 +71,7 @@ export default function LoginScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError(t('login.connectionError'));
     }
-  }, [email, password, login, router, clearError]);
+  }, [email, password, login, router, clearError, t]);
 
   const handleRegister = useCallback(async () => {
     Keyboard.dismiss();
@@ -94,7 +103,43 @@ export default function LoginScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError(t('login.registerError'));
     }
-  }, [fullName, email, password, register, router, clearError]);
+  }, [fullName, email, password, register, router, clearError, t]);
+
+  const handleGoogleLogin = useCallback(async () => {
+    setError('');
+    clearError();
+    setGoogleLoading(true);
+
+    try {
+      const redirectUri = AuthSession.makeRedirectUri({ preferLocalhost: false });
+      const authUrl = `${API_BASE}/auth/google?redirect_uri=${encodeURIComponent(redirectUri)}`;
+
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+
+      if (result.type === 'success' && result.url) {
+        // Extract token from redirect URL
+        const url = new URL(result.url);
+        const token = url.searchParams.get('token') || url.hash?.match(/token=([^&]+)/)?.[1];
+
+        if (token) {
+          await saveToken(token);
+          const user = await fetchUserProfile();
+          updateUser(user);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          router.replace('/(tabs)');
+        } else {
+          setError(t('login.connectionError'));
+        }
+      } else if (result.type === 'cancel') {
+        // User cancelled, do nothing
+      }
+    } catch (err: any) {
+      console.log('[ZURT Auth] Google login error:', err?.message ?? err);
+      Alert.alert(t('common.error'), t('login.googleUnavailable'));
+    } finally {
+      setGoogleLoading(false);
+    }
+  }, [clearError, router, t, updateUser]);
 
   const handleDemo = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -130,6 +175,24 @@ export default function LoginScreen() {
 
           {/* Form */}
           <View style={styles.form}>
+            {/* Google login button */}
+            <TouchableOpacity
+              style={styles.googleButton}
+              onPress={handleGoogleLogin}
+              activeOpacity={0.7}
+              disabled={googleLoading || isLoading}
+            >
+              <Text style={styles.googleIcon}>G</Text>
+              <Text style={styles.googleButtonText}>{t('login.googleLogin')}</Text>
+            </TouchableOpacity>
+
+            {/* Divider */}
+            <View style={styles.dividerContainer}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>{t('login.or')}</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
             {mode === 'register' && (
               <Input
                 label={t('login.fullName')}
@@ -161,7 +224,7 @@ export default function LoginScreen() {
 
             <Input
               label={t('login.password')}
-              placeholder="••••••••"
+              placeholder={'\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'}
               value={password}
               onChangeText={(text) => {
                 setPassword(text);
@@ -207,6 +270,7 @@ export default function LoginScreen() {
                 style={styles.biometricButton}
                 activeOpacity={0.7}
                 accessibilityLabel="Autenticar com biometria"
+                onPress={() => router.push('/(auth)/biometric')}
               >
                 <View style={styles.biometricCircle}>
                   <Text style={styles.biometricIcon}>{'\uD83D\uDC46'}</Text>
@@ -275,6 +339,46 @@ const styles = StyleSheet.create({
   form: {
     width: '100%',
   },
+  // -- Google button --
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.md,
+    paddingVertical: spacing.md + 2,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: '#DADCE0',
+  },
+  googleIcon: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#4285F4',
+    marginRight: spacing.sm,
+  },
+  googleButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1F1F1F',
+  },
+  // -- Divider --
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    fontSize: 13,
+    color: colors.text.muted,
+    paddingHorizontal: spacing.md,
+  },
+  // --
   error: {
     color: colors.negative,
     fontSize: 13,
