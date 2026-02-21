@@ -27,6 +27,9 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
+    "extra": {
+      "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "822526137511-j4i3icif8pdgg5om2s163489f88nhb58.apps.googleusercontent.com"
+    },
     "plugins": [
       "expo-router",
       [

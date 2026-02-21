@@ -28,98 +28,12 @@ WebBrowser.maybeCompleteAuthSession();
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://zurt.com.br/api';
 
-// Google OAuth client IDs - configure these in .env
-// EXPO_PUBLIC_GOOGLE_CLIENT_ID     -> used in Expo Go and as default
-// EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID -> web builds
-// EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID -> standalone iOS builds
-// EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID -> standalone Android builds
-const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? '';
+// Google OAuth - web client ID from .env
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
-const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '';
-const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '';
 
 const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/userinfo/v2/me';
 
 type Mode = 'login' | 'register';
-
-// ---------------------------------------------------------------------------
-// Helper: try multiple backend endpoints to exchange Google token for JWT
-// ---------------------------------------------------------------------------
-async function exchangeGoogleTokenForJWT(params: {
-  idToken?: string;
-  accessToken: string;
-  email: string;
-  name: string;
-}): Promise<string | null> {
-  const { idToken, accessToken, email, name } = params;
-
-  // Attempt 1: POST /api/auth/google/mobile  (dedicated mobile endpoint)
-  try {
-    console.log('[ZURT Auth] Trying POST /auth/google/mobile...');
-    const res = await fetch(`${API_BASE}/auth/google/mobile`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ id_token: idToken, access_token: accessToken, email, name }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const token = data.token ?? data.access_token ?? data.jwt;
-      if (token) {
-        console.log('[ZURT Auth] /auth/google/mobile success');
-        return token;
-      }
-    }
-    console.log('[ZURT Auth] /auth/google/mobile status:', res.status);
-  } catch (err: any) {
-    console.log('[ZURT Auth] /auth/google/mobile error:', err?.message);
-  }
-
-  // Attempt 2: POST /api/auth/google/callback  (reuse existing callback endpoint)
-  try {
-    console.log('[ZURT Auth] Trying POST /auth/google/callback...');
-    const res = await fetch(`${API_BASE}/auth/google/callback`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ id_token: idToken, access_token: accessToken, email, name }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const token = data.token ?? data.access_token ?? data.jwt;
-      if (token) {
-        console.log('[ZURT Auth] /auth/google/callback success');
-        return token;
-      }
-    }
-    console.log('[ZURT Auth] /auth/google/callback status:', res.status);
-  } catch (err: any) {
-    console.log('[ZURT Auth] /auth/google/callback error:', err?.message);
-  }
-
-  // Attempt 3: POST /api/auth/login with google_token field
-  if (email) {
-    try {
-      console.log('[ZURT Auth] Trying POST /auth/login with google_token...');
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ email, google_token: idToken || accessToken }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const token = data.token ?? data.access_token ?? data.jwt;
-        if (token) {
-          console.log('[ZURT Auth] /auth/login with google_token success');
-          return token;
-        }
-      }
-      console.log('[ZURT Auth] /auth/login with google_token status:', res.status);
-    } catch (err: any) {
-      console.log('[ZURT Auth] /auth/login with google_token error:', err?.message);
-    }
-  }
-
-  return null;
-}
 
 // ===========================================================================
 // LoginScreen
@@ -144,13 +58,10 @@ export default function LoginScreen() {
   // -------------------------------------------------------------------------
   // Google Auth via expo-auth-session (direct, no backend redirect)
   // -------------------------------------------------------------------------
-  const hasGoogleClientId = !!(GOOGLE_CLIENT_ID || GOOGLE_WEB_CLIENT_ID || GOOGLE_IOS_CLIENT_ID || GOOGLE_ANDROID_CLIENT_ID);
+  const hasGoogleClientId = !!GOOGLE_WEB_CLIENT_ID;
 
   const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
-    clientId: GOOGLE_CLIENT_ID || undefined,
     webClientId: GOOGLE_WEB_CLIENT_ID || undefined,
-    iosClientId: GOOGLE_IOS_CLIENT_ID || undefined,
-    androidClientId: GOOGLE_ANDROID_CLIENT_ID || undefined,
     scopes: ['profile', 'email'],
   });
 
@@ -186,13 +97,12 @@ export default function LoginScreen() {
   }, [googleResponse]);
 
   const handleGoogleAuth = async (authentication: { accessToken: string; idToken?: string }) => {
-    const { accessToken, idToken } = authentication;
-    console.log('[ZURT Auth] Google auth success, idToken:', idToken ? 'YES' : 'NO', 'accessToken:', accessToken ? 'YES' : 'NO');
+    const { accessToken } = authentication;
+    console.log('[ZURT Auth] Google auth success, accessToken:', accessToken ? 'YES' : 'NO');
 
     try {
-      // Step 1: Get Google user info (email + name)
+      // Step 1: Get Google user email
       let googleEmail = '';
-      let googleName = '';
 
       if (accessToken) {
         try {
@@ -202,35 +112,44 @@ export default function LoginScreen() {
           if (res.ok) {
             const info = await res.json();
             googleEmail = info.email ?? '';
-            googleName = info.name ?? '';
-            console.log('[ZURT Auth] Google user:', googleEmail, googleName);
+            console.log('[ZURT Auth] Google user email:', googleEmail);
           }
         } catch (err: any) {
           console.log('[ZURT Auth] Failed to fetch Google userinfo:', err?.message);
         }
       }
 
-      // Step 2: Try to exchange Google token for ZURT JWT via backend
-      const jwtToken = await exchangeGoogleTokenForJWT({
-        idToken,
-        accessToken,
-        email: googleEmail,
-        name: googleName,
+      if (!googleEmail) {
+        setError(t('login.googleUnavailable'));
+        return;
+      }
+
+      // Step 2: Try POST /api/auth/login with Google email
+      console.log('[ZURT Auth] Trying POST /auth/login with Google email...');
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ email: googleEmail }),
       });
 
-      if (jwtToken) {
-        await saveToken(jwtToken);
-        const restored = await restoreSession();
-        if (restored) {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          router.replace('/(tabs)');
-          return;
+      if (res.ok) {
+        const data = await res.json();
+        const jwtToken = data.token ?? data.access_token ?? data.jwt;
+        if (jwtToken) {
+          console.log('[ZURT Auth] Login with Google email success');
+          await saveToken(jwtToken);
+          const restored = await restoreSession();
+          if (restored) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            router.replace('/(tabs)');
+            return;
+          }
         }
       }
 
-      // Step 3: All backend endpoints failed - show error
-      console.log('[ZURT Auth] All Google token exchange attempts failed');
-      setError(t('login.googleUnavailable'));
+      // User doesn't exist in backend — show "create account first" message
+      console.log('[ZURT Auth] User not found in backend, status:', res.status);
+      Alert.alert(t('common.error'), t('login.googleCreateAccount'));
     } catch (err: any) {
       console.log('[ZURT Auth] handleGoogleAuth error:', err?.message ?? err);
       setError(t('login.googleUnavailable'));
