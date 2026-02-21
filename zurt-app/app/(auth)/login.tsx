@@ -52,9 +52,10 @@ export default function LoginScreen() {
   const displayError = error || storeError || '';
 
   // -------------------------------------------------------------------------
-  // Google Auth via WebBrowser — opens backend /api/auth/google in browser
-  // Backend redirects to Google, user authenticates, backend redirects back
-  // with token. We try to intercept the redirect URL to extract the JWT.
+  // Google Auth via WebBrowser — opens backend /api/auth/google in browser.
+  // Backend redirects to Google, user authenticates, backend redirects to
+  // https://zurt.com.br/auth/google?token=JWT. We intercept that redirect
+  // URL and extract the JWT from the query parameter.
   // -------------------------------------------------------------------------
   const handleGoogleLogin = useCallback(async () => {
     Keyboard.dismiss();
@@ -63,16 +64,17 @@ export default function LoginScreen() {
     setGoogleLoading(true);
 
     try {
-      // Open the backend's Google OAuth flow in an in-app browser.
-      // We pass our custom scheme so the browser closes if the backend
-      // ever redirects to zurt://...
+      // Open backend Google OAuth. The returnUrl tells the auth session
+      // to intercept when the browser navigates to this URL prefix.
+      // Backend flow: /api/auth/google → Google consent → callback →
+      // redirect to https://zurt.com.br/auth/google?token=JWT
       const result = await WebBrowser.openAuthSessionAsync(
         GOOGLE_AUTH_URL,
-        'zurt://',
+        'https://zurt.com.br/auth/google',
       );
 
       if (result.type === 'success' && result.url) {
-        // Try to extract JWT token from the redirect URL
+        // Extract JWT token from ?token= query parameter
         const tokenMatch = result.url.match(/[?&]token=([^&]+)/);
         if (tokenMatch) {
           const jwtToken = decodeURIComponent(tokenMatch[1]);
@@ -85,7 +87,7 @@ export default function LoginScreen() {
             return;
           }
         }
-        // Redirect happened but no token found
+        // Redirect happened but no token in URL
         console.log('[ZURT Auth] Redirect URL had no token:', result.url);
         Alert.alert(t('common.error'), t('login.googleCreateAccount'));
       } else {
