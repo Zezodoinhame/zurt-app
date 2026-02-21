@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
 import { colors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -23,10 +24,14 @@ import { useSettingsStore } from '../../src/stores/settingsStore';
 import { Input } from '../../src/components/ui/Input';
 import { saveToken } from '../../src/services/api';
 
+WebBrowser.maybeCompleteAuthSession();
+
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://zurt.com.br/api';
 
-// Backend Google OAuth URL — opens Google consent via the backend
-const GOOGLE_AUTH_URL = `${API_BASE}/auth/google`;
+// Google web client ID — used as clientId fallback on all platforms
+const GOOGLE_WEB_CLIENT_ID = '822526137511-j4i3icif8pdgg5om2s163489f88nhb58.apps.googleusercontent.com';
+
+const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/userinfo/v2/me';
 
 type Mode = 'login' | 'register';
 
@@ -52,56 +57,166 @@ export default function LoginScreen() {
   const displayError = error || storeError || '';
 
   // -------------------------------------------------------------------------
-  // Google Auth via WebBrowser — opens backend /api/auth/google?source=mobile.
-  // Backend redirects to Google, user authenticates, backend redirects to
-  // zurt://auth/callback?token=JWT. We intercept that deep link and extract
-  // the JWT from the query parameter.
+  // Google Auth via expo-auth-session — uses useIdTokenAuthRequest which
+  // works in Expo Go without iosClientId. We pass the webClientId as both
+  // clientId (fallback for all platforms) and webClientId.
   // -------------------------------------------------------------------------
+  let googleRequest: ReturnType<typeof Google.useIdTokenAuthRequest>[0] = null;
+  let googleResponse: ReturnType<typeof Google.useIdTokenAuthRequest>[1] = null;
+  let googlePromptAsync: ReturnType<typeof Google.useIdTokenAuthRequest>[2] = async () => ({ type: 'dismiss' as const, url: '' });
+
+  try {
+    const [req, res, prompt] = Google.useIdTokenAuthRequest({
+      clientId: GOOGLE_WEB_CLIENT_ID,
+      webClientId: GOOGLE_WEB_CLIENT_ID,
+    });
+    googleRequest = req;
+    googleResponse = res;
+    googlePromptAsync = prompt;
+  } catch (err: any) {
+    console.log('[ZURT Auth] Google hook init error:', err?.message ?? err);
+    // Will be caught — googleAvailable stays true but googleRequest stays null
+  }
+
+  // Handle Google OAuth response
+  useEffect(() => {
+    if (!googleResponse) return;
+    if (googleResponse.type === 'success') {
+      handleGoogleAuth(googleResponse);
+    } else if (googleResponse.type === 'error') {
+      console.log('[ZURT Auth] Google OAuth error');
+      setGoogleLoading(false);
+      setGoogleAvailable(false);
+    } else {
+      // cancel / dismiss
+      console.log('[ZURT Auth] Google OAuth:', googleResponse.type);
+      setGoogleLoading(false);
+    }
+  }, [googleResponse]);
+
+  const handleGoogleAuth = async (response: any) => {
+    try {
+      // Try to get id_token from response params
+      const idToken: string | undefined =
+        response.params?.id_token ||
+        response.authentication?.idToken;
+      const accessToken: string | undefined =
+        response.authentication?.accessToken ||
+        response.params?.access_token;
+
+      console.log('[ZURT Auth] idToken:', idToken ? 'YES' : 'NO', 'accessToken:', accessToken ? 'YES' : 'NO');
+
+      // Step 1: Try POST /api/auth/google/mobile with id_token
+      if (idToken) {
+        try {
+          console.log('[ZURT Auth] Trying POST /auth/google/mobile...');
+          const res = await fetch(`${API_BASE}/auth/google/mobile`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ id_token: idToken }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const jwt = data.token ?? data.access_token ?? data.jwt;
+            if (jwt) {
+              console.log('[ZURT Auth] /auth/google/mobile success');
+              await saveToken(jwt);
+              const restored = await restoreSession();
+              if (restored) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                router.replace('/(tabs)');
+                return;
+              }
+            }
+          }
+          console.log('[ZURT Auth] /auth/google/mobile status:', res.status);
+        } catch (err: any) {
+          console.log('[ZURT Auth] /auth/google/mobile error:', err?.message);
+        }
+      }
+
+      // Step 2: Fallback — get email from Google and POST /api/auth/login
+      let googleEmail = '';
+
+      // Try decoding id_token JWT payload for email
+      if (idToken) {
+        try {
+          const payload = JSON.parse(atob(idToken.split('.')[1]));
+          googleEmail = payload.email ?? '';
+        } catch { /* ignore decode errors */ }
+      }
+
+      // If no email from id_token, try userinfo endpoint
+      if (!googleEmail && accessToken) {
+        try {
+          const res = await fetch(GOOGLE_USERINFO_URL, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          if (res.ok) {
+            const info = await res.json();
+            googleEmail = info.email ?? '';
+          }
+        } catch { /* ignore */ }
+      }
+
+      if (googleEmail) {
+        console.log('[ZURT Auth] Trying POST /auth/login with email:', googleEmail);
+        try {
+          const res = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ email: googleEmail }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const jwt = data.token ?? data.access_token ?? data.jwt;
+            if (jwt) {
+              console.log('[ZURT Auth] /auth/login with email success');
+              await saveToken(jwt);
+              const restored = await restoreSession();
+              if (restored) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                router.replace('/(tabs)');
+                return;
+              }
+            }
+          }
+        } catch (err: any) {
+          console.log('[ZURT Auth] /auth/login error:', err?.message);
+        }
+      }
+
+      // All attempts failed
+      console.log('[ZURT Auth] All Google auth attempts failed');
+      Alert.alert(t('common.error'), t('login.googleCreateAccount'));
+    } catch (err: any) {
+      console.log('[ZURT Auth] handleGoogleAuth error:', err?.message ?? err);
+      setError(t('login.googleUnavailable'));
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   const handleGoogleLogin = useCallback(async () => {
     Keyboard.dismiss();
     setError('');
     clearError();
-    setGoogleLoading(true);
 
-    try {
-      // Open backend Google OAuth with ?source=mobile so the backend
-      // redirects to our deep link scheme instead of the website.
-      // Flow: /api/auth/google?source=mobile → Google consent → callback →
-      // redirect to zurt://auth/callback?token=JWT
-      const result = await WebBrowser.openAuthSessionAsync(
-        `${GOOGLE_AUTH_URL}?source=mobile`,
-        'zurt://auth/callback',
-      );
-
-      if (result.type === 'success' && result.url) {
-        // Extract JWT token from ?token= query parameter
-        const tokenMatch = result.url.match(/[?&]token=([^&]+)/);
-        if (tokenMatch) {
-          const jwtToken = decodeURIComponent(tokenMatch[1]);
-          console.log('[ZURT Auth] Got JWT from Google redirect');
-          await saveToken(jwtToken);
-          const restored = await restoreSession();
-          if (restored) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            router.replace('/(tabs)');
-            return;
-          }
-        }
-        // Redirect happened but no token in URL
-        console.log('[ZURT Auth] Redirect URL had no token:', result.url);
-        Alert.alert(t('common.error'), t('login.googleCreateAccount'));
-      } else {
-        // User cancelled / dismissed the browser
-        console.log('[ZURT Auth] Google auth browser:', result.type);
-      }
-    } catch (err: any) {
-      console.log('[ZURT Auth] Google WebBrowser error:', err?.message ?? err);
-      // Browser approach failed — disable Google button gracefully
+    if (!googleRequest) {
+      // Hook didn't initialize — disable button
       setGoogleAvailable(false);
-    } finally {
+      return;
+    }
+
+    setGoogleLoading(true);
+    try {
+      await googlePromptAsync();
+    } catch (err: any) {
+      console.log('[ZURT Auth] googlePromptAsync error:', err?.message ?? err);
+      setGoogleAvailable(false);
       setGoogleLoading(false);
     }
-  }, [clearError, t, restoreSession, router]);
+  }, [googleRequest, googlePromptAsync, clearError]);
 
   // -------------------------------------------------------------------------
   // Email/password auth
