@@ -30,11 +30,11 @@ import {
 import { ErrorState } from '../../src/components/shared/ErrorState';
 
 import {
-  formatBRL,
+  formatCurrency,
   formatPct,
   maskValue,
-  getGreeting,
 } from '../../src/utils/formatters';
+import { useSettingsStore } from '../../src/stores/settingsStore';
 
 // ---------------------------------------------------------------------------
 // Time range options for the chart
@@ -77,6 +77,7 @@ export default function HomeScreen() {
     setTimeRange,
   } = usePortfolioStore();
   const { getUnreadCount, loadNotifications } = useNotificationStore();
+  const { t, currency } = useSettingsStore();
 
   // ---- Effects ------------------------------------------------------------
   useEffect(() => {
@@ -106,7 +107,7 @@ export default function HomeScreen() {
   // ---- Derived values -----------------------------------------------------
   const unreadCount = getUnreadCount();
   const firstName = user?.name?.split(' ')[0] ?? '';
-  const greeting = `${getGreeting()}, ${firstName}`;
+  const greeting = `${t('greeting.' + (new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'))}, ${firstName}`;
 
   const variation1mVariant =
     (summary?.variation1m ?? 0) >= 0 ? 'positive' : 'negative';
@@ -117,7 +118,7 @@ export default function HomeScreen() {
 
   // ---- Helpers for value display ------------------------------------------
   const displayValue = (value: number) =>
-    valuesHidden ? maskValue('') : formatBRL(value);
+    valuesHidden ? maskValue('') : formatCurrency(value, currency);
 
   const displayPct = (value: number) =>
     valuesHidden ? '••••' : formatPct(value);
@@ -161,7 +162,7 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={styles.bellContainer}
             activeOpacity={0.7}
-            accessibilityLabel={`Notificações, ${unreadCount} não lidas`}
+            accessibilityLabel={`${t('home.notifications')}, ${unreadCount} ${t('home.unread')}`}
           >
             <Text style={styles.bellIcon}>🔔</Text>
             {unreadCount > 0 && (
@@ -192,7 +193,7 @@ export default function HomeScreen() {
             {/* -------------------------------------------------------------- */}
             {summary && (
               <Card variant="glow" delay={100}>
-                <Text style={styles.heroLabel}>Patrimônio total</Text>
+                <Text style={styles.heroLabel}>{t('home.totalPatrimony')}</Text>
 
                 <View style={styles.heroValueRow}>
                   <Text style={styles.heroValue}>
@@ -202,7 +203,7 @@ export default function HomeScreen() {
                     onPress={handleToggleValues}
                     hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                     accessibilityLabel={
-                      valuesHidden ? 'Mostrar valores' : 'Ocultar valores'
+                      valuesHidden ? t('home.showValues') : t('home.hideValues')
                     }
                   >
                     <Text style={styles.eyeIcon}>
@@ -229,14 +230,14 @@ export default function HomeScreen() {
 
                 <View style={styles.heroSubRow}>
                   <View style={styles.heroSubItem}>
-                    <Text style={styles.heroSubLabel}>Investido</Text>
+                    <Text style={styles.heroSubLabel}>{t('home.invested')}</Text>
                     <Text style={styles.heroSubValue}>
                       {displayValue(summary.investedValue)}
                     </Text>
                   </View>
                   <View style={styles.heroSubSeparator} />
                   <View style={styles.heroSubItem}>
-                    <Text style={styles.heroSubLabel}>Lucro</Text>
+                    <Text style={styles.heroSubLabel}>{t('home.profit')}</Text>
                     <Text
                       style={[
                         styles.heroSubValue,
@@ -251,12 +252,31 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
+            {/* Empty State CTA - No connections                                */}
+            {/* -------------------------------------------------------------- */}
+            {allocations.length === 0 && institutions.length === 0 && (
+              <Card delay={200}>
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyIcon}>🏦</Text>
+                  <Text style={styles.emptyText}>{t('home.emptyTitle')}</Text>
+                  <TouchableOpacity
+                    style={styles.emptyButton}
+                    onPress={() => router.push('/connect-bank')}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.emptyButtonText}>{t('home.emptyButton')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </Card>
+            )}
+
+            {/* -------------------------------------------------------------- */}
             {/* Chart Section - Evolucao patrimonial                            */}
             {/* -------------------------------------------------------------- */}
             {summary && chartData.length > 1 && (
               <Card delay={200}>
                 <Text style={styles.sectionTitleInCard}>
-                  Evolução patrimonial
+                  {t('home.evolution')}
                 </Text>
 
                 {/* Time range pills */}
@@ -299,7 +319,7 @@ export default function HomeScreen() {
             {allocations.length > 0 && (
               <Card delay={300}>
                 <Text style={styles.sectionTitleInCard}>
-                  Alocação por classe
+                  {t('home.allocation')}
                 </Text>
                 <AllocationBar allocations={allocations} />
               </Card>
@@ -310,7 +330,7 @@ export default function HomeScreen() {
             {/* -------------------------------------------------------------- */}
             {institutions.length > 0 && (
               <View>
-                <Text style={styles.sectionTitle}>Contas conectadas</Text>
+                <Text style={styles.sectionTitle}>{t('home.connectedAccounts')}</Text>
 
                 {institutions.map((inst, idx) => (
                   <AccountCard
@@ -326,7 +346,7 @@ export default function HomeScreen() {
                   onPress={() => router.push('/connect-bank')}
                 >
                   <Text style={styles.connectButtonText}>
-                    + Conectar instituição
+                    {t('home.connectInstitution')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -337,7 +357,7 @@ export default function HomeScreen() {
             {/* -------------------------------------------------------------- */}
             {insights.length > 0 && (
               <View>
-                <Text style={styles.sectionTitle}>Insights</Text>
+                <Text style={styles.sectionTitle}>{t('home.insights')}</Text>
 
                 {insights.map((insight, idx) => {
                   const borderColor =
@@ -370,7 +390,7 @@ export default function HomeScreen() {
                               { color: borderColor },
                             ]}
                           >
-                            {insight.action || 'Ver detalhes'} →
+                            {insight.action || t('home.viewDetails')} →
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -582,5 +602,34 @@ const styles = StyleSheet.create({
   insightActionText: {
     fontSize: 13,
     fontWeight: '600',
+  },
+
+  // -- Empty state -----------------------------------------------------------
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: spacing.lg,
+  },
+  emptyText: {
+    fontSize: 15,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
+  },
+  emptyButton: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+  },
+  emptyButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.background,
   },
 });

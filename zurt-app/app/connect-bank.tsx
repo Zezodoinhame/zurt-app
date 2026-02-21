@@ -16,6 +16,7 @@ import {
 } from '../src/services/api';
 import { colors } from '../src/theme/colors';
 import { spacing, radius } from '../src/theme/spacing';
+import { useSettingsStore } from '../src/stores/settingsStore';
 
 interface InstitutionResult {
   id: string | number;
@@ -33,6 +34,7 @@ type ScreenState = 'search' | 'connecting' | 'webview' | 'syncing' | 'success' |
 
 export default function ConnectBankScreen() {
   const router = useRouter();
+  const { t } = useSettingsStore();
 
   const [screenState, setScreenState] = useState<ScreenState>('search');
   const [searchText, setSearchText] = useState('');
@@ -143,9 +145,9 @@ export default function ConnectBankScreen() {
 
   const handleGoBack = useCallback(() => {
     if (screenState === 'webview') {
-      Alert.alert('Cancel Connection', 'Are you sure you want to cancel the bank connection?', [
-        { text: 'Continue', style: 'cancel' },
-        { text: 'Cancel', style: 'destructive', onPress: () => {
+      Alert.alert(t('connect.cancelTitle'), t('connect.cancelMessage'), [
+        { text: t('connect.continue'), style: 'cancel' },
+        { text: t('connect.cancel'), style: 'destructive', onPress: () => {
           setScreenState('search'); setConnectToken(null); setSelectedInstitution(null);
         }},
       ]);
@@ -179,9 +181,9 @@ export default function ConnectBankScreen() {
       </TouchableOpacity>
       <View style={styles.headerTitleContainer}>
         <Text style={styles.headerTitle}>
-          {screenState === 'webview' ? selectedInstitution?.name ?? 'Connect'
-            : screenState === 'syncing' ? 'Syncing...'
-              : screenState === 'success' ? 'Connected!' : 'Connect Bank'}
+          {screenState === 'webview' ? selectedInstitution?.name ?? t('connect.title')
+            : screenState === 'syncing' ? t('connect.syncingData')
+              : screenState === 'success' ? t('connect.bankConnected') : t('connect.title')}
         </Text>
         {screenState === 'search' && <Text style={styles.headerSubtitle}>Open Finance</Text>}
       </View>
@@ -193,7 +195,7 @@ export default function ConnectBankScreen() {
     <View style={styles.searchContainer}>
       <View style={styles.searchInputWrapper}>
         <Text style={styles.searchIcon}>{'\uD83D\uDD0D'}</Text>
-        <TextInput style={styles.searchInput} placeholder="Search banks and institutions..."
+        <TextInput style={styles.searchInput} placeholder={t('connect.searchPlaceholder')}
           placeholderTextColor={colors.text.muted} value={searchText} onChangeText={handleSearch}
           autoCapitalize="none" autoCorrect={false} returnKeyType="search" />
         {searchText.length > 0 && (
@@ -206,7 +208,7 @@ export default function ConnectBankScreen() {
       {isSearching && (
         <View style={styles.searchingIndicator}>
           <ActivityIndicator size="small" color={colors.accent} />
-          <Text style={styles.searchingText}>Searching...</Text>
+          <Text style={styles.searchingText}>{t('connect.searching')}</Text>
         </View>
       )}
     </View>
@@ -239,27 +241,26 @@ export default function ConnectBankScreen() {
       return (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>{'\uD83C\uDFE6'}</Text>
-          <Text style={styles.emptyTitle}>Connect your bank</Text>
+          <Text style={styles.emptyTitle}>{t('connect.connectYourBank')}</Text>
           <Text style={styles.emptyDescription}>
-            Search for your bank or financial institution to connect via Open Finance.
-            Your data is encrypted and secure.
+            {t('connect.connectDescription')}
           </Text>
           <View style={styles.featuresContainer}>
             <View style={styles.featureRow}>
               <Text style={styles.featureIcon}>{'\uD83D\uDD12'}</Text>
-              <Text style={styles.featureText}>Bank-grade encryption</Text>
+              <Text style={styles.featureText}>{t('connect.bankEncryption')}</Text>
             </View>
             <View style={styles.featureRow}>
               <Text style={styles.featureIcon}>{'\u26A1'}</Text>
-              <Text style={styles.featureText}>Automatic data sync</Text>
+              <Text style={styles.featureText}>{t('connect.autoSync')}</Text>
             </View>
             <View style={styles.featureRow}>
               <Text style={styles.featureIcon}>{'\uD83D\uDCCA'}</Text>
-              <Text style={styles.featureText}>Investments, accounts & cards</Text>
+              <Text style={styles.featureText}>{t('connect.investmentsAccountsCards')}</Text>
             </View>
             <View style={styles.featureRow}>
               <Text style={styles.featureIcon}>{'\uD83D\uDD04'}</Text>
-              <Text style={styles.featureText}>Regulated by Central Bank</Text>
+              <Text style={styles.featureText}>{t('connect.regulatedByCB')}</Text>
             </View>
           </View>
         </View>
@@ -269,9 +270,9 @@ export default function ConnectBankScreen() {
       return (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>{'\uD83D\uDD0D'}</Text>
-          <Text style={styles.emptyTitle}>No results found</Text>
+          <Text style={styles.emptyTitle}>{t('connect.noResults')}</Text>
           <Text style={styles.emptyDescription}>
-            No institutions found for "{searchText}". Try a different search term.
+            {t('connect.noResultsFor')} "{searchText}". {t('connect.tryDifferent')}
           </Text>
         </View>
       );
@@ -282,10 +283,10 @@ export default function ConnectBankScreen() {
   const renderConnecting = () => (
     <View style={styles.centerContainer}>
       <ActivityIndicator size="large" color={colors.accent} />
-      <Text style={styles.statusTitle}>Preparing connection...</Text>
+      <Text style={styles.statusTitle}>{t('connect.preparingConnection')}</Text>
       <Text style={styles.statusDescription}>
-        Setting up a secure connection with{' '}
-        {selectedInstitution?.name ?? 'your bank'}.
+        {t('connect.settingUp')}{' '}
+        {selectedInstitution?.name ?? ''}.
       </Text>
     </View>
   );
@@ -301,7 +302,7 @@ export default function ConnectBankScreen() {
           renderLoading={() => (
             <View style={styles.webViewLoading}>
               <ActivityIndicator size="large" color={colors.accent} />
-              <Text style={styles.webViewLoadingText}>Loading...</Text>
+              <Text style={styles.webViewLoadingText}>{t('common.loading')}</Text>
             </View>
           )}
           onError={(syntheticEvent) => {
@@ -326,10 +327,10 @@ export default function ConnectBankScreen() {
   const renderSyncing = () => (
     <View style={styles.centerContainer}>
       <ActivityIndicator size="large" color={colors.accent} />
-      <Text style={styles.statusTitle}>Syncing your data...</Text>
+      <Text style={styles.statusTitle}>{t('connect.syncingData')}</Text>
       <Text style={styles.statusDescription}>
-        We are importing your financial data from{' '}
-        {selectedInstitution?.name ?? 'your bank'}. This may take a moment.
+        {t('connect.importingData')}{' '}
+        {selectedInstitution?.name ?? ''}. {t('connect.mayTakeAMoment')}
       </Text>
     </View>
   );
@@ -339,13 +340,12 @@ export default function ConnectBankScreen() {
       <View style={styles.successIconContainer}>
         <Text style={styles.successIcon}>{'\u2713'}</Text>
       </View>
-      <Text style={styles.statusTitle}>Bank Connected!</Text>
+      <Text style={styles.statusTitle}>{t('connect.bankConnected')}</Text>
       <Text style={styles.statusDescription}>
-        {selectedInstitution?.name ?? 'Your bank'} has been successfully connected.
-        Your financial data is now syncing.
+        {selectedInstitution?.name ?? ''} {t('connect.successDescription')}
       </Text>
       <TouchableOpacity style={styles.primaryButton} onPress={handleDone} activeOpacity={0.8}>
-        <Text style={styles.primaryButtonText}>Done</Text>
+        <Text style={styles.primaryButtonText}>{t('connect.done')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -355,15 +355,15 @@ export default function ConnectBankScreen() {
       <View style={styles.errorIconContainer}>
         <Text style={styles.errorIcon}>!</Text>
       </View>
-      <Text style={styles.statusTitle}>Connection Failed</Text>
+      <Text style={styles.statusTitle}>{t('connect.connectionFailed')}</Text>
       <Text style={styles.statusDescription}>
         {errorMessage || 'Something went wrong. Please try again.'}
       </Text>
       <TouchableOpacity style={styles.primaryButton} onPress={handleRetry} activeOpacity={0.8}>
-        <Text style={styles.primaryButtonText}>Try Again</Text>
+        <Text style={styles.primaryButtonText}>{t('connect.tryAgain')}</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.secondaryButton} onPress={handleDone} activeOpacity={0.8}>
-        <Text style={styles.secondaryButtonText}>Go Back</Text>
+        <Text style={styles.secondaryButtonText}>{t('connect.goBack')}</Text>
       </TouchableOpacity>
     </View>
   );

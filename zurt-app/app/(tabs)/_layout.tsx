@@ -4,6 +4,7 @@ import { Tabs } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../../src/theme/colors';
 import { useNotificationStore } from '../../src/stores/notificationStore';
+import { useSettingsStore } from '../../src/stores/settingsStore';
 
 interface TabIconProps {
   icon: string;
@@ -34,6 +35,7 @@ function TabIcon({ icon, label, focused, badge }: TabIconProps) {
 
 export default function TabLayout() {
   const getUnreadCount = useNotificationStore((s) => s.getUnreadCount);
+  const t = useSettingsStore((s) => s.t);
 
   return (
     <Tabs
@@ -54,7 +56,7 @@ export default function TabLayout() {
         name="index"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="🏠" label="Home" focused={focused} />
+            <TabIcon icon="🏠" label={t('tab.home')} focused={focused} />
           ),
         }}
       />
@@ -62,7 +64,7 @@ export default function TabLayout() {
         name="wallet"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="💼" label="Carteira" focused={focused} />
+            <TabIcon icon="💼" label={t('tab.wallet')} focused={focused} />
           ),
         }}
       />
@@ -70,7 +72,7 @@ export default function TabLayout() {
         name="cards"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="💳" label="Cartões" focused={focused} />
+            <TabIcon icon="💳" label={t('tab.cards')} focused={focused} />
           ),
         }}
       />
@@ -80,7 +82,7 @@ export default function TabLayout() {
           tabBarIcon: ({ focused }) => (
             <TabIcon
               icon="🔔"
-              label="Alertas"
+              label={t('tab.alerts')}
               focused={focused}
               badge={getUnreadCount()}
             />
@@ -91,7 +93,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="👤" label="Perfil" focused={focused} />
+            <TabIcon icon="👤" label={t('tab.profile')} focused={focused} />
           ),
         }}
       />

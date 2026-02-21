@@ -16,6 +16,7 @@ import { colors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useAuthStore } from '../../src/stores/authStore';
 import { Button } from '../../src/components/ui/Button';
+import { useSettingsStore } from '../../src/stores/settingsStore';
 import { Input } from '../../src/components/ui/Input';
 
 type Mode = 'login' | 'register';
@@ -24,6 +25,7 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { login, register, loginDemo, isLoading, error: storeError, clearError } = useAuthStore();
+  const { t } = useSettingsStore();
 
   const [mode, setMode] = useState<Mode>('login');
   const [fullName, setFullName] = useState('');
@@ -40,11 +42,11 @@ export default function LoginScreen() {
     clearError();
 
     if (!email.trim()) {
-      setError('Digite seu email');
+      setError(t('login.emailError'));
       return;
     }
     if (!password.trim()) {
-      setError('Digite sua senha');
+      setError(t('login.passwordError'));
       return;
     }
 
@@ -58,7 +60,7 @@ export default function LoginScreen() {
       }
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setError('Erro de conexao. Tente novamente.');
+      setError(t('login.connectionError'));
     }
   }, [email, password, login, router, clearError]);
 
@@ -68,15 +70,15 @@ export default function LoginScreen() {
     clearError();
 
     if (!fullName.trim()) {
-      setError('Digite seu nome completo');
+      setError(t('login.nameError'));
       return;
     }
     if (!email.trim()) {
-      setError('Digite seu email');
+      setError(t('login.emailError'));
       return;
     }
     if (!password.trim() || password.length < 6) {
-      setError('Senha deve ter no minimo 6 caracteres');
+      setError(t('login.passwordMinLength'));
       return;
     }
 
@@ -90,7 +92,7 @@ export default function LoginScreen() {
       }
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setError('Erro ao criar conta. Tente novamente.');
+      setError(t('login.registerError'));
     }
   }, [fullName, email, password, register, router, clearError]);
 
@@ -130,8 +132,8 @@ export default function LoginScreen() {
           <View style={styles.form}>
             {mode === 'register' && (
               <Input
-                label="Nome completo"
-                placeholder="Seu nome"
+                label={t('login.fullName')}
+                placeholder={t('login.yourName')}
                 value={fullName}
                 onChangeText={(text) => {
                   setFullName(text);
@@ -144,7 +146,7 @@ export default function LoginScreen() {
             )}
 
             <Input
-              label="Email"
+              label={t('login.email')}
               placeholder="seu@email.com"
               value={email}
               onChangeText={(text) => {
@@ -158,7 +160,7 @@ export default function LoginScreen() {
             />
 
             <Input
-              label="Senha"
+              label={t('login.password')}
               placeholder="••••••••"
               value={password}
               onChangeText={(text) => {
@@ -185,7 +187,7 @@ export default function LoginScreen() {
 
             <View style={styles.buttonContainer}>
               <Button
-                title={mode === 'login' ? 'Acessar' : 'Criar conta'}
+                title={mode === 'login' ? t('login.access') : t('login.createAccount')}
                 onPress={mode === 'login' ? handleLogin : handleRegister}
                 loading={isLoading}
                 size="lg"
@@ -195,8 +197,8 @@ export default function LoginScreen() {
             <TouchableOpacity onPress={toggleMode} style={styles.switchMode}>
               <Text style={styles.switchModeText}>
                 {mode === 'login'
-                  ? 'Nao tem conta? Cadastre-se'
-                  : 'Ja tem conta? Entrar'}
+                  ? t('login.noAccount')
+                  : t('login.hasAccount')}
               </Text>
             </TouchableOpacity>
 
@@ -216,7 +218,7 @@ export default function LoginScreen() {
           {/* Demo link */}
           <View style={styles.demoContainer}>
             <TouchableOpacity onPress={handleDemo} style={styles.demoButton}>
-              <Text style={styles.demoText}>Modo demonstração</Text>
+              <Text style={styles.demoText}>{t('login.demo')}</Text>
             </TouchableOpacity>
           </View>
         </View>

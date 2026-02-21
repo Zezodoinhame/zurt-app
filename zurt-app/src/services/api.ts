@@ -184,10 +184,10 @@ async function fetchWithFallback<T>(
     const result = transform(data);
     await setCache(cacheKey, result);
     return result;
-  } catch {
+  } catch (err) {
     const cached = await getCached<T>(cacheKey);
     if (cached) return cached;
-    return demoFallback;
+    throw err; // Real users: propagate error instead of returning demo data
   }
 }
 
@@ -323,7 +323,7 @@ export async function fetchDashboardSummary(): Promise<{
     '/dashboard/summary',
     (data) => {
       const rawSummary = data.summary ?? data.portfolio ?? data;
-      const rawAllocations: Allocation[] = data.allocations ?? demoAllocations;
+      const rawAllocations: Allocation[] = data.allocations ?? [];
 
       // Compute totalValue from multiple possible fields, falling back to sum of allocations
       const allocationsTotal = rawAllocations.reduce((sum: number, a: any) => sum + (a.value ?? 0), 0);
@@ -352,9 +352,9 @@ export async function fetchDashboardSummary(): Promise<{
 
       return {
         summary,
-        institutions: data.institutions ?? demoInstitutions,
+        institutions: data.institutions ?? [],
         allocations: rawAllocations,
-        insights: data.insights ?? demoInsights,
+        insights: data.insights ?? [],
       };
     },
     demoResult,
@@ -390,7 +390,7 @@ export async function fetchSpendingByCategory(
     `/dashboard/spending-by-category?${params}`,
     (data) => {
       const raw = data.categories ?? data.spending ?? data ?? [];
-      return Array.isArray(raw) ? raw : demoCategorySpending;
+      return Array.isArray(raw) ? raw : [];
     },
     demoCategorySpending,
   );
@@ -431,12 +431,12 @@ export async function fetchInvestments(): Promise<{
             variation: a.variation ?? 0,
             priceHistory: a.priceHistory ?? a.price_history ?? [],
           }))
-        : demoAssets;
+        : [];
 
       return {
         assets,
-        institutions: data.institutions ?? demoInstitutions,
-        allocations: data.allocations ?? demoAllocations,
+        institutions: data.institutions ?? [],
+        allocations: data.allocations ?? [],
       };
     },
     demoResult,
@@ -526,14 +526,14 @@ export async function fetchCardsApi(): Promise<{
               installment: t.installment,
             })),
           }))
-        : demoCards;
+        : [];
 
       return {
         cards,
         categorySpending:
           data.categorySpending ??
           data.category_spending ??
-          demoCategorySpending,
+          [],
       };
     },
     demoResult,
@@ -568,7 +568,7 @@ export async function fetchNotificationsApi(): Promise<Notification[]> {
             date: n.date ?? n.created_at ?? '',
             read: n.read ?? false,
           }))
-        : demoNotifications;
+        : [];
     },
     demoNotifications,
   );

@@ -6,19 +6,22 @@ import {
   StyleSheet,
   Dimensions,
   RefreshControl,
+  TouchableOpacity,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 import { colors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useCardsStore } from '../../src/stores/cardsStore';
 import { useAuthStore } from '../../src/stores/authStore';
+import { useSettingsStore } from '../../src/stores/settingsStore';
 import { CreditCardVisual } from '../../src/components/cards/CreditCardVisual';
 import { SkeletonCard, SkeletonList } from '../../src/components/skeletons/Skeleton';
 import { ErrorState } from '../../src/components/shared/ErrorState';
-import { formatBRL, formatShortDate, maskValue } from '../../src/utils/formatters';
+import { formatShortDate, maskValue, formatCurrency } from '../../src/utils/formatters';
 import type { TransactionCategory } from '../../src/types';
 
 // ---------------------------------------------------------------------------
@@ -67,6 +70,8 @@ export default function CardsScreen() {
   } = useCardsStore();
 
   const { valuesHidden } = useAuthStore();
+  const { t, currency } = useSettingsStore();
+  const router = useRouter();
 
   // ---- Effects ------------------------------------------------------------
   useEffect(() => {
@@ -116,7 +121,7 @@ export default function CardsScreen() {
 
   // ---- Value display helpers ----------------------------------------------
   const displayValue = (value: number) =>
-    valuesHidden ? maskValue('') : formatBRL(value);
+    valuesHidden ? maskValue('') : formatCurrency(value, currency);
 
   // =========================================================================
   // Render
@@ -141,7 +146,7 @@ export default function CardsScreen() {
         {/* Header                                                           */}
         {/* ---------------------------------------------------------------- */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Cartões</Text>
+          <Text style={styles.headerTitle}>{t('cards.title')}</Text>
         </View>
 
         {/* ---------------------------------------------------------------- */}
@@ -155,6 +160,19 @@ export default function CardsScreen() {
           </View>
         ) : error && cards.length === 0 ? (
           <ErrorState message={error} onRetry={loadCards} />
+        ) : cards.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>💳</Text>
+            <Text style={styles.emptyTitle}>{t('cards.emptyTitle')}</Text>
+            <Text style={styles.emptyDescription}>{t('cards.emptyDescription')}</Text>
+            <TouchableOpacity
+              style={styles.emptyButton}
+              onPress={() => router.push('/connect-bank')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.emptyButtonText}>{t('cards.emptyButton')}</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <>
             {/* -------------------------------------------------------------- */}
@@ -207,13 +225,13 @@ export default function CardsScreen() {
                 <View style={styles.invoiceCard}>
                   <View style={styles.invoiceColumns}>
                     <View style={styles.invoiceColumn}>
-                      <Text style={styles.invoiceLabel}>Fatura atual</Text>
+                      <Text style={styles.invoiceLabel}>{t('cards.currentInvoice')}</Text>
                       <Text style={styles.invoiceValueLarge}>
                         {displayValue(selectedCard.currentInvoice)}
                       </Text>
                     </View>
                     <View style={styles.invoiceColumn}>
-                      <Text style={styles.invoiceLabel}>Próxima fatura</Text>
+                      <Text style={styles.invoiceLabel}>{t('cards.nextInvoice')}</Text>
                       <Text style={styles.invoiceValueSecondary}>
                         {displayValue(selectedCard.nextInvoice)}
                       </Text>
@@ -228,7 +246,7 @@ export default function CardsScreen() {
             {/* -------------------------------------------------------------- */}
             {categorySpending.length > 0 && (
               <View style={styles.contentPadding}>
-                <Text style={styles.sectionTitle}>Gastos por categoria</Text>
+                <Text style={styles.sectionTitle}>{t('cards.spendingByCategory')}</Text>
 
                 {categorySpending
                   .filter((cat) => cat.total > 0)
@@ -265,7 +283,7 @@ export default function CardsScreen() {
             {/* -------------------------------------------------------------- */}
             {selectedCard && selectedCard.transactions.length > 0 && (
               <View style={styles.contentPadding}>
-                <Text style={styles.sectionTitle}>Transações</Text>
+                <Text style={styles.sectionTitle}>{t('cards.transactions')}</Text>
 
                 {groupedTransactions.map((group) => (
                   <View key={group.date} style={styles.transactionGroup}>
@@ -477,5 +495,42 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
     textAlign: 'right',
     minWidth: 90,
+  },
+
+  // -- Empty state -----------------------------------------------------------
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+    paddingHorizontal: spacing.xl,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: spacing.lg,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text.primary,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  emptyDescription: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+  },
+  emptyButton: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+  },
+  emptyButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.background,
   },
 });

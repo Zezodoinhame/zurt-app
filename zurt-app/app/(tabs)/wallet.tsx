@@ -9,17 +9,19 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 
 import { colors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { usePortfolioStore } from '../../src/stores/portfolioStore';
 import { useAuthStore } from '../../src/stores/authStore';
+import { useSettingsStore } from '../../src/stores/settingsStore';
 import { AssetCard } from '../../src/components/cards/AssetCard';
 import { BottomSheet } from '../../src/components/shared/BottomSheet';
 import { MiniLineChart } from '../../src/components/charts/MiniLineChart';
 import { SkeletonList } from '../../src/components/skeletons/Skeleton';
 import { ErrorState } from '../../src/components/shared/ErrorState';
-import { formatBRL, formatPct, maskValue } from '../../src/utils/formatters';
+import { formatPct, maskValue, formatCurrency } from '../../src/utils/formatters';
 import type { Asset, AssetClass, InstitutionId } from '../../src/types';
 
 // ---------------------------------------------------------------------------
@@ -64,6 +66,8 @@ export default function WalletScreen() {
     refresh,
   } = usePortfolioStore();
   const { valuesHidden } = useAuthStore();
+  const { t, currency } = useSettingsStore();
+  const router = useRouter();
 
   // Local state
   const [viewMode, setViewMode] = useState<ViewMode>('class');
@@ -192,7 +196,7 @@ export default function WalletScreen() {
         ]}
         onPress={() => handleToggleViewMode('class')}
         activeOpacity={0.7}
-        accessibilityLabel="Agrupar por classe de ativo"
+        accessibilityLabel={t('wallet.byClass')}
         accessibilityRole="button"
       >
         <Text
@@ -201,7 +205,7 @@ export default function WalletScreen() {
             viewMode === 'class' && styles.toggleTextActive,
           ]}
         >
-          Por Classe
+          {t('wallet.byClass')}
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
@@ -211,7 +215,7 @@ export default function WalletScreen() {
         ]}
         onPress={() => handleToggleViewMode('institution')}
         activeOpacity={0.7}
-        accessibilityLabel="Agrupar por instituição"
+        accessibilityLabel={t('wallet.byInstitution')}
         accessibilityRole="button"
       >
         <Text
@@ -220,7 +224,7 @@ export default function WalletScreen() {
             viewMode === 'institution' && styles.toggleTextActive,
           ]}
         >
-          Por Instituição
+          {t('wallet.byInstitution')}
         </Text>
       </TouchableOpacity>
     </View>
@@ -237,7 +241,7 @@ export default function WalletScreen() {
             style={styles.groupHeader}
             onPress={() => handleToggleClass(allocation.class)}
             activeOpacity={0.7}
-            accessibilityLabel={`${allocation.label}, ${groupAssets.length} ativos, ${formatBRL(allocation.value)}`}
+            accessibilityLabel={`${allocation.label}, ${groupAssets.length} ativos, ${formatCurrency(allocation.value, currency)}`}
           >
             <View style={styles.groupHeaderLeft}>
               <View
@@ -251,12 +255,12 @@ export default function WalletScreen() {
                   <Text style={styles.groupLabel}>{allocation.label}</Text>
                   <Text style={styles.groupCount}>
                     {groupAssets.length}{' '}
-                    {groupAssets.length === 1 ? 'ativo' : 'ativos'}
+                    {groupAssets.length === 1 ? t('wallet.asset') : t('wallet.assets')}
                   </Text>
                 </View>
                 <View style={styles.groupHeaderBottomRow}>
                   <Text style={styles.groupValue}>
-                    {displayValue(formatBRL(allocation.value))}
+                    {displayValue(formatCurrency(allocation.value, currency))}
                   </Text>
                   <Text style={styles.groupPercentage}>
                     {formatPct(allocation.percentage, false)}
@@ -298,7 +302,7 @@ export default function WalletScreen() {
             style={styles.groupHeader}
             onPress={() => handleToggleInstitution(institution.id)}
             activeOpacity={0.7}
-            accessibilityLabel={`${institution.name}, ${groupAssets.length} ativos, ${formatBRL(totalValue)}`}
+            accessibilityLabel={`${institution.name}, ${groupAssets.length} ativos, ${formatCurrency(totalValue, currency)}`}
           >
             <View style={styles.groupHeaderLeft}>
               <View
@@ -316,12 +320,12 @@ export default function WalletScreen() {
                   <Text style={styles.groupLabel}>{institution.name}</Text>
                   <Text style={styles.groupCount}>
                     {groupAssets.length}{' '}
-                    {groupAssets.length === 1 ? 'ativo' : 'ativos'}
+                    {groupAssets.length === 1 ? t('wallet.asset') : t('wallet.assets')}
                   </Text>
                 </View>
                 <View style={styles.groupHeaderBottomRow}>
                   <Text style={styles.groupValue}>
-                    {displayValue(formatBRL(totalValue))}
+                    {displayValue(formatCurrency(totalValue, currency))}
                   </Text>
                 </View>
               </View>
@@ -384,21 +388,21 @@ export default function WalletScreen() {
         {/* Info rows */}
         <View style={styles.detailInfoGrid}>
           <View style={styles.detailInfoRow}>
-            <Text style={styles.detailInfoLabel}>Preço médio</Text>
+            <Text style={styles.detailInfoLabel}>{t('wallet.avgPrice')}</Text>
             <Text style={styles.detailInfoValue}>
-              {displayValue(formatBRL(selectedAsset.averagePrice))}
+              {displayValue(formatCurrency(selectedAsset.averagePrice, currency))}
             </Text>
           </View>
 
           <View style={styles.detailInfoRow}>
-            <Text style={styles.detailInfoLabel}>Preço atual</Text>
+            <Text style={styles.detailInfoLabel}>{t('wallet.currentPrice')}</Text>
             <Text style={styles.detailInfoValue}>
-              {displayValue(formatBRL(selectedAsset.currentPrice))}
+              {displayValue(formatCurrency(selectedAsset.currentPrice, currency))}
             </Text>
           </View>
 
           <View style={styles.detailInfoRow}>
-            <Text style={styles.detailInfoLabel}>Quantidade</Text>
+            <Text style={styles.detailInfoLabel}>{t('wallet.quantity')}</Text>
             <Text style={styles.detailInfoValue}>
               {valuesHidden
                 ? '\u2022\u2022\u2022\u2022'
@@ -409,21 +413,21 @@ export default function WalletScreen() {
           </View>
 
           <View style={styles.detailInfoRow}>
-            <Text style={styles.detailInfoLabel}>Valor investido</Text>
+            <Text style={styles.detailInfoLabel}>{t('wallet.investedValue')}</Text>
             <Text style={styles.detailInfoValue}>
-              {displayValue(formatBRL(selectedAsset.investedValue))}
+              {displayValue(formatCurrency(selectedAsset.investedValue, currency))}
             </Text>
           </View>
 
           <View style={styles.detailInfoRow}>
-            <Text style={styles.detailInfoLabel}>Valor atual</Text>
+            <Text style={styles.detailInfoLabel}>{t('wallet.currentValue')}</Text>
             <Text style={styles.detailInfoValue}>
-              {displayValue(formatBRL(selectedAsset.currentValue))}
+              {displayValue(formatCurrency(selectedAsset.currentValue, currency))}
             </Text>
           </View>
 
           <View style={styles.detailInfoRow}>
-            <Text style={styles.detailInfoLabel}>Rentabilidade</Text>
+            <Text style={styles.detailInfoLabel}>{t('wallet.profitability')}</Text>
             <Text
               style={[
                 styles.detailInfoValue,
@@ -439,7 +443,7 @@ export default function WalletScreen() {
           </View>
 
           <View style={styles.detailInfoRow}>
-            <Text style={styles.detailInfoLabel}>Instituição</Text>
+            <Text style={styles.detailInfoLabel}>{t('wallet.institution')}</Text>
             <Text style={styles.detailInfoValue}>{institutionName}</Text>
           </View>
         </View>
@@ -455,7 +459,7 @@ export default function WalletScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Carteira</Text>
+        <Text style={styles.headerTitle}>{t('wallet.title')}</Text>
       </View>
 
       {/* Toggle */}
@@ -468,6 +472,19 @@ export default function WalletScreen() {
         </View>
       ) : error && assets.length === 0 ? (
         <ErrorState message={error} onRetry={loadPortfolio} />
+      ) : assets.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyIcon}>💼</Text>
+          <Text style={styles.emptyTitle}>{t('wallet.emptyTitle')}</Text>
+          <Text style={styles.emptyDescription}>{t('wallet.emptyDescription')}</Text>
+          <TouchableOpacity
+            style={styles.emptyButton}
+            onPress={() => router.push('/connect-bank')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.emptyButtonText}>{t('wallet.emptyButton')}</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <ScrollView
           style={styles.scrollView}
@@ -689,5 +706,42 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text.primary,
     fontVariant: ['tabular-nums'],
+  },
+
+  // Empty state
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+    paddingHorizontal: spacing.xl,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: spacing.lg,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text.primary,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  emptyDescription: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+  },
+  emptyButton: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+  },
+  emptyButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.background,
   },
 });

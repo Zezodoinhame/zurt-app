@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors } from '../../theme/colors';
 import { spacing, radius } from '../../theme/spacing';
+import { useSettingsStore } from '../../stores/settingsStore';
 
 interface ErrorStateProps {
   message?: string;
@@ -9,16 +10,18 @@ interface ErrorStateProps {
 }
 
 export function ErrorState({
-  message = 'Erro ao carregar dados',
+  message,
   onRetry,
 }: ErrorStateProps) {
+  const t = useSettingsStore((s) => s.t);
+
   return (
     <View style={styles.container}>
       <Text style={styles.icon}>!</Text>
-      <Text style={styles.message}>{message}</Text>
+      <Text style={styles.message}>{message || t('common.error')}</Text>
       {onRetry && (
         <TouchableOpacity style={styles.retryButton} onPress={onRetry} activeOpacity={0.7}>
-          <Text style={styles.retryText}>Tentar novamente</Text>
+          <Text style={styles.retryText}>{t('common.retry')}</Text>
         </TouchableOpacity>
       )}
     </View>

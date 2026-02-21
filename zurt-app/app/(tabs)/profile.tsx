@@ -22,7 +22,7 @@ import type { Language } from '../../src/i18n/translations';
 import type { Currency } from '../../src/stores/settingsStore';
 import { Toggle } from '../../src/components/ui/Toggle';
 import { Card } from '../../src/components/ui/Card';
-import { formatBRL, formatDate } from '../../src/utils/formatters';
+import { formatDate, formatCurrency } from '../../src/utils/formatters';
 import { changePassword } from '../../src/services/api';
 
 // ---------------------------------------------------------------------------
@@ -484,7 +484,7 @@ export default function ProfileScreen() {
           <View style={styles.tokenItem}>
             <Text style={styles.tokenLabel}>{t('profile.revenueShare')}</Text>
             <Text style={[styles.tokenValue, { color: colors.accent }]}>
-              {formatBRL(user.revenueShareReceived)}
+              {formatCurrency(user.revenueShareReceived, currency)}
             </Text>
           </View>
         </View>

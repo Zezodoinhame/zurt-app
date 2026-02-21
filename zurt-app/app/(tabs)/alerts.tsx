@@ -13,19 +13,20 @@ import { colors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useNotificationStore } from '../../src/stores/notificationStore';
 import { formatRelativeDate } from '../../src/utils/formatters';
+import { useSettingsStore } from '../../src/stores/settingsStore';
 import { SkeletonList } from '../../src/components/skeletons/Skeleton';
 import { ErrorState } from '../../src/components/shared/ErrorState';
 import type { NotificationType } from '../../src/types';
 
 const typeConfig: Record<
   NotificationType,
-  { icon: string; color: string; label: string }
+  { icon: string; color: string }
 > = {
-  distribution: { icon: '💎', color: colors.accent, label: 'Distribuição' },
-  maturity: { icon: '⚠️', color: colors.warning, label: 'Vencimento' },
-  invoice: { icon: '💳', color: colors.info, label: 'Fatura' },
-  insight: { icon: '💡', color: '#A855F7', label: 'Insight' },
-  system: { icon: '🔔', color: colors.text.secondary, label: 'Sistema' },
+  distribution: { icon: '💎', color: colors.accent },
+  maturity: { icon: '⚠️', color: colors.warning },
+  invoice: { icon: '💳', color: colors.info },
+  insight: { icon: '💡', color: '#A855F7' },
+  system: { icon: '🔔', color: colors.text.secondary },
 };
 
 const filterOptions: Array<{ key: NotificationType | 'all'; label: string }> = [
@@ -53,6 +54,7 @@ export default function AlertsScreen() {
     getUnreadCount,
     getFilteredNotifications,
   } = useNotificationStore();
+  const { t } = useSettingsStore();
 
   useEffect(() => {
     loadNotifications();
@@ -85,7 +87,7 @@ export default function AlertsScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
-        <Text style={styles.screenTitle}>Alertas</Text>
+        <Text style={styles.screenTitle}>{t('alerts.title')}</Text>
         <View style={{ paddingHorizontal: spacing.xl }}>
           <SkeletonList count={8} />
         </View>
@@ -96,7 +98,7 @@ export default function AlertsScreen() {
   if (error && notifications.length === 0) {
     return (
       <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
-        <Text style={styles.screenTitle}>Alertas</Text>
+        <Text style={styles.screenTitle}>{t('alerts.title')}</Text>
         <ErrorState message={error} onRetry={loadNotifications} />
       </View>
     );
@@ -105,10 +107,10 @@ export default function AlertsScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.screenTitle}>Alertas</Text>
+        <Text style={styles.screenTitle}>{t('alerts.title')}</Text>
         {unreadCount > 0 && (
           <TouchableOpacity onPress={handleMarkAllRead} style={styles.markAll}>
-            <Text style={styles.markAllText}>Marcar todos como lido</Text>
+            <Text style={styles.markAllText}>{t('alerts.markAllRead')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -159,7 +161,7 @@ export default function AlertsScreen() {
         {notifications.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyIcon}>🔕</Text>
-            <Text style={styles.emptyText}>Nenhuma notificação</Text>
+            <Text style={styles.emptyText}>{t('alerts.noNotifications')}</Text>
           </View>
         ) : (
           notifications.map((notification, index) => {
@@ -213,7 +215,7 @@ export default function AlertsScreen() {
                     style={styles.dismissButton}
                     onPress={() => handleDismiss(notification.id)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityLabel="Dispensar notificação"
+                    accessibilityLabel={t('alerts.dismiss')}
                   >
                     <Text style={styles.dismissText}>✕</Text>
                   </TouchableOpacity>

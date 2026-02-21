@@ -23,6 +23,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'home.hideValues': 'Ocultar valores',
     'home.notifications': 'Notificações',
     'home.unread': 'não lidas',
+    'home.emptyTitle': 'Conecte sua primeira instituição financeira para visualizar seu patrimônio',
+    'home.emptyButton': '+ Conectar via Open Finance',
 
     // Greetings
     'greeting.morning': 'Bom dia',
@@ -42,6 +44,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'wallet.currentValue': 'Valor atual',
     'wallet.profitability': 'Rentabilidade',
     'wallet.institution': 'Instituição',
+    'wallet.emptyTitle': 'Nenhum investimento encontrado',
+    'wallet.emptyDescription': 'Conecte uma instituição para ver sua carteira.',
+    'wallet.emptyButton': '+ Conectar instituição',
 
     // Asset classes
     'class.fixedIncome': 'Renda Fixa',
@@ -58,6 +63,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'cards.spendingByCategory': 'Gastos por categoria',
     'cards.transactions': 'Transações',
     'cards.noCards': 'Nenhum cartão conectado',
+    'cards.emptyTitle': 'Nenhum cartão encontrado',
+    'cards.emptyDescription': 'Conecte uma instituição para ver seus cartões.',
+    'cards.emptyButton': '+ Conectar instituição',
 
     // Categories
     'category.food': 'Alimentação',
@@ -130,6 +138,51 @@ export const translations: Record<Language, Record<string, string>> = {
     'password.error': 'Erro ao alterar senha',
     'password.mismatch': 'As senhas não coincidem',
 
+    // Login
+    'login.access': 'Acessar',
+    'login.createAccount': 'Criar conta',
+    'login.email': 'Email',
+    'login.password': 'Senha',
+    'login.fullName': 'Nome completo',
+    'login.yourName': 'Seu nome',
+    'login.demo': 'Modo demonstração',
+    'login.noAccount': 'Não tem conta? Cadastre-se',
+    'login.hasAccount': 'Já tem conta? Entrar',
+    'login.emailError': 'Digite seu email',
+    'login.passwordError': 'Digite sua senha',
+    'login.nameError': 'Digite seu nome completo',
+    'login.passwordMinLength': 'Senha deve ter no mínimo 6 caracteres',
+    'login.connectionError': 'Erro de conexão. Tente novamente.',
+    'login.registerError': 'Erro ao criar conta. Tente novamente.',
+
+    // Connect bank
+    'connect.searchPlaceholder': 'Buscar bancos e instituições...',
+    'connect.searching': 'Buscando...',
+    'connect.connectYourBank': 'Conecte seu banco',
+    'connect.connectDescription': 'Pesquise seu banco ou instituição financeira para conectar via Open Finance. Seus dados são criptografados e seguros.',
+    'connect.bankEncryption': 'Criptografia bancária',
+    'connect.autoSync': 'Sincronização automática',
+    'connect.investmentsAccountsCards': 'Investimentos, contas e cartões',
+    'connect.regulatedByCB': 'Regulado pelo Banco Central',
+    'connect.noResults': 'Nenhum resultado encontrado',
+    'connect.noResultsFor': 'Nenhuma instituição encontrada para',
+    'connect.tryDifferent': 'Tente um termo de busca diferente.',
+    'connect.preparingConnection': 'Preparando conexão...',
+    'connect.settingUp': 'Configurando uma conexão segura com',
+    'connect.syncingData': 'Sincronizando seus dados...',
+    'connect.importingData': 'Estamos importando seus dados financeiros de',
+    'connect.mayTakeAMoment': 'Isso pode levar um momento.',
+    'connect.bankConnected': 'Banco Conectado!',
+    'connect.successDescription': 'foi conectado com sucesso. Seus dados financeiros estão sendo sincronizados.',
+    'connect.connectionFailed': 'Falha na Conexão',
+    'connect.tryAgain': 'Tentar Novamente',
+    'connect.goBack': 'Voltar',
+    'connect.done': 'Concluído',
+    'connect.cancelTitle': 'Cancelar Conexão',
+    'connect.cancelMessage': 'Tem certeza que deseja cancelar a conexão bancária?',
+    'connect.continue': 'Continuar',
+    'connect.cancel': 'Cancelar',
+
     // Common
     'common.loading': 'Carregando...',
     'common.error': 'Erro',
@@ -172,6 +225,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'home.hideValues': 'Hide values',
     'home.notifications': 'Notifications',
     'home.unread': 'unread',
+    'home.emptyTitle': 'Connect your first financial institution to view your patrimony',
+    'home.emptyButton': '+ Connect via Open Finance',
 
     // Greetings
     'greeting.morning': 'Good morning',
@@ -191,6 +246,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'wallet.currentValue': 'Current value',
     'wallet.profitability': 'Profitability',
     'wallet.institution': 'Institution',
+    'wallet.emptyTitle': 'No investments found',
+    'wallet.emptyDescription': 'Connect an institution to see your wallet.',
+    'wallet.emptyButton': '+ Connect institution',
 
     // Asset classes
     'class.fixedIncome': 'Fixed Income',
@@ -207,6 +265,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'cards.spendingByCategory': 'Spending by category',
     'cards.transactions': 'Transactions',
     'cards.noCards': 'No cards connected',
+    'cards.emptyTitle': 'No cards found',
+    'cards.emptyDescription': 'Connect an institution to see your cards.',
+    'cards.emptyButton': '+ Connect institution',
 
     // Categories
     'category.food': 'Food',
@@ -279,6 +340,51 @@ export const translations: Record<Language, Record<string, string>> = {
     'password.error': 'Error changing password',
     'password.mismatch': 'Passwords do not match',
 
+    // Login
+    'login.access': 'Sign in',
+    'login.createAccount': 'Create account',
+    'login.email': 'Email',
+    'login.password': 'Password',
+    'login.fullName': 'Full name',
+    'login.yourName': 'Your name',
+    'login.demo': 'Demo mode',
+    'login.noAccount': "Don't have an account? Sign up",
+    'login.hasAccount': 'Already have an account? Sign in',
+    'login.emailError': 'Enter your email',
+    'login.passwordError': 'Enter your password',
+    'login.nameError': 'Enter your full name',
+    'login.passwordMinLength': 'Password must be at least 6 characters',
+    'login.connectionError': 'Connection error. Please try again.',
+    'login.registerError': 'Error creating account. Please try again.',
+
+    // Connect bank
+    'connect.searchPlaceholder': 'Search banks and institutions...',
+    'connect.searching': 'Searching...',
+    'connect.connectYourBank': 'Connect your bank',
+    'connect.connectDescription': 'Search for your bank or financial institution to connect via Open Finance. Your data is encrypted and secure.',
+    'connect.bankEncryption': 'Bank-grade encryption',
+    'connect.autoSync': 'Automatic data sync',
+    'connect.investmentsAccountsCards': 'Investments, accounts & cards',
+    'connect.regulatedByCB': 'Regulated by Central Bank',
+    'connect.noResults': 'No results found',
+    'connect.noResultsFor': 'No institutions found for',
+    'connect.tryDifferent': 'Try a different search term.',
+    'connect.preparingConnection': 'Preparing connection...',
+    'connect.settingUp': 'Setting up a secure connection with',
+    'connect.syncingData': 'Syncing your data...',
+    'connect.importingData': 'We are importing your financial data from',
+    'connect.mayTakeAMoment': 'This may take a moment.',
+    'connect.bankConnected': 'Bank Connected!',
+    'connect.successDescription': 'has been successfully connected. Your financial data is now syncing.',
+    'connect.connectionFailed': 'Connection Failed',
+    'connect.tryAgain': 'Try Again',
+    'connect.goBack': 'Go Back',
+    'connect.done': 'Done',
+    'connect.cancelTitle': 'Cancel Connection',
+    'connect.cancelMessage': 'Are you sure you want to cancel the bank connection?',
+    'connect.continue': 'Continue',
+    'connect.cancel': 'Cancel',
+
     // Common
     'common.loading': 'Loading...',
     'common.error': 'Error',
@@ -321,6 +427,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'home.hideValues': '隐藏数值',
     'home.notifications': '通知',
     'home.unread': '未读',
+    'home.emptyTitle': '连接您的第一个金融机构以查看您的资产',
+    'home.emptyButton': '+ 通过Open Finance连接',
 
     // Greetings
     'greeting.morning': '早上好',
@@ -340,6 +448,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'wallet.currentValue': '当前价值',
     'wallet.profitability': '盈利能力',
     'wallet.institution': '机构',
+    'wallet.emptyTitle': '未找到投资',
+    'wallet.emptyDescription': '连接机构以查看您的钱包。',
+    'wallet.emptyButton': '+ 连接机构',
 
     // Asset classes
     'class.fixedIncome': '固定收益',
@@ -356,6 +467,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'cards.spendingByCategory': '按类别支出',
     'cards.transactions': '交易',
     'cards.noCards': '未连接卡片',
+    'cards.emptyTitle': '未找到卡片',
+    'cards.emptyDescription': '连接机构以查看您的卡片。',
+    'cards.emptyButton': '+ 连接机构',
 
     // Categories
     'category.food': '餐饮',
@@ -428,6 +542,51 @@ export const translations: Record<Language, Record<string, string>> = {
     'password.error': '修改密码错误',
     'password.mismatch': '密码不匹配',
 
+    // Login
+    'login.access': '登录',
+    'login.createAccount': '创建账户',
+    'login.email': '邮箱',
+    'login.password': '密码',
+    'login.fullName': '全名',
+    'login.yourName': '您的姓名',
+    'login.demo': '演示模式',
+    'login.noAccount': '没有账户？注册',
+    'login.hasAccount': '已有账户？登录',
+    'login.emailError': '请输入邮箱',
+    'login.passwordError': '请输入密码',
+    'login.nameError': '请输入全名',
+    'login.passwordMinLength': '密码至少6个字符',
+    'login.connectionError': '连接错误，请重试。',
+    'login.registerError': '创建账户错误，请重试。',
+
+    // Connect bank
+    'connect.searchPlaceholder': '搜索银行和机构...',
+    'connect.searching': '搜索中...',
+    'connect.connectYourBank': '连接您的银行',
+    'connect.connectDescription': '搜索您的银行或金融机构通过Open Finance连接。您的数据已加密且安全。',
+    'connect.bankEncryption': '银行级加密',
+    'connect.autoSync': '自动数据同步',
+    'connect.investmentsAccountsCards': '投资、账户和卡片',
+    'connect.regulatedByCB': '受央行监管',
+    'connect.noResults': '未找到结果',
+    'connect.noResultsFor': '未找到相关机构',
+    'connect.tryDifferent': '请尝试不同的搜索词。',
+    'connect.preparingConnection': '准备连接...',
+    'connect.settingUp': '正在建立安全连接',
+    'connect.syncingData': '同步数据中...',
+    'connect.importingData': '正在导入您的金融数据',
+    'connect.mayTakeAMoment': '这可能需要一些时间。',
+    'connect.bankConnected': '银行已连接！',
+    'connect.successDescription': '已成功连接。您的金融数据正在同步。',
+    'connect.connectionFailed': '连接失败',
+    'connect.tryAgain': '重试',
+    'connect.goBack': '返回',
+    'connect.done': '完成',
+    'connect.cancelTitle': '取消连接',
+    'connect.cancelMessage': '确定要取消银行连接吗？',
+    'connect.continue': '继续',
+    'connect.cancel': '取消',
+
     // Common
     'common.loading': '加载中...',
     'common.error': '错误',
@@ -470,6 +629,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'home.hideValues': 'إخفاء القيم',
     'home.notifications': 'الإشعارات',
     'home.unread': 'غير مقروءة',
+    'home.emptyTitle': 'قم بربط مؤسستك المالية الأولى لعرض أصولك',
+    'home.emptyButton': '+ الاتصال عبر Open Finance',
 
     // Greetings
     'greeting.morning': 'صباح الخير',
@@ -489,6 +650,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'wallet.currentValue': 'القيمة الحالية',
     'wallet.profitability': 'الربحية',
     'wallet.institution': 'المؤسسة',
+    'wallet.emptyTitle': 'لم يتم العثور على استثمارات',
+    'wallet.emptyDescription': 'قم بربط مؤسسة لعرض محفظتك.',
+    'wallet.emptyButton': '+ ربط مؤسسة',
 
     // Asset classes
     'class.fixedIncome': 'الدخل الثابت',
@@ -505,6 +669,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'cards.spendingByCategory': 'الإنفاق حسب الفئة',
     'cards.transactions': 'المعاملات',
     'cards.noCards': 'لا توجد بطاقات متصلة',
+    'cards.emptyTitle': 'لم يتم العثور على بطاقات',
+    'cards.emptyDescription': 'قم بربط مؤسسة لعرض بطاقاتك.',
+    'cards.emptyButton': '+ ربط مؤسسة',
 
     // Categories
     'category.food': 'الطعام',
@@ -576,6 +743,51 @@ export const translations: Record<Language, Record<string, string>> = {
     'password.success': 'تم تغيير كلمة المرور بنجاح!',
     'password.error': 'خطأ في تغيير كلمة المرور',
     'password.mismatch': 'كلمات المرور غير متطابقة',
+
+    // Login
+    'login.access': 'تسجيل الدخول',
+    'login.createAccount': 'إنشاء حساب',
+    'login.email': 'البريد الإلكتروني',
+    'login.password': 'كلمة المرور',
+    'login.fullName': 'الاسم الكامل',
+    'login.yourName': 'اسمك',
+    'login.demo': 'الوضع التجريبي',
+    'login.noAccount': 'ليس لديك حساب؟ سجل',
+    'login.hasAccount': 'لديك حساب بالفعل؟ سجل الدخول',
+    'login.emailError': 'أدخل بريدك الإلكتروني',
+    'login.passwordError': 'أدخل كلمة المرور',
+    'login.nameError': 'أدخل اسمك الكامل',
+    'login.passwordMinLength': 'يجب أن تكون كلمة المرور 6 أحرف على الأقل',
+    'login.connectionError': 'خطأ في الاتصال. حاول مرة أخرى.',
+    'login.registerError': 'خطأ في إنشاء الحساب. حاول مرة أخرى.',
+
+    // Connect bank
+    'connect.searchPlaceholder': 'البحث عن البنوك والمؤسسات...',
+    'connect.searching': 'جارٍ البحث...',
+    'connect.connectYourBank': 'اربط بنكك',
+    'connect.connectDescription': 'ابحث عن بنكك أو مؤسستك المالية للاتصال عبر Open Finance. بياناتك مشفرة وآمنة.',
+    'connect.bankEncryption': 'تشفير بنكي',
+    'connect.autoSync': 'مزامنة تلقائية',
+    'connect.investmentsAccountsCards': 'الاستثمارات والحسابات والبطاقات',
+    'connect.regulatedByCB': 'منظم من البنك المركزي',
+    'connect.noResults': 'لا توجد نتائج',
+    'connect.noResultsFor': 'لم يتم العثور على مؤسسات لـ',
+    'connect.tryDifferent': 'جرب مصطلح بحث مختلف.',
+    'connect.preparingConnection': 'جارٍ إعداد الاتصال...',
+    'connect.settingUp': 'إعداد اتصال آمن مع',
+    'connect.syncingData': 'مزامنة بياناتك...',
+    'connect.importingData': 'نحن نستورد بياناتك المالية من',
+    'connect.mayTakeAMoment': 'قد يستغرق هذا لحظة.',
+    'connect.bankConnected': 'تم ربط البنك!',
+    'connect.successDescription': 'تم ربطه بنجاح. بياناتك المالية قيد المزامنة.',
+    'connect.connectionFailed': 'فشل الاتصال',
+    'connect.tryAgain': 'حاول مرة أخرى',
+    'connect.goBack': 'رجوع',
+    'connect.done': 'تم',
+    'connect.cancelTitle': 'إلغاء الاتصال',
+    'connect.cancelMessage': 'هل أنت متأكد من إلغاء اتصال البنك؟',
+    'connect.continue': 'استمرار',
+    'connect.cancel': 'إلغاء',
 
     // Common
     'common.loading': 'جارٍ التحميل...',

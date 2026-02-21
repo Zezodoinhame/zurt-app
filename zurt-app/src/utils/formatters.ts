@@ -105,10 +105,11 @@ export function formatShortDate(dateString: string): string {
 }
 
 /**
- * Mask value with asterisks: R$ •••••
+ * Mask value with asterisks using the current currency symbol
  */
-export function maskValue(value: string): string {
-  return 'R$ •••••';
+export function maskValue(value: string, curr?: Currency): string {
+  const symbol = curr ? currencySymbols[curr] : 'R$';
+  return `${symbol} •••••`;
 }
 
 /**
