@@ -18,7 +18,7 @@ export type AssetClass =
 // Institutions
 // -----------------------------------------------------------------------------
 
-export type InstitutionId = 'xp' | 'btg' | 'nubank' | 'inter' | 'binance';
+export type InstitutionId = string;
 
 export type ConnectionStatus = 'connected' | 'syncing' | 'error';
 
@@ -86,7 +86,7 @@ export interface Allocation {
 // Credit Cards
 // -----------------------------------------------------------------------------
 
-export type CardBrand = 'mastercard' | 'visa';
+export type CardBrand = string;
 
 export interface CreditCard {
   id: string;

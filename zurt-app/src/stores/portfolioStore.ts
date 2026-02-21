@@ -7,7 +7,8 @@ import type {
   AssetClass,
   Insight,
 } from '../types';
-import { fetchDashboardSummary, fetchInvestments } from '../services/api';
+import { fetchDashboardSummary } from '../services/api';
+import { useCardsStore } from './cardsStore';
 
 type TimeRange = '1M' | '3M' | '6M' | '1A' | 'MAX';
 
@@ -47,48 +48,46 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const [dashboardData, investmentData] = await Promise.all([
-        fetchDashboardSummary(),
-        fetchInvestments(),
-      ]);
+      const dashboardData = await fetchDashboardSummary();
 
-      console.log('[ZURT Data] dashboard:', JSON.stringify(dashboardData).substring(0, 500));
-      console.log('[ZURT Data] investments:', JSON.stringify(investmentData).substring(0, 500));
+      const assets = dashboardData.assets;
+      let institutions = dashboardData.institutions;
+      let allocations = dashboardData.allocations;
 
-      // Recompute institution assetCount and totalValue from actual assets
-      const assets = investmentData.assets;
-      const institutions = investmentData.institutions.map((inst) => {
-        const instAssets = assets.filter((a) => a.institution === inst.id);
-        return {
-          ...inst,
-          assetCount: instAssets.length > 0 ? instAssets.length : inst.assetCount,
-          totalValue: instAssets.length > 0
-            ? instAssets.reduce((sum, a) => sum + a.currentValue, 0)
-            : inst.totalValue,
-        };
-      });
+      // If we have detailed assets, recompute institution stats from them
+      if (assets.length > 0 && institutions.length > 0) {
+        institutions = institutions.map((inst) => {
+          const instAssets = assets.filter(
+            (a) =>
+              a.institution === inst.id ||
+              a.institution === inst.name ||
+              (a.institution ?? '').toLowerCase().includes(inst.id),
+          );
+          return {
+            ...inst,
+            assetCount: instAssets.length > 0 ? instAssets.length : inst.assetCount,
+            totalValue: instAssets.length > 0
+              ? instAssets.reduce((sum, a) => sum + a.currentValue, 0)
+              : inst.totalValue,
+          };
+        });
+      }
 
-      // Recompute allocations from actual assets if needed
-      const allocations = investmentData.allocations.map((alloc) => {
-        const classAssets = assets.filter((a) => a.class === alloc.class);
-        return {
-          ...alloc,
-          value: classAssets.length > 0
-            ? classAssets.reduce((sum, a) => sum + a.currentValue, 0)
-            : alloc.value,
-        };
-      });
-
-      // Ensure summary totalValue matches sum of allocations
-      const allocTotal = allocations.reduce((sum, a) => sum + a.value, 0);
-      const summary = dashboardData.summary;
-      if (summary && (summary.totalValue === 0 || !summary.totalValue) && allocTotal > 0) {
-        summary.totalValue = allocTotal;
-        summary.profit = allocTotal - (summary.investedValue || 0);
+      // Recompute allocations from actual assets if both exist
+      if (assets.length > 0 && allocations.length > 0) {
+        allocations = allocations.map((alloc) => {
+          const classAssets = assets.filter((a) => a.class === alloc.class);
+          return {
+            ...alloc,
+            value: classAssets.length > 0
+              ? classAssets.reduce((sum, a) => sum + a.currentValue, 0)
+              : alloc.value,
+          };
+        });
       }
 
       set({
-        summary,
+        summary: dashboardData.summary,
         institutions,
         assets,
         allocations,
@@ -96,6 +95,11 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
         isLoading: false,
         error: null,
       });
+
+      // Push cards to cardsStore if available
+      if (dashboardData.cards.length > 0) {
+        useCardsStore.getState()._setCardsFromDashboard(dashboardData.cards);
+      }
     } catch (err: any) {
       set({
         isLoading: false,
@@ -108,42 +112,44 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
     set({ isRefreshing: true, error: null });
 
     try {
-      const [dashboardData, investmentData] = await Promise.all([
-        fetchDashboardSummary(),
-        fetchInvestments(),
-      ]);
+      const dashboardData = await fetchDashboardSummary();
 
-      const assets = investmentData.assets;
-      const institutions = investmentData.institutions.map((inst) => {
-        const instAssets = assets.filter((a) => a.institution === inst.id);
-        return {
-          ...inst,
-          assetCount: instAssets.length > 0 ? instAssets.length : inst.assetCount,
-          totalValue: instAssets.length > 0
-            ? instAssets.reduce((sum, a) => sum + a.currentValue, 0)
-            : inst.totalValue,
-        };
-      });
+      const assets = dashboardData.assets;
+      let institutions = dashboardData.institutions;
+      let allocations = dashboardData.allocations;
 
-      const allocations = investmentData.allocations.map((alloc) => {
-        const classAssets = assets.filter((a) => a.class === alloc.class);
-        return {
-          ...alloc,
-          value: classAssets.length > 0
-            ? classAssets.reduce((sum, a) => sum + a.currentValue, 0)
-            : alloc.value,
-        };
-      });
+      if (assets.length > 0 && institutions.length > 0) {
+        institutions = institutions.map((inst) => {
+          const instAssets = assets.filter(
+            (a) =>
+              a.institution === inst.id ||
+              a.institution === inst.name ||
+              (a.institution ?? '').toLowerCase().includes(inst.id),
+          );
+          return {
+            ...inst,
+            assetCount: instAssets.length > 0 ? instAssets.length : inst.assetCount,
+            totalValue: instAssets.length > 0
+              ? instAssets.reduce((sum, a) => sum + a.currentValue, 0)
+              : inst.totalValue,
+          };
+        });
+      }
 
-      const allocTotal = allocations.reduce((sum, a) => sum + a.value, 0);
-      const summary = dashboardData.summary;
-      if (summary && (summary.totalValue === 0 || !summary.totalValue) && allocTotal > 0) {
-        summary.totalValue = allocTotal;
-        summary.profit = allocTotal - (summary.investedValue || 0);
+      if (assets.length > 0 && allocations.length > 0) {
+        allocations = allocations.map((alloc) => {
+          const classAssets = assets.filter((a) => a.class === alloc.class);
+          return {
+            ...alloc,
+            value: classAssets.length > 0
+              ? classAssets.reduce((sum, a) => sum + a.currentValue, 0)
+              : alloc.value,
+          };
+        });
       }
 
       set({
-        summary,
+        summary: dashboardData.summary,
         institutions,
         assets,
         allocations,
@@ -151,6 +157,11 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
         isRefreshing: false,
         error: null,
       });
+
+      // Push cards to cardsStore if available
+      if (dashboardData.cards.length > 0) {
+        useCardsStore.getState()._setCardsFromDashboard(dashboardData.cards);
+      }
     } catch (err: any) {
       set({
         isRefreshing: false,

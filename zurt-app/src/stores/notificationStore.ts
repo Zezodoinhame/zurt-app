@@ -35,7 +35,6 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const notifications = await fetchNotificationsApi();
-      console.log('[ZURT Data] notifications:', JSON.stringify(notifications).substring(0, 500));
       set({ notifications, isLoading: false, error: null });
     } catch (err: any) {
       set({

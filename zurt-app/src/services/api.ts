@@ -302,59 +302,167 @@ export async function changePassword(
 }
 
 // =============================================================================
-// Dashboard Summary
+// Dashboard Finance (single endpoint for all data)
 // =============================================================================
+
+// Known Brazilian institution colors
+const INSTITUTION_COLORS: Record<string, { color: string; secondary: string }> = {
+  nubank: { color: '#820AD1', secondary: '#A020F0' },
+  inter: { color: '#FF7A00', secondary: '#FF9933' },
+  btg: { color: '#191B22', secondary: '#0046BE' },
+  xp: { color: '#FFD700', secondary: '#1A1A1A' },
+  'itaú': { color: '#003399', secondary: '#FF6600' },
+  itau: { color: '#003399', secondary: '#FF6600' },
+  bradesco: { color: '#CC092F', secondary: '#FFFFFF' },
+  santander: { color: '#EC0000', secondary: '#FFFFFF' },
+  c6: { color: '#2B2B2B', secondary: '#CCCCCC' },
+  rico: { color: '#FF6600', secondary: '#FFFFFF' },
+  clear: { color: '#00C2A8', secondary: '#FFFFFF' },
+  binance: { color: '#F0B90B', secondary: '#1E2329' },
+  mercado: { color: '#009EE3', secondary: '#FFE600' },
+  picpay: { color: '#21C25E', secondary: '#FFFFFF' },
+};
+
+function getInstColors(name: string): { color: string; secondaryColor: string } {
+  const lower = name.toLowerCase();
+  for (const [key, val] of Object.entries(INSTITUTION_COLORS)) {
+    if (lower.includes(key)) return { color: val.color, secondaryColor: val.secondary };
+  }
+  return { color: '#1A73E8', secondaryColor: '#FFFFFF' };
+}
 
 export async function fetchDashboardSummary(): Promise<{
   summary: PortfolioSummary;
   institutions: Institution[];
   allocations: Allocation[];
   insights: Insight[];
+  cards: CreditCard[];
+  assets: Asset[];
 }> {
   const demoResult = {
     summary: portfolioSummary,
     institutions: demoInstitutions,
     allocations: demoAllocations,
     insights: demoInsights,
+    cards: demoCards,
+    assets: demoAssets,
   };
 
   return fetchWithFallback(
-    'dashboard:summary',
-    '/dashboard/summary',
+    'dashboard:finance',
+    '/dashboard/finance',
     (data) => {
-      const rawSummary = data.summary ?? data.portfolio ?? data;
-      const rawAllocations: Allocation[] = data.allocations ?? [];
+      const rawSummary = data.summary ?? {};
 
-      // Compute totalValue from multiple possible fields, falling back to sum of allocations
-      const allocationsTotal = rawAllocations.reduce((sum: number, a: any) => sum + (a.value ?? 0), 0);
-      const totalValue =
-        (rawSummary.totalValue ?? rawSummary.total_value ??
-        rawSummary.netWorth ?? rawSummary.net_worth ??
-        data.totalValue ?? data.total_value ??
-        data.netWorth ?? data.net_worth ??
-        allocationsTotal) || 0;
-
-      const investedValue = rawSummary.investedValue ?? rawSummary.invested_value ?? data.investedValue ?? data.invested_value ?? 0;
-      const profit = rawSummary.profit ?? data.profit ?? ((totalValue - investedValue) || 0);
+      // Map summary: netWorth → totalValue, cash+investments → investedValue
+      const netWorth = rawSummary.netWorth ?? rawSummary.net_worth ?? 0;
+      const cash = rawSummary.cash ?? 0;
+      const investments = rawSummary.investments ?? 0;
+      const investedValue = cash + investments;
+      const profit = netWorth - investedValue;
 
       const summary: PortfolioSummary = {
-        totalValue,
+        totalValue: netWorth,
         investedValue,
         profit,
-        variation1m: rawSummary.variation1m ?? rawSummary.variation_1m ?? data.variation1m ?? data.netWorthChange ?? 0,
-        variation12m: rawSummary.variation12m ?? rawSummary.variation_12m ?? data.variation12m ?? 0,
+        variation1m: rawSummary.variation1m ?? rawSummary.variation_1m ?? 0,
+        variation12m: rawSummary.variation12m ?? rawSummary.variation_12m ?? 0,
         history: (rawSummary.history ?? data.history ?? []).map((h: any) => ({
-          month: h.month,
-          date: h.date,
-          value: h.value,
+          month: h.month ?? '',
+          date: h.date ?? '',
+          value: h.value ?? 0,
         })),
       };
 
+      // Map accounts grouped by institution_name → Institution[]
+      const rawAccounts: any[] = data.accounts ?? [];
+      const accountsByInst = new Map<string, any[]>();
+      for (const acc of rawAccounts) {
+        const name = acc.institution_name ?? acc.institutionName ?? 'Unknown';
+        if (!accountsByInst.has(name)) accountsByInst.set(name, []);
+        accountsByInst.get(name)!.push(acc);
+      }
+      const institutions: Institution[] = [];
+      for (const [name, accs] of accountsByInst) {
+        const id = name.toLowerCase().replace(/\s+/g, '-');
+        const totalValue = accs.reduce(
+          (sum: number, a: any) => sum + Math.abs(a.balance ?? a.currentBalance ?? a.value ?? 0),
+          0,
+        );
+        const colors = getInstColors(name);
+        institutions.push({
+          id,
+          name,
+          color: colors.color,
+          secondaryColor: colors.secondaryColor,
+          assetCount: accs.length,
+          totalValue,
+          status: 'connected',
+        });
+      }
+
+      // Map breakdown → Allocation[]
+      const rawBreakdown: any[] = data.breakdown ?? data.allocations ?? [];
+      const allocations: Allocation[] = rawBreakdown.map((b: any) => ({
+        class: b.class ?? b.asset_class ?? b.category ?? 'stocks',
+        label: b.label ?? b.name ?? b.category ?? '',
+        value: b.value ?? b.amount ?? 0,
+        percentage: b.percentage ?? b.percent ?? 0,
+        color: b.color ?? '#888888',
+      }));
+
+      // Map cards → CreditCard[]
+      const rawCards: any[] = data.cards ?? [];
+      const cards: CreditCard[] = rawCards.map((c: any) => {
+        const brand = (c.brand ?? 'visa').toLowerCase();
+        return {
+          id: String(c.id),
+          name: c.institution_name ?? c.name ?? '',
+          lastFour: c.last4 ?? c.lastFour ?? c.last_four ?? '',
+          brand,
+          limit: c.limit ?? c.credit_limit ?? 0,
+          used: c.openDebt ?? c.used ?? 0,
+          dueDate: c.dueDate ?? c.due_date ?? '',
+          closingDate: c.closingDate ?? c.closing_date ?? '',
+          color: c.color ?? (brand === 'mastercard' ? '#1A1A1A' : '#1A1F71'),
+          secondaryColor: c.secondaryColor ?? (brand === 'mastercard' ? '#EB001B' : '#F7B600'),
+          currentInvoice: c.openDebt ?? c.currentInvoice ?? c.current_invoice ?? 0,
+          nextInvoice: c.nextInvoice ?? c.next_invoice ?? 0,
+          transactions: (c.transactions ?? []).map((t: any) => ({
+            id: String(t.id),
+            date: t.date,
+            description: t.description,
+            category: t.category ?? 'shopping',
+            amount: t.amount ?? 0,
+            installment: t.installment,
+          })),
+        };
+      });
+
+      // Map investments → Asset[]
+      const rawInvestments: any[] = data.investments ?? [];
+      const assets: Asset[] = rawInvestments.map((a: any) => ({
+        id: String(a.id),
+        name: a.name ?? '',
+        ticker: a.ticker ?? a.symbol ?? '',
+        class: a.class ?? a.asset_class ?? a.type ?? 'stocks',
+        institution: a.institution ?? a.institution_name ?? a.institution_id ?? '',
+        quantity: a.quantity ?? a.shares ?? 0,
+        averagePrice: a.averagePrice ?? a.average_price ?? a.avgPrice ?? 0,
+        currentPrice: a.currentPrice ?? a.current_price ?? a.price ?? 0,
+        investedValue: a.investedValue ?? a.invested_value ?? 0,
+        currentValue: a.currentValue ?? a.current_value ?? a.value ?? 0,
+        variation: a.variation ?? a.change ?? 0,
+        priceHistory: a.priceHistory ?? a.price_history ?? [],
+      }));
+
       return {
         summary,
-        institutions: data.institutions ?? [],
-        allocations: rawAllocations,
+        institutions,
+        allocations,
         insights: data.insights ?? [],
+        cards,
+        assets,
       };
     },
     demoResult,

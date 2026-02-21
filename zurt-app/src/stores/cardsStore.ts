@@ -9,11 +9,13 @@ interface CardsState {
   isLoading: boolean;
   isRefreshing: boolean;
   error: string | null;
+  _loadedFromDashboard: boolean;
 
   loadCards: () => Promise<void>;
   refresh: () => Promise<void>;
   setSelectedCardIndex: (index: number) => void;
   getSelectedCard: () => CreditCard | null;
+  _setCardsFromDashboard: (cards: CreditCard[]) => void;
 }
 
 export const useCardsStore = create<CardsState>((set, get) => ({
@@ -23,12 +25,19 @@ export const useCardsStore = create<CardsState>((set, get) => ({
   isLoading: false,
   isRefreshing: false,
   error: null,
+  _loadedFromDashboard: false,
+
+  _setCardsFromDashboard: (cards: CreditCard[]) => {
+    set({ cards, _loadedFromDashboard: true, isLoading: false, error: null });
+  },
 
   loadCards: async () => {
+    // If cards were already loaded from /dashboard/finance, skip
+    if (get()._loadedFromDashboard) return;
+
     set({ isLoading: true, error: null });
     try {
       const data = await fetchCardsApi();
-      console.log('[ZURT Data] cards:', JSON.stringify(data).substring(0, 500));
       set({
         cards: data.cards,
         categorySpending: data.categorySpending,
@@ -44,7 +53,7 @@ export const useCardsStore = create<CardsState>((set, get) => ({
   },
 
   refresh: async () => {
-    set({ isRefreshing: true, error: null });
+    set({ isRefreshing: true, error: null, _loadedFromDashboard: false });
     try {
       const data = await fetchCardsApi();
       set({
