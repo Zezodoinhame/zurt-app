@@ -331,6 +331,17 @@ function getInstColors(name: string): { color: string; secondaryColor: string } 
   return { color: '#1A73E8', secondaryColor: '#FFFFFF' };
 }
 
+export interface DashboardTransaction {
+  id: string;
+  date: string;
+  amount: number;
+  description: string;
+  merchant?: string;
+  account_name?: string;
+  institution_name?: string;
+  category?: string;
+}
+
 export async function fetchDashboardSummary(): Promise<{
   summary: PortfolioSummary;
   institutions: Institution[];
@@ -338,6 +349,7 @@ export async function fetchDashboardSummary(): Promise<{
   insights: Insight[];
   cards: CreditCard[];
   assets: Asset[];
+  transactions: DashboardTransaction[];
 }> {
   const demoResult = {
     summary: portfolioSummary,
@@ -346,6 +358,7 @@ export async function fetchDashboardSummary(): Promise<{
     insights: demoInsights,
     cards: demoCards,
     assets: demoAssets,
+    transactions: [] as DashboardTransaction[],
   };
 
   return fetchWithFallback(
@@ -456,6 +469,19 @@ export async function fetchDashboardSummary(): Promise<{
         priceHistory: a.priceHistory ?? a.price_history ?? [],
       }));
 
+      // Map transactions
+      const rawTransactions: any[] = data.transactions ?? [];
+      const transactions: DashboardTransaction[] = rawTransactions.map((t: any) => ({
+        id: String(t.id ?? ''),
+        date: t.date ?? t.created_at ?? '',
+        amount: parseFloat(t.amount ?? '0') || 0,
+        description: t.description ?? t.merchant ?? '',
+        merchant: t.merchant ?? '',
+        account_name: t.account_name ?? '',
+        institution_name: t.institution_name ?? '',
+        category: t.category ?? '',
+      }));
+
       return {
         summary,
         institutions,
@@ -463,6 +489,7 @@ export async function fetchDashboardSummary(): Promise<{
         insights: data.insights ?? [],
         cards,
         assets,
+        transactions,
       };
     },
     demoResult,
@@ -975,6 +1002,17 @@ export async function fetchInvestmentSummary(): Promise<any> {
 // =============================================================================
 // AI Agent
 // =============================================================================
+
+// =============================================================================
+// Market / Asset Detail (brapi.dev via backend proxy)
+// =============================================================================
+
+export async function fetchAssetDetail(ticker: string): Promise<any> {
+  if (_isDemoMode) {
+    return { results: [] };
+  }
+  return apiRequest(`/market/asset/${encodeURIComponent(ticker)}`);
+}
 
 export async function fetchAIInsights(message?: string): Promise<{
   message: string;

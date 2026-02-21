@@ -254,6 +254,30 @@ export const translations: Record<Language, Record<string, string>> = {
     'alerts.aiSection': 'Alertas inteligentes',
     'alerts.aiCheck': 'Verificar agora',
     'alerts.aiChecking': 'Analisando...',
+
+    // Asset Detail
+    'asset.noData': 'Dados do ativo nao encontrados',
+    'asset.quoteOfDay': 'Cotacao do Dia',
+    'asset.open': 'Abertura',
+    'asset.high': 'Maxima',
+    'asset.low': 'Minima',
+    'asset.prevClose': 'Fechamento anterior',
+    'asset.volume': 'Volume',
+    'asset.fundamentals': 'Indicadores Fundamentalistas',
+    'asset.netMargin': 'Margem Liquida',
+    'asset.debtEbitda': 'Divida Liq./EBITDA',
+    'asset.priceHistory': 'Historico de Preco',
+    'asset.dividends': 'Dividendos (12m)',
+    'asset.about': 'Sobre a Empresa',
+    'asset.seeMore': 'Ver mais',
+    'asset.seeLess': 'Ver menos',
+    'asset.sector': 'Setor',
+    'asset.industry': 'Industria',
+    'asset.employees': 'Funcionarios',
+
+    // Cards - Transactions
+    'cards.recentTransactions': 'Ultimas transacoes',
+    'cards.moreTransactions': 'Mais transacoes',
   },
   en: {
     // Tabs
@@ -508,6 +532,30 @@ export const translations: Record<Language, Record<string, string>> = {
     'alerts.aiSection': 'Smart alerts',
     'alerts.aiCheck': 'Check now',
     'alerts.aiChecking': 'Analyzing...',
+
+    // Asset Detail
+    'asset.noData': 'Asset data not found',
+    'asset.quoteOfDay': 'Quote of the Day',
+    'asset.open': 'Open',
+    'asset.high': 'High',
+    'asset.low': 'Low',
+    'asset.prevClose': 'Previous Close',
+    'asset.volume': 'Volume',
+    'asset.fundamentals': 'Fundamental Indicators',
+    'asset.netMargin': 'Net Margin',
+    'asset.debtEbitda': 'Net Debt/EBITDA',
+    'asset.priceHistory': 'Price History',
+    'asset.dividends': 'Dividends (12m)',
+    'asset.about': 'About the Company',
+    'asset.seeMore': 'See more',
+    'asset.seeLess': 'See less',
+    'asset.sector': 'Sector',
+    'asset.industry': 'Industry',
+    'asset.employees': 'Employees',
+
+    // Cards - Transactions
+    'cards.recentTransactions': 'Recent transactions',
+    'cards.moreTransactions': 'More transactions',
   },
   zh: {
     // Tabs
@@ -762,6 +810,30 @@ export const translations: Record<Language, Record<string, string>> = {
     'alerts.aiSection': '智能提醒',
     'alerts.aiCheck': '立即检查',
     'alerts.aiChecking': '分析中...',
+
+    // Asset Detail
+    'asset.noData': '未找到资产数据',
+    'asset.quoteOfDay': '今日报价',
+    'asset.open': '开盘',
+    'asset.high': '最高',
+    'asset.low': '最低',
+    'asset.prevClose': '前收盘价',
+    'asset.volume': '成交量',
+    'asset.fundamentals': '基本面指标',
+    'asset.netMargin': '净利润率',
+    'asset.debtEbitda': '净债务/EBITDA',
+    'asset.priceHistory': '价格历史',
+    'asset.dividends': '股息(12个月)',
+    'asset.about': '关于公司',
+    'asset.seeMore': '查看更多',
+    'asset.seeLess': '收起',
+    'asset.sector': '行业',
+    'asset.industry': '细分行业',
+    'asset.employees': '员工数',
+
+    // Cards - Transactions
+    'cards.recentTransactions': '最近交易',
+    'cards.moreTransactions': '更多交易',
   },
   ar: {
     // Tabs
@@ -1016,5 +1088,29 @@ export const translations: Record<Language, Record<string, string>> = {
     'alerts.aiSection': 'تنبيهات ذكية',
     'alerts.aiCheck': 'تحقق الآن',
     'alerts.aiChecking': 'جارٍ التحليل...',
+
+    // Asset Detail
+    'asset.noData': 'لم يتم العثور على بيانات الأصل',
+    'asset.quoteOfDay': 'سعر اليوم',
+    'asset.open': 'الافتتاح',
+    'asset.high': 'الأعلى',
+    'asset.low': 'الأدنى',
+    'asset.prevClose': 'الإغلاق السابق',
+    'asset.volume': 'الحجم',
+    'asset.fundamentals': 'المؤشرات الأساسية',
+    'asset.netMargin': 'هامش الربح الصافي',
+    'asset.debtEbitda': 'صافي الدين/EBITDA',
+    'asset.priceHistory': 'تاريخ الأسعار',
+    'asset.dividends': 'الأرباح الموزعة (12 شهر)',
+    'asset.about': 'عن الشركة',
+    'asset.seeMore': 'عرض المزيد',
+    'asset.seeLess': 'عرض أقل',
+    'asset.sector': 'القطاع',
+    'asset.industry': 'الصناعة',
+    'asset.employees': 'الموظفون',
+
+    // Cards - Transactions
+    'cards.recentTransactions': 'المعاملات الأخيرة',
+    'cards.moreTransactions': 'المزيد من المعاملات',
   },
 };

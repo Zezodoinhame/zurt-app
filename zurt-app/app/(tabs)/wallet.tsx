@@ -164,9 +164,15 @@ export default function WalletScreen() {
 
   const handleAssetPress = useCallback((asset: Asset) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Navigate to full asset detail if ticker exists
+    if (asset.ticker) {
+      router.push({ pathname: '/asset-detail', params: { ticker: asset.ticker } });
+      return;
+    }
+    // Fallback to bottom sheet for assets without ticker
     setSelectedAsset(asset);
     setSheetVisible(true);
-  }, []);
+  }, [router]);
 
   const handleCloseSheet = useCallback(() => {
     setSheetVisible(false);

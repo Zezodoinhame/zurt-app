@@ -49,6 +49,10 @@ export default function RootLayout() {
             name="connect-bank"
             options={{ animation: 'slide_from_right' }}
           />
+          <Stack.Screen
+            name="asset-detail"
+            options={{ animation: 'slide_from_right' }}
+          />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>

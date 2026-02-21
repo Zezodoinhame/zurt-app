@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import type { CreditCard, CategorySpending } from '../types';
+import type { DashboardTransaction } from '../services/api';
 import { fetchCardsApi } from '../services/api';
 
 interface CardsState {
   cards: CreditCard[];
   categorySpending: CategorySpending[];
+  dashboardTransactions: DashboardTransaction[];
   selectedCardIndex: number;
   isLoading: boolean;
   isRefreshing: boolean;
@@ -15,20 +17,27 @@ interface CardsState {
   refresh: () => Promise<void>;
   setSelectedCardIndex: (index: number) => void;
   getSelectedCard: () => CreditCard | null;
-  _setCardsFromDashboard: (cards: CreditCard[]) => void;
+  _setCardsFromDashboard: (cards: CreditCard[], transactions?: DashboardTransaction[]) => void;
 }
 
 export const useCardsStore = create<CardsState>((set, get) => ({
   cards: [],
   categorySpending: [],
+  dashboardTransactions: [],
   selectedCardIndex: 0,
   isLoading: false,
   isRefreshing: false,
   error: null,
   _loadedFromDashboard: false,
 
-  _setCardsFromDashboard: (cards: CreditCard[]) => {
-    set({ cards, _loadedFromDashboard: true, isLoading: false, error: null });
+  _setCardsFromDashboard: (cards: CreditCard[], transactions?: DashboardTransaction[]) => {
+    set({
+      cards,
+      dashboardTransactions: transactions ?? get().dashboardTransactions,
+      _loadedFromDashboard: true,
+      isLoading: false,
+      error: null,
+    });
   },
 
   loadCards: async () => {
@@ -47,7 +56,7 @@ export const useCardsStore = create<CardsState>((set, get) => ({
     } catch (err: any) {
       set({
         isLoading: false,
-        error: err?.message ?? 'Erro ao carregar cartões',
+        error: err?.message ?? 'Erro ao carregar cartoes',
       });
     }
   },
@@ -65,7 +74,7 @@ export const useCardsStore = create<CardsState>((set, get) => ({
     } catch (err: any) {
       set({
         isRefreshing: false,
-        error: err?.message ?? 'Erro ao atualizar cartões',
+        error: err?.message ?? 'Erro ao atualizar cartoes',
       });
     }
   },

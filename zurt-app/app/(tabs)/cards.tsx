@@ -22,6 +22,7 @@ import { CreditCardVisual } from '../../src/components/cards/CreditCardVisual';
 import { SkeletonCard, SkeletonList } from '../../src/components/skeletons/Skeleton';
 import { ErrorState } from '../../src/components/shared/ErrorState';
 import { formatShortDate, maskValue, formatCurrency } from '../../src/utils/formatters';
+import { categorizeTransaction } from '../../src/utils/transactionCategories';
 import type { TransactionCategory } from '../../src/types';
 
 // ---------------------------------------------------------------------------
@@ -33,7 +34,7 @@ const CARD_WIDTH = SCREEN_WIDTH - 64;
 const CARD_SNAP_INTERVAL = CARD_WIDTH + 16; // card width + horizontal gap
 
 // ---------------------------------------------------------------------------
-// Category icon map
+// Category icon map (for card-embedded transactions)
 // ---------------------------------------------------------------------------
 
 const categoryIcons: Record<string, string> = {
@@ -59,6 +60,7 @@ export default function CardsScreen() {
   const {
     cards,
     categorySpending,
+    dashboardTransactions,
     isLoading,
     isRefreshing,
     error,
@@ -81,9 +83,9 @@ export default function CardsScreen() {
   // ---- Derived values -----------------------------------------------------
   const selectedCard = getSelectedCard();
 
-  // Group transactions by date
+  // Group card-embedded transactions by date
   const groupedTransactions = useMemo(() => {
-    if (!selectedCard?.transactions) return [];
+    if (!selectedCard?.transactions || selectedCard.transactions.length === 0) return [];
 
     const groups: { date: string; transactions: typeof selectedCard.transactions }[] = [];
     const map = new Map<string, typeof selectedCard.transactions>();
@@ -102,6 +104,29 @@ export default function CardsScreen() {
 
     return groups;
   }, [selectedCard]);
+
+  // Dashboard transactions filtered by selected card (or all if no match)
+  const filteredDashboardTx = useMemo(() => {
+    if (dashboardTransactions.length === 0) return [];
+
+    if (selectedCard) {
+      const cardName = (selectedCard.name ?? '').toLowerCase();
+      const cardLast4 = selectedCard.lastFour;
+      // Try to match by institution_name or account_name
+      const matched = dashboardTransactions.filter((tx) => {
+        const instName = (tx.institution_name ?? '').toLowerCase();
+        const accName = (tx.account_name ?? '').toLowerCase();
+        return (
+          (cardName && (instName.includes(cardName) || accName.includes(cardName))) ||
+          (cardLast4 && (accName.includes(cardLast4) || instName.includes(cardLast4)))
+        );
+      });
+      if (matched.length > 0) return matched.slice(0, 20);
+    }
+
+    // Fallback: show all recent transactions (max 20)
+    return dashboardTransactions.slice(0, 20);
+  }, [dashboardTransactions, selectedCard]);
 
   // ---- Handlers -----------------------------------------------------------
   const handleScrollEnd = useCallback(
@@ -162,7 +187,7 @@ export default function CardsScreen() {
           <ErrorState message={error} onRetry={loadCards} />
         ) : cards.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>💳</Text>
+            <Text style={styles.emptyIcon}>{'\u{1F4B3}'}</Text>
             <Text style={styles.emptyTitle}>{t('cards.emptyTitle')}</Text>
             <Text style={styles.emptyDescription}>{t('cards.emptyDescription')}</Text>
             <TouchableOpacity
@@ -250,7 +275,7 @@ export default function CardsScreen() {
 
                 {categorySpending
                   .filter((cat) => cat.total > 0)
-                  .map((cat, index) => (
+                  .map((cat) => (
                     <View
                       key={cat.category}
                       style={styles.categoryRow}
@@ -279,7 +304,7 @@ export default function CardsScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* Transactions                                                    */}
+            {/* Card-embedded Transactions                                      */}
             {/* -------------------------------------------------------------- */}
             {selectedCard && selectedCard.transactions.length > 0 && (
               <View style={styles.contentPadding}>
@@ -291,7 +316,7 @@ export default function CardsScreen() {
                       {formatShortDate(group.date)}
                     </Text>
 
-                    {group.transactions.map((tx, txIndex) => (
+                    {group.transactions.map((tx) => (
                       <View
                         key={tx.id}
                         style={styles.transactionRow}
@@ -316,6 +341,45 @@ export default function CardsScreen() {
                     ))}
                   </View>
                 ))}
+              </View>
+            )}
+
+            {/* -------------------------------------------------------------- */}
+            {/* Dashboard Transactions (with smart categorization)              */}
+            {/* -------------------------------------------------------------- */}
+            {filteredDashboardTx.length > 0 && (
+              <View style={styles.contentPadding}>
+                {selectedCard && selectedCard.transactions.length === 0 && (
+                  <Text style={styles.sectionTitle}>{t('cards.recentTransactions')}</Text>
+                )}
+                {selectedCard && selectedCard.transactions.length > 0 && (
+                  <Text style={styles.sectionTitle}>{t('cards.moreTransactions')}</Text>
+                )}
+
+                {filteredDashboardTx.map((tx) => {
+                  const cat = categorizeTransaction(tx.description || tx.merchant || '');
+                  return (
+                    <View key={tx.id} style={styles.dashTxRow}>
+                      <View style={[styles.dashTxIconCircle, { backgroundColor: cat.color + '25' }]}>
+                        <Text style={styles.dashTxEmoji}>{cat.emoji}</Text>
+                      </View>
+                      <View style={styles.dashTxInfo}>
+                        <Text style={styles.dashTxDescription} numberOfLines={1}>
+                          {tx.description || tx.merchant || '-'}
+                        </Text>
+                        <Text style={styles.dashTxDate}>
+                          {tx.date ? formatShortDate(tx.date) : ''}
+                          {tx.institution_name ? ` \u2022 ${tx.institution_name}` : ''}
+                        </Text>
+                      </View>
+                      <Text style={styles.dashTxAmount}>
+                        {valuesHidden
+                          ? maskValue('')
+                          : formatCurrency(Math.abs(tx.amount), currency)}
+                      </Text>
+                    </View>
+                  );
+                })}
               </View>
             )}
           </>
@@ -457,7 +521,7 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
 
-  // -- Transactions ----------------------------------------------------------
+  // -- Card-embedded Transactions -------------------------------------------
   transactionGroup: {
     marginBottom: spacing.lg,
   },
@@ -495,6 +559,50 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
     textAlign: 'right',
     minWidth: 90,
+  },
+
+  // -- Dashboard Transactions (categorized) ---------------------------------
+  dashTxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  dashTxIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  dashTxEmoji: {
+    fontSize: 18,
+  },
+  dashTxInfo: {
+    flex: 1,
+  },
+  dashTxDescription: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text.primary,
+  },
+  dashTxDate: {
+    fontSize: 12,
+    color: colors.text.muted,
+    marginTop: 2,
+  },
+  dashTxAmount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FF6B6B',
+    fontVariant: ['tabular-nums'],
+    textAlign: 'right',
+    minWidth: 80,
   },
 
   // -- Empty state -----------------------------------------------------------

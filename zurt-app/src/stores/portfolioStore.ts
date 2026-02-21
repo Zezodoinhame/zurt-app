@@ -96,9 +96,9 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
         error: null,
       });
 
-      // Push cards to cardsStore if available
-      if (dashboardData.cards.length > 0) {
-        useCardsStore.getState()._setCardsFromDashboard(dashboardData.cards);
+      // Push cards and transactions to cardsStore if available
+      if (dashboardData.cards.length > 0 || dashboardData.transactions.length > 0) {
+        useCardsStore.getState()._setCardsFromDashboard(dashboardData.cards, dashboardData.transactions);
       }
     } catch (err: any) {
       set({
@@ -158,9 +158,9 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
         error: null,
       });
 
-      // Push cards to cardsStore if available
-      if (dashboardData.cards.length > 0) {
-        useCardsStore.getState()._setCardsFromDashboard(dashboardData.cards);
+      // Push cards and transactions to cardsStore if available
+      if (dashboardData.cards.length > 0 || dashboardData.transactions.length > 0) {
+        useCardsStore.getState()._setCardsFromDashboard(dashboardData.cards, dashboardData.transactions);
       }
     } catch (err: any) {
       set({
