@@ -39,7 +39,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     } catch (err: any) {
       set({
         isLoading: false,
-        error: err?.message ?? 'Erro ao carregar notificacoes',
+        error: err?.message ?? 'Erro ao carregar notificações',
       });
     }
   },
@@ -52,7 +52,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     } catch (err: any) {
       set({
         isRefreshing: false,
-        error: err?.message ?? 'Erro ao atualizar notificacoes',
+        error: err?.message ?? 'Erro ao atualizar notificações',
       });
     }
   },

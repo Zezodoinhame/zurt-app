@@ -323,6 +323,7 @@ export default function HomeScreen() {
                 <TouchableOpacity
                   style={styles.connectButton}
                   activeOpacity={0.7}
+                  onPress={() => router.push('/connect-bank')}
                 >
                   <Text style={styles.connectButtonText}>
                     + Conectar instituição

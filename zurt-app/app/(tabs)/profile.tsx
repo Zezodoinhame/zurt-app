@@ -1,5 +1,15 @@
-import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  TextInput,
+  ActivityIndicator,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -7,10 +17,34 @@ import { colors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePortfolioStore } from '../../src/stores/portfolioStore';
+import { useSettingsStore } from '../../src/stores/settingsStore';
+import type { Language } from '../../src/i18n/translations';
+import type { Currency } from '../../src/stores/settingsStore';
 import { Toggle } from '../../src/components/ui/Toggle';
 import { Card } from '../../src/components/ui/Card';
 import { formatBRL, formatDate } from '../../src/utils/formatters';
 import { changePassword } from '../../src/services/api';
+
+// ---------------------------------------------------------------------------
+// Language & Currency options
+// ---------------------------------------------------------------------------
+
+const languageOptions: Array<{ key: Language; flag: string; label: string }> = [
+  { key: 'pt', flag: '🇧🇷', label: 'Português' },
+  { key: 'en', flag: '🇺🇸', label: 'English' },
+  { key: 'zh', flag: '🇨🇳', label: '中文' },
+  { key: 'ar', flag: '🇸🇦', label: 'العربية' },
+];
+
+const currencyOptions: Array<{ key: Currency; flag: string; label: string }> = [
+  { key: 'BRL', flag: '🇧🇷', label: 'BRL (R$)' },
+  { key: 'USD', flag: '🇺🇸', label: 'USD ($)' },
+  { key: 'EUR', flag: '🇪🇺', label: 'EUR (€)' },
+];
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
 
 interface SettingRowProps {
   icon: string;
@@ -35,7 +69,7 @@ function SettingRow({ icon, label, value, onPress, rightElement, danger }: Setti
       {value && <Text style={styles.settingValue}>{value}</Text>}
       {rightElement}
       {onPress && !rightElement && (
-        <Text style={styles.chevron}>{'\u203A'}</Text>
+        <Text style={styles.chevron}>›</Text>
       )}
     </TouchableOpacity>
   );
@@ -49,17 +83,211 @@ function SectionTitle({ title }: { title: string }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Picker Modal
+// ---------------------------------------------------------------------------
+
+interface PickerModalProps<T extends string> {
+  visible: boolean;
+  title: string;
+  options: Array<{ key: T; flag: string; label: string }>;
+  selected: T;
+  onSelect: (key: T) => void;
+  onClose: () => void;
+}
+
+function PickerModal<T extends string>({
+  visible,
+  title,
+  options,
+  selected,
+  onSelect,
+  onClose,
+}: PickerModalProps<T>) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <TouchableOpacity
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>{title}</Text>
+          {options.map((opt) => (
+            <TouchableOpacity
+              key={opt.key}
+              style={[
+                styles.modalOption,
+                selected === opt.key && styles.modalOptionSelected,
+              ]}
+              onPress={() => {
+                Haptics.selectionAsync();
+                onSelect(opt.key);
+                onClose();
+              }}
+            >
+              <Text style={styles.modalOptionFlag}>{opt.flag}</Text>
+              <Text style={[
+                styles.modalOptionLabel,
+                selected === opt.key && styles.modalOptionLabelSelected,
+              ]}>
+                {opt.label}
+              </Text>
+              {selected === opt.key && (
+                <Text style={styles.modalCheck}>✓</Text>
+              )}
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity style={styles.modalClose} onPress={onClose}>
+            <Text style={styles.modalCloseText}>Fechar</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Password Modal
+// ---------------------------------------------------------------------------
+
+function PasswordModal({
+  visible,
+  onClose,
+  isDemoMode,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  isDemoMode: boolean;
+}) {
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSave = async () => {
+    setError('');
+    if (!currentPw || !newPw || !confirmPw) {
+      setError('Preencha todos os campos');
+      return;
+    }
+    if (newPw !== confirmPw) {
+      setError('As senhas não coincidem');
+      return;
+    }
+    if (newPw.length < 6) {
+      setError('A nova senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await changePassword(currentPw, newPw);
+      Alert.alert('Sucesso', 'Senha alterada com sucesso!');
+      setCurrentPw('');
+      setNewPw('');
+      setConfirmPw('');
+      onClose();
+    } catch (err: any) {
+      setError(err?.message ?? 'Erro ao alterar senha');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClose = () => {
+    setCurrentPw('');
+    setNewPw('');
+    setConfirmPw('');
+    setError('');
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
+      <TouchableOpacity
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={handleClose}
+      >
+        <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+          <Text style={styles.modalTitle}>Alterar senha</Text>
+
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="Senha atual"
+            placeholderTextColor={colors.text.muted}
+            secureTextEntry
+            value={currentPw}
+            onChangeText={setCurrentPw}
+            autoCapitalize="none"
+          />
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="Nova senha"
+            placeholderTextColor={colors.text.muted}
+            secureTextEntry
+            value={newPw}
+            onChangeText={setNewPw}
+            autoCapitalize="none"
+          />
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="Confirmar nova senha"
+            placeholderTextColor={colors.text.muted}
+            secureTextEntry
+            value={confirmPw}
+            onChangeText={setConfirmPw}
+            autoCapitalize="none"
+          />
+
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+          <TouchableOpacity
+            style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color={colors.background} size="small" />
+            ) : (
+              <Text style={styles.saveButtonText}>Salvar</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.modalClose} onPress={handleClose}>
+            <Text style={styles.modalCloseText}>Cancelar</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+// ===========================================================================
+// ProfileScreen
+// ===========================================================================
+
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user, logout, updateUser, isDemoMode } = useAuthStore();
   const { institutions } = usePortfolioStore();
+  const { language, currency, setLanguage, setCurrency, t } = useSettingsStore();
+
+  // Modal states
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+
+  const currentLanguageLabel = languageOptions.find((l) => l.key === language)?.label ?? 'Português';
+  const currentCurrencyLabel = currencyOptions.find((c) => c.key === currency)?.label ?? 'BRL (R$)';
 
   const handleLogout = useCallback(() => {
-    Alert.alert('Sair', 'Deseja realmente sair do ZURT?', [
-      { text: 'Cancelar', style: 'cancel' },
+    Alert.alert(t('profile.logout'), t('profile.logoutConfirm'), [
+      { text: t('profile.cancel'), style: 'cancel' },
       {
-        text: 'Sair',
+        text: t('profile.logout'),
         style: 'destructive',
         onPress: async () => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -68,19 +296,23 @@ export default function ProfileScreen() {
         },
       },
     ]);
-  }, [logout, router]);
+  }, [logout, router, t]);
 
   const handleChangePassword = useCallback(() => {
     if (isDemoMode) {
-      Alert.alert('Demo', 'Indisponivel no modo demonstracao');
+      Alert.alert('Demo', t('profile.demoUnavailable'));
       return;
     }
-    Alert.prompt(
-      'Alterar senha',
-      'Funcionalidade disponivel em breve',
-      [{ text: 'OK' }],
-    );
-  }, [isDemoMode]);
+    setShowPasswordModal(true);
+  }, [isDemoMode, t]);
+
+  const handleConnectBank = useCallback(() => {
+    if (isDemoMode) {
+      Alert.alert('Demo', t('profile.demoUnavailable'));
+      return;
+    }
+    router.push('/connect-bank');
+  }, [isDemoMode, router, t]);
 
   const toggleBiometric = useCallback(
     (value: boolean) => {
@@ -124,68 +356,78 @@ export default function ProfileScreen() {
             <Text style={styles.userName}>{user.name}</Text>
             <Text style={styles.userEmail}>{user.email}</Text>
             {isDemoMode && (
-              <Text style={styles.demoLabel}>Modo demonstracao</Text>
+              <Text style={styles.demoLabel}>{t('profile.demoMode')}</Text>
             )}
           </View>
           <TouchableOpacity style={styles.editButton} accessibilityLabel="Editar perfil">
-            <Text style={styles.editIcon}>{'\u270F\uFE0F'}</Text>
+            <Text style={styles.editIcon}>✏️</Text>
           </TouchableOpacity>
         </View>
       </Card>
 
       {/* Security */}
-      <SectionTitle title={'\uD83D\uDD10 Seguranca'} />
+      <SectionTitle title={`🔐 ${t('profile.security')}`} />
       <View>
         <View style={styles.section}>
           <SettingRow
-            icon={'\uD83D\uDC46'}
-            label="Biometria"
+            icon="👆"
+            label={t('profile.biometric')}
             rightElement={
               <Toggle
                 value={user.biometricEnabled}
                 onValueChange={toggleBiometric}
-                accessibilityLabel="Ativar biometria"
+                accessibilityLabel={t('profile.biometric')}
               />
             }
           />
-          <SettingRow icon={'\uD83D\uDD11'} label="Alterar senha" onPress={handleChangePassword} />
-          <SettingRow icon={'\uD83D\uDD22'} label="Alterar PIN" onPress={() => {}} />
+          <SettingRow icon="🔑" label={t('profile.changePassword')} onPress={handleChangePassword} />
+          <SettingRow icon="🔢" label={t('profile.changePin')} onPress={() => {}} />
         </View>
       </View>
 
       {/* Preferences */}
-      <SectionTitle title={'\u2699\uFE0F Preferencias'} />
+      <SectionTitle title={`⚙️ ${t('profile.preferences')}`} />
       <View>
         <View style={styles.section}>
           <SettingRow
-            icon={'\uD83D\uDD14'}
-            label="Notificacoes push"
+            icon="🔔"
+            label={t('profile.pushNotifications')}
             rightElement={
               <Toggle
                 value={user.pushEnabled}
                 onValueChange={togglePush}
-                accessibilityLabel="Ativar notificacoes"
+                accessibilityLabel={t('profile.pushNotifications')}
               />
             }
           />
           <SettingRow
-            icon={'\uD83D\uDC41\uFE0F'}
-            label="Ocultar valores ao abrir"
+            icon="👁️"
+            label={t('profile.hideValuesOnOpen')}
             rightElement={
               <Toggle
                 value={user.hideValuesOnOpen}
                 onValueChange={toggleHideValues}
-                accessibilityLabel="Ocultar valores"
+                accessibilityLabel={t('profile.hideValuesOnOpen')}
               />
             }
           />
-          <SettingRow icon={'\uD83C\uDF10'} label="Idioma" value="Portugues" onPress={() => {}} />
-          <SettingRow icon={'\uD83D\uDCB0'} label="Moeda padrao" value="BRL" onPress={() => {}} />
+          <SettingRow
+            icon="🌐"
+            label={t('profile.language')}
+            value={currentLanguageLabel}
+            onPress={() => setShowLanguagePicker(true)}
+          />
+          <SettingRow
+            icon="💰"
+            label={t('profile.defaultCurrency')}
+            value={currentCurrencyLabel}
+            onPress={() => setShowCurrencyPicker(true)}
+          />
         </View>
       </View>
 
       {/* Connected accounts */}
-      <SectionTitle title={'\uD83C\uDFE6 Contas Conectadas'} />
+      <SectionTitle title={`🏦 ${t('profile.connectedAccounts')}`} />
       <View>
         <View style={styles.section}>
           {institutions.map((inst) => {
@@ -197,10 +439,10 @@ export default function ProfileScreen() {
                   : colors.negative;
             const statusLabel =
               inst.status === 'connected'
-                ? 'Conectado'
+                ? t('status.connected')
                 : inst.status === 'syncing'
-                  ? 'Sincronizando'
-                  : 'Erro';
+                  ? t('status.syncing')
+                  : t('status.error');
 
             return (
               <View key={inst.id} style={styles.settingRow}>
@@ -221,26 +463,26 @@ export default function ProfileScreen() {
               </View>
             );
           })}
-          <TouchableOpacity style={styles.connectButton}>
+          <TouchableOpacity style={styles.connectButton} onPress={handleConnectBank}>
             <Text style={styles.connectButtonText}>
-              + Conectar via Open Finance
+              {t('profile.connectOpenFinance')}
             </Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* ZURT Token */}
-      <SectionTitle title={'\uD83D\uDCCA ZURT Token'} />
+      <SectionTitle title={`📊 ${t('profile.zurtToken')}`} />
       <Card variant="elevated" delay={450}>
         <View style={styles.tokenRow}>
           <View style={styles.tokenItem}>
-            <Text style={styles.tokenLabel}>Saldo de tokens</Text>
+            <Text style={styles.tokenLabel}>{t('profile.tokenBalance')}</Text>
             <Text style={styles.tokenValue}>
               {user.zurtTokens.toLocaleString('pt-BR')} ZURT
             </Text>
           </View>
           <View style={styles.tokenItem}>
-            <Text style={styles.tokenLabel}>Revenue share recebido</Text>
+            <Text style={styles.tokenLabel}>{t('profile.revenueShare')}</Text>
             <Text style={[styles.tokenValue, { color: colors.accent }]}>
               {formatBRL(user.revenueShareReceived)}
             </Text>
@@ -248,7 +490,7 @@ export default function ProfileScreen() {
         </View>
         <View style={styles.tokenDivider} />
         <View style={styles.tokenDistribution}>
-          <Text style={styles.tokenLabel}>Proxima distribuicao</Text>
+          <Text style={styles.tokenLabel}>{t('profile.nextDistribution')}</Text>
           <Text style={styles.tokenDate}>
             {user.nextDistribution ? formatDate(user.nextDistribution) : '-'}
           </Text>
@@ -256,27 +498,54 @@ export default function ProfileScreen() {
       </Card>
 
       {/* About */}
-      <SectionTitle title={'\u2139\uFE0F Sobre'} />
+      <SectionTitle title={`ℹ️ ${t('profile.about')}`} />
       <View>
         <View style={styles.section}>
-          <SettingRow icon={'\uD83D\uDCC4'} label="Termos de uso" onPress={() => {}} />
-          <SettingRow icon={'\uD83D\uDD12'} label="Politica de privacidade" onPress={() => {}} />
-          <SettingRow icon={'\u2753'} label="Ajuda" onPress={() => {}} />
-          <SettingRow icon={'\uD83D\uDCAC'} label="Suporte (WhatsApp)" onPress={() => {}} />
+          <SettingRow icon="📄" label={t('profile.terms')} onPress={() => {}} />
+          <SettingRow icon="🔒" label={t('profile.privacy')} onPress={() => {}} />
+          <SettingRow icon="❓" label={t('profile.help')} onPress={() => {}} />
+          <SettingRow icon="💬" label={t('profile.support')} onPress={() => {}} />
         </View>
       </View>
 
       {/* Logout */}
       <View>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>{'\uD83D\uDEAA'} Sair</Text>
+          <Text style={styles.logoutText}>🚪 {t('profile.logout')}</Text>
         </TouchableOpacity>
       </View>
 
       <Text style={styles.version}>ZURT Wealth v1.0.0</Text>
+
+      {/* Modals */}
+      <PickerModal<Language>
+        visible={showLanguagePicker}
+        title={t('profile.language')}
+        options={languageOptions}
+        selected={language}
+        onSelect={setLanguage}
+        onClose={() => setShowLanguagePicker(false)}
+      />
+      <PickerModal<Currency>
+        visible={showCurrencyPicker}
+        title={t('profile.defaultCurrency')}
+        options={currencyOptions}
+        selected={currency}
+        onSelect={setCurrency}
+        onClose={() => setShowCurrencyPicker(false)}
+      />
+      <PasswordModal
+        visible={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        isDemoMode={isDemoMode}
+      />
     </ScrollView>
   );
 }
+
+// ===========================================================================
+// Styles
+// ===========================================================================
 
 const styles = StyleSheet.create({
   container: {
@@ -472,5 +741,100 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.text.muted,
     marginTop: spacing.xl,
+  },
+
+  // -- Modal styles --------------------------------------------------------
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '85%',
+    backgroundColor: colors.card,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text.primary,
+    marginBottom: spacing.xl,
+    textAlign: 'center',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
+    marginBottom: spacing.xs,
+  },
+  modalOptionSelected: {
+    backgroundColor: colors.accent + '15',
+  },
+  modalOptionFlag: {
+    fontSize: 22,
+    marginRight: spacing.md,
+  },
+  modalOptionLabel: {
+    flex: 1,
+    fontSize: 16,
+    color: colors.text.primary,
+  },
+  modalOptionLabelSelected: {
+    color: colors.accent,
+    fontWeight: '600',
+  },
+  modalCheck: {
+    fontSize: 18,
+    color: colors.accent,
+    fontWeight: '700',
+  },
+  modalClose: {
+    marginTop: spacing.lg,
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  modalCloseText: {
+    fontSize: 14,
+    color: colors.text.secondary,
+  },
+
+  // -- Password modal styles -----------------------------------------------
+  passwordInput: {
+    backgroundColor: colors.input,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    fontSize: 14,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
+  },
+  errorText: {
+    color: colors.negative,
+    fontSize: 13,
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  saveButton: {
+    backgroundColor: colors.accent,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md + 2,
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  saveButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.background,
   },
 });

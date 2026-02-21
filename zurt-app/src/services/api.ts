@@ -112,6 +112,9 @@ async function apiRequest<T>(
   options?: RequestInit,
   retryCount = 0,
 ): Promise<T> {
+  const url = `${API_BASE}${path}`;
+  console.log(`[ZURT API] >> ${options?.method ?? 'GET'} ${url}`);
+
   const token = await getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -123,11 +126,13 @@ async function apiRequest<T>(
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
   try {
-    const response = await fetch(`${API_BASE}${path}`, {
+    const response = await fetch(url, {
       ...options,
       headers: { ...headers, ...(options?.headers as Record<string, string>) },
       signal: controller.signal,
     });
+
+    console.log(`[ZURT API] << ${response.status} ${path}`);
 
     if (response.status === 401) {
       await clearToken();
@@ -149,6 +154,13 @@ async function apiRequest<T>(
     }
 
     return await response.json();
+  } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      console.log(`[ZURT API] !! TIMEOUT after ${REQUEST_TIMEOUT}ms: ${path}`);
+    } else {
+      console.log(`[ZURT API] !! ERROR ${path}:`, err?.message ?? err);
+    }
+    throw err;
   } finally {
     clearTimeout(timeoutId);
   }
@@ -310,24 +322,38 @@ export async function fetchDashboardSummary(): Promise<{
     'dashboard:summary',
     '/dashboard/summary',
     (data) => {
-      const summary: PortfolioSummary = data.summary ??
-        data.portfolio ?? {
-          totalValue: data.totalValue ?? data.total_value ?? data.netWorth ?? data.net_worth ?? 0,
-          investedValue: data.investedValue ?? data.invested_value ?? 0,
-          profit: data.profit ?? 0,
-          variation1m: data.variation1m ?? data.variation_1m ?? data.netWorthChange ?? 0,
-          variation12m: data.variation12m ?? data.variation_12m ?? 0,
-          history: (data.history ?? []).map((h: any) => ({
-            month: h.month,
-            date: h.date,
-            value: h.value,
-          })),
-        };
+      const rawSummary = data.summary ?? data.portfolio ?? data;
+      const rawAllocations: Allocation[] = data.allocations ?? demoAllocations;
+
+      // Compute totalValue from multiple possible fields, falling back to sum of allocations
+      const allocationsTotal = rawAllocations.reduce((sum: number, a: any) => sum + (a.value ?? 0), 0);
+      const totalValue =
+        (rawSummary.totalValue ?? rawSummary.total_value ??
+        rawSummary.netWorth ?? rawSummary.net_worth ??
+        data.totalValue ?? data.total_value ??
+        data.netWorth ?? data.net_worth ??
+        allocationsTotal) || 0;
+
+      const investedValue = rawSummary.investedValue ?? rawSummary.invested_value ?? data.investedValue ?? data.invested_value ?? 0;
+      const profit = rawSummary.profit ?? data.profit ?? ((totalValue - investedValue) || 0);
+
+      const summary: PortfolioSummary = {
+        totalValue,
+        investedValue,
+        profit,
+        variation1m: rawSummary.variation1m ?? rawSummary.variation_1m ?? data.variation1m ?? data.netWorthChange ?? 0,
+        variation12m: rawSummary.variation12m ?? rawSummary.variation_12m ?? data.variation12m ?? 0,
+        history: (rawSummary.history ?? data.history ?? []).map((h: any) => ({
+          month: h.month,
+          date: h.date,
+          value: h.value,
+        })),
+      };
 
       return {
         summary,
         institutions: data.institutions ?? demoInstitutions,
-        allocations: data.allocations ?? demoAllocations,
+        allocations: rawAllocations,
         insights: data.insights ?? demoInsights,
       };
     },

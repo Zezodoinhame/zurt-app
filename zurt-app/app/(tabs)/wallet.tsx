@@ -28,11 +28,11 @@ import type { Asset, AssetClass, InstitutionId } from '../../src/types';
 
 const assetClassLabels: Record<AssetClass, string> = {
   fixedIncome: 'Renda Fixa',
-  stocks: 'Acoes',
+  stocks: 'Ações',
   fiis: 'FIIs',
   crypto: 'Cripto',
   international: 'Internacional',
-  pension: 'Previdencia',
+  pension: 'Previdência',
 };
 
 const institutionNames: Record<InstitutionId, string> = {
@@ -211,7 +211,7 @@ export default function WalletScreen() {
         ]}
         onPress={() => handleToggleViewMode('institution')}
         activeOpacity={0.7}
-        accessibilityLabel="Agrupar por instituicao"
+        accessibilityLabel="Agrupar por instituição"
         accessibilityRole="button"
       >
         <Text
@@ -220,7 +220,7 @@ export default function WalletScreen() {
             viewMode === 'institution' && styles.toggleTextActive,
           ]}
         >
-          Por Instituicao
+          Por Instituição
         </Text>
       </TouchableOpacity>
     </View>
@@ -384,14 +384,14 @@ export default function WalletScreen() {
         {/* Info rows */}
         <View style={styles.detailInfoGrid}>
           <View style={styles.detailInfoRow}>
-            <Text style={styles.detailInfoLabel}>Preco medio</Text>
+            <Text style={styles.detailInfoLabel}>Preço médio</Text>
             <Text style={styles.detailInfoValue}>
               {displayValue(formatBRL(selectedAsset.averagePrice))}
             </Text>
           </View>
 
           <View style={styles.detailInfoRow}>
-            <Text style={styles.detailInfoLabel}>Preco atual</Text>
+            <Text style={styles.detailInfoLabel}>Preço atual</Text>
             <Text style={styles.detailInfoValue}>
               {displayValue(formatBRL(selectedAsset.currentPrice))}
             </Text>
@@ -439,7 +439,7 @@ export default function WalletScreen() {
           </View>
 
           <View style={styles.detailInfoRow}>
-            <Text style={styles.detailInfoLabel}>Instituicao</Text>
+            <Text style={styles.detailInfoLabel}>Instituição</Text>
             <Text style={styles.detailInfoValue}>{institutionName}</Text>
           </View>
         </View>

@@ -216,7 +216,7 @@ export default function LoginScreen() {
           {/* Demo link */}
           <View style={styles.demoContainer}>
             <TouchableOpacity onPress={handleDemo} style={styles.demoButton}>
-              <Text style={styles.demoText}>Modo demonstracao</Text>
+              <Text style={styles.demoText}>Modo demonstração</Text>
             </TouchableOpacity>
           </View>
         </View>

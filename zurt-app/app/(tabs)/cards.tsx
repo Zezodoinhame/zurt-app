@@ -141,7 +141,7 @@ export default function CardsScreen() {
         {/* Header                                                           */}
         {/* ---------------------------------------------------------------- */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Cart\u00F5es</Text>
+          <Text style={styles.headerTitle}>Cartões</Text>
         </View>
 
         {/* ---------------------------------------------------------------- */}
@@ -213,7 +213,7 @@ export default function CardsScreen() {
                       </Text>
                     </View>
                     <View style={styles.invoiceColumn}>
-                      <Text style={styles.invoiceLabel}>Pr\u00F3xima fatura</Text>
+                      <Text style={styles.invoiceLabel}>Próxima fatura</Text>
                       <Text style={styles.invoiceValueSecondary}>
                         {displayValue(selectedCard.nextInvoice)}
                       </Text>
@@ -265,7 +265,7 @@ export default function CardsScreen() {
             {/* -------------------------------------------------------------- */}
             {selectedCard && selectedCard.transactions.length > 0 && (
               <View style={styles.contentPadding}>
-                <Text style={styles.sectionTitle}>Transa\u00E7\u00F5es</Text>
+                <Text style={styles.sectionTitle}>Transações</Text>
 
                 {groupedTransactions.map((group) => (
                   <View key={group.date} style={styles.transactionGroup}>

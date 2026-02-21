@@ -37,7 +37,7 @@ export const useCardsStore = create<CardsState>((set, get) => ({
     } catch (err: any) {
       set({
         isLoading: false,
-        error: err?.message ?? 'Erro ao carregar cartoes',
+        error: err?.message ?? 'Erro ao carregar cartões',
       });
     }
   },
@@ -55,7 +55,7 @@ export const useCardsStore = create<CardsState>((set, get) => ({
     } catch (err: any) {
       set({
         isRefreshing: false,
-        error: err?.message ?? 'Erro ao atualizar cartoes',
+        error: err?.message ?? 'Erro ao atualizar cartões',
       });
     }
   },

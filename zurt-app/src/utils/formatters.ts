@@ -1,3 +1,6 @@
+import type { Currency } from '../stores/settingsStore';
+import { exchangeRates, currencySymbols, currencyLocales } from '../stores/settingsStore';
+
 /**
  * Format number as BRL currency: R$ 847.350,00
  */
@@ -5,6 +8,20 @@ export function formatBRL(value: number): string {
   return value.toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+/**
+ * Format value in the given currency, converting from BRL
+ */
+export function formatCurrency(value: number, currency: Currency = 'BRL'): string {
+  const converted = value * exchangeRates[currency];
+  const locale = currencyLocales[currency];
+  return converted.toLocaleString(locale, {
+    style: 'currency',
+    currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -88,10 +105,10 @@ export function formatShortDate(dateString: string): string {
 }
 
 /**
- * Mask value with asterisks: R$ *****
+ * Mask value with asterisks: R$ •••••
  */
 export function maskValue(value: string): string {
-  return 'R$ \u2022\u2022\u2022\u2022\u2022';
+  return 'R$ •••••';
 }
 
 /**

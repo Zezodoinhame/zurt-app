@@ -6,20 +6,24 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import { colors } from '../src/theme/colors';
 import { useAuthStore } from '../src/stores/authStore';
+import { useSettingsStore } from '../src/stores/settingsStore';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const restoreSession = useAuthStore((s) => s.restoreSession);
+  const loadSettings = useSettingsStore((s) => s.loadSettings);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    console.log('[ZURT App] RootLayout mounted, restoring session...');
     (async () => {
       try {
-        await restoreSession();
-      } catch {
-        // ignore - will redirect to login
+        await Promise.all([restoreSession(), loadSettings()]);
+      } catch (err: any) {
+        console.log('[ZURT App] restoreSession error:', err?.message ?? err);
       } finally {
+        console.log('[ZURT App] Ready! Showing app.');
         setReady(true);
         SplashScreen.hideAsync();
       }
@@ -41,6 +45,10 @@ export default function RootLayout() {
         >
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="connect-bank"
+            options={{ animation: 'slide_from_right' }}
+          />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>
