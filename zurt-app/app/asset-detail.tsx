@@ -164,7 +164,9 @@ const indicatorStyles = StyleSheet.create({
 export default function AssetDetailScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { ticker } = useLocalSearchParams<{ ticker: string }>();
+  const params = useLocalSearchParams<{ ticker: string }>();
+  // expo-router may return string | string[] — normalize to string
+  const ticker = Array.isArray(params.ticker) ? params.ticker[0] : params.ticker;
   const { t, currency } = useSettingsStore();
 
   const [data, setData] = useState<AssetData | null>(null);
@@ -175,11 +177,18 @@ export default function AssetDetailScreen() {
   const [logoError, setLogoError] = useState(false);
 
   const loadData = useCallback(async () => {
-    if (!ticker) return;
+    console.log('ASSET DETAIL - ticker param:', ticker);
+    if (!ticker) {
+      console.log('ASSET DETAIL - ticker is undefined/empty, aborting');
+      setLoading(false);
+      setError('Ticker not provided');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const response = await fetchAssetDetail(ticker);
+      console.log('ASSET DETAIL - response:', JSON.stringify(response).substring(0, 300));
       const results = response?.results ?? [];
       if (results.length > 0) {
         setData(results[0]);
@@ -187,6 +196,7 @@ export default function AssetDetailScreen() {
         setError(t('asset.noData'));
       }
     } catch (err: any) {
+      console.log('ASSET DETAIL - error:', err?.message);
       setError(err?.message ?? t('common.error'));
     } finally {
       setLoading(false);

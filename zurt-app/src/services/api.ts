@@ -1007,11 +1007,38 @@ export async function fetchInvestmentSummary(): Promise<any> {
 // Market / Asset Detail (brapi.dev via backend proxy)
 // =============================================================================
 
+const BRAPI_URL = 'https://brapi.dev/api/quote';
+const BRAPI_TOKEN = '5kSd6kh79GgVf2X4ncFacn';
+
+async function fetchFromBrapi(ticker: string): Promise<any> {
+  const url = `${BRAPI_URL}/${encodeURIComponent(ticker)}?token=${BRAPI_TOKEN}&fundamental=true&dividends=true&range=1y&interval=1d&modules=summaryProfile,defaultKeyStatistics,financialData`;
+  console.log('[ZURT API] >> brapi fallback:', url.substring(0, 80));
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`brapi ${res.status}`);
+  return await res.json();
+}
+
 export async function fetchAssetDetail(ticker: string): Promise<any> {
+  // In demo mode, skip backend (would 401 and trigger logout) — go straight to brapi
   if (_isDemoMode) {
-    return { results: [] };
+    try {
+      return await fetchFromBrapi(ticker);
+    } catch (err: any) {
+      console.log('[ZURT API] !! brapi error:', err?.message);
+      return { results: [] };
+    }
   }
-  return apiRequest(`/market/asset/${encodeURIComponent(ticker)}`);
+
+  // Authenticated users: try backend proxy first, fallback to brapi
+  try {
+    return await apiRequest(`/market/asset/${encodeURIComponent(ticker)}`);
+  } catch {
+    try {
+      return await fetchFromBrapi(ticker);
+    } catch {
+      return { results: [] };
+    }
+  }
 }
 
 export async function fetchAIInsights(message?: string): Promise<{

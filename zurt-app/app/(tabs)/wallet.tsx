@@ -163,6 +163,7 @@ export default function WalletScreen() {
   );
 
   const handleAssetPress = useCallback((asset: Asset) => {
+    console.log('ASSET PRESS:', asset.name, 'ticker:', asset.ticker);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     // Navigate to full asset detail if ticker exists
     if (asset.ticker) {
