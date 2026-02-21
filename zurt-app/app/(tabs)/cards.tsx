@@ -21,9 +21,10 @@ import { useSettingsStore } from '../../src/stores/settingsStore';
 import { CreditCardVisual } from '../../src/components/cards/CreditCardVisual';
 import { SkeletonCard, SkeletonList } from '../../src/components/skeletons/Skeleton';
 import { ErrorState } from '../../src/components/shared/ErrorState';
-import { formatShortDate, maskValue, formatCurrency } from '../../src/utils/formatters';
+import { formatShortDate, formatDate, maskValue, formatCurrency } from '../../src/utils/formatters';
 import { categorizeTransaction } from '../../src/utils/transactionCategories';
 import type { TransactionCategory } from '../../src/types';
+import type { DashboardTransaction } from '../../src/services/api';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -31,22 +32,7 @@ import type { TransactionCategory } from '../../src/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 64;
-const CARD_SNAP_INTERVAL = CARD_WIDTH + 16; // card width + horizontal gap
-
-// ---------------------------------------------------------------------------
-// Category icon map (for card-embedded transactions)
-// ---------------------------------------------------------------------------
-
-const categoryIcons: Record<string, string> = {
-  food: '\u{1F355}',
-  transport: '\u{1F697}',
-  subscriptions: '\u{1F4FA}',
-  shopping: '\u{1F6CD}\uFE0F',
-  fuel: '\u26FD',
-  health: '\u{1F48A}',
-  travel: '\u2708\uFE0F',
-  tech: '\u{1F4BB}',
-};
+const CARD_SNAP_INTERVAL = CARD_WIDTH + 16;
 
 // ===========================================================================
 // CardsScreen
@@ -65,6 +51,7 @@ export default function CardsScreen() {
     isRefreshing,
     error,
     loadCards,
+    loadTransactions,
     refresh,
     selectedCardIndex,
     setSelectedCardIndex,
@@ -80,22 +67,87 @@ export default function CardsScreen() {
     loadCards();
   }, []);
 
+  // Fetch transactions from /finance/transactions if dashboard didn't provide them
+  useEffect(() => {
+    if (cards.length > 0) {
+      console.log('[Cards] dashboardTransactions:', dashboardTransactions.length);
+      if (dashboardTransactions.length === 0) {
+        console.log('[Cards] No dashboard TX, fetching from /finance/transactions...');
+        loadTransactions();
+      }
+    }
+  }, [cards.length, dashboardTransactions.length]);
+
   // ---- Derived values -----------------------------------------------------
   const selectedCard = getSelectedCard();
 
-  // Group card-embedded transactions by date
-  const groupedTransactions = useMemo(() => {
-    if (!selectedCard?.transactions || selectedCard.transactions.length === 0) return [];
+  // All transactions (card-embedded + dashboard) unified and grouped by date
+  const allTransactions = useMemo(() => {
+    // Collect card-embedded transactions
+    const cardTx: DashboardTransaction[] = (selectedCard?.transactions ?? []).map((tx) => ({
+      id: tx.id,
+      date: tx.date,
+      amount: tx.amount,
+      description: tx.description,
+      merchant: '',
+      account_name: selectedCard?.name ?? '',
+      institution_name: selectedCard?.name ?? '',
+      category: tx.category ?? '',
+    }));
 
-    const groups: { date: string; transactions: typeof selectedCard.transactions }[] = [];
-    const map = new Map<string, typeof selectedCard.transactions>();
-
-    for (const tx of selectedCard.transactions) {
-      const key = tx.date;
-      if (!map.has(key)) {
-        map.set(key, []);
+    // Dashboard transactions (filtered to selected card if possible)
+    let dashTx: DashboardTransaction[] = [];
+    if (dashboardTransactions.length > 0) {
+      if (selectedCard) {
+        const cardName = (selectedCard.name ?? '').toLowerCase();
+        const cardLast4 = selectedCard.lastFour;
+        const matched = dashboardTransactions.filter((tx) => {
+          const instName = (tx.institution_name ?? '').toLowerCase();
+          const accName = (tx.account_name ?? '').toLowerCase();
+          return (
+            (cardName && (instName.includes(cardName) || accName.includes(cardName))) ||
+            (cardLast4 && (accName.includes(cardLast4) || instName.includes(cardLast4)))
+          );
+        });
+        dashTx = matched.length > 0 ? matched : dashboardTransactions;
+      } else {
+        dashTx = dashboardTransactions;
       }
-      map.get(key)!.push(tx);
+    }
+
+    // Merge: card-embedded first, then dashboard (dedup by id)
+    const seenIds = new Set(cardTx.map((t) => t.id));
+    const merged = [...cardTx];
+    for (const tx of dashTx) {
+      if (!seenIds.has(tx.id)) {
+        merged.push(tx);
+        seenIds.add(tx.id);
+      }
+    }
+
+    // Sort by date descending
+    merged.sort((a, b) => {
+      const da = new Date(a.date).getTime() || 0;
+      const db = new Date(b.date).getTime() || 0;
+      return db - da;
+    });
+
+    // Limit to 30
+    return merged.slice(0, 30);
+  }, [selectedCard, dashboardTransactions]);
+
+  // Group transactions by date
+  const groupedAllTransactions = useMemo(() => {
+    if (allTransactions.length === 0) return [];
+
+    const groups: { date: string; transactions: DashboardTransaction[] }[] = [];
+    const map = new Map<string, DashboardTransaction[]>();
+
+    for (const tx of allTransactions) {
+      // Normalize date to YYYY-MM-DD
+      const dateKey = tx.date ? tx.date.substring(0, 10) : 'unknown';
+      if (!map.has(dateKey)) map.set(dateKey, []);
+      map.get(dateKey)!.push(tx);
     }
 
     for (const [date, transactions] of map) {
@@ -103,30 +155,7 @@ export default function CardsScreen() {
     }
 
     return groups;
-  }, [selectedCard]);
-
-  // Dashboard transactions filtered by selected card (or all if no match)
-  const filteredDashboardTx = useMemo(() => {
-    if (dashboardTransactions.length === 0) return [];
-
-    if (selectedCard) {
-      const cardName = (selectedCard.name ?? '').toLowerCase();
-      const cardLast4 = selectedCard.lastFour;
-      // Try to match by institution_name or account_name
-      const matched = dashboardTransactions.filter((tx) => {
-        const instName = (tx.institution_name ?? '').toLowerCase();
-        const accName = (tx.account_name ?? '').toLowerCase();
-        return (
-          (cardName && (instName.includes(cardName) || accName.includes(cardName))) ||
-          (cardLast4 && (accName.includes(cardLast4) || instName.includes(cardLast4)))
-        );
-      });
-      if (matched.length > 0) return matched.slice(0, 20);
-    }
-
-    // Fallback: show all recent transactions (max 20)
-    return dashboardTransactions.slice(0, 20);
-  }, [dashboardTransactions, selectedCard]);
+  }, [allTransactions]);
 
   // ---- Handlers -----------------------------------------------------------
   const handleScrollEnd = useCallback(
@@ -167,16 +196,12 @@ export default function CardsScreen() {
           />
         }
       >
-        {/* ---------------------------------------------------------------- */}
-        {/* Header                                                           */}
-        {/* ---------------------------------------------------------------- */}
+        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{t('cards.title')}</Text>
         </View>
 
-        {/* ---------------------------------------------------------------- */}
-        {/* Loading skeleton state                                           */}
-        {/* ---------------------------------------------------------------- */}
+        {/* Loading */}
         {isLoading ? (
           <View style={styles.contentPadding}>
             <SkeletonCard />
@@ -200,9 +225,7 @@ export default function CardsScreen() {
           </View>
         ) : (
           <>
-            {/* -------------------------------------------------------------- */}
-            {/* Horizontal card carousel                                        */}
-            {/* -------------------------------------------------------------- */}
+            {/* Card Carousel */}
             {cards.length > 0 && (
               <View>
                 <ScrollView
@@ -242,9 +265,7 @@ export default function CardsScreen() {
               </View>
             )}
 
-            {/* -------------------------------------------------------------- */}
-            {/* Invoice summary                                                 */}
-            {/* -------------------------------------------------------------- */}
+            {/* Invoice Summary */}
             {selectedCard && (
               <View style={styles.contentPadding}>
                 <View style={styles.invoiceCard}>
@@ -266,23 +287,17 @@ export default function CardsScreen() {
               </View>
             )}
 
-            {/* -------------------------------------------------------------- */}
-            {/* Category spending                                               */}
-            {/* -------------------------------------------------------------- */}
+            {/* Category Spending */}
             {categorySpending.length > 0 && (
               <View style={styles.contentPadding}>
                 <Text style={styles.sectionTitle}>{t('cards.spendingByCategory')}</Text>
-
                 {categorySpending
                   .filter((cat) => cat.total > 0)
                   .map((cat) => (
-                    <View
-                      key={cat.category}
-                      style={styles.categoryRow}
-                    >
-                      <Text style={styles.categoryIcon}>
-                        {categoryIcons[cat.category] ?? cat.icon}
-                      </Text>
+                    <View key={cat.category} style={styles.categoryRow}>
+                      <View style={[styles.catIconCircle, { backgroundColor: (cat.color ?? '#95A5A6') + '25' }]}>
+                        <Text style={styles.catEmoji}>{cat.icon}</Text>
+                      </View>
                       <Text style={styles.categoryLabel}>{cat.label}</Text>
                       <View style={styles.categoryBarTrack}>
                         <View
@@ -303,85 +318,54 @@ export default function CardsScreen() {
               </View>
             )}
 
-            {/* -------------------------------------------------------------- */}
-            {/* Card-embedded Transactions                                      */}
-            {/* -------------------------------------------------------------- */}
-            {selectedCard && selectedCard.transactions.length > 0 && (
-              <View style={styles.contentPadding}>
-                <Text style={styles.sectionTitle}>{t('cards.transactions')}</Text>
+            {/* ============================================================= */}
+            {/* Transactions (unified: card-embedded + dashboard, grouped)     */}
+            {/* ============================================================= */}
+            <View style={styles.contentPadding}>
+              <Text style={styles.sectionTitle}>{t('cards.recentTransactions')}</Text>
 
-                {groupedTransactions.map((group) => (
-                  <View key={group.date} style={styles.transactionGroup}>
-                    <Text style={styles.dateHeader}>
-                      {formatShortDate(group.date)}
+              {groupedAllTransactions.length === 0 ? (
+                <View style={styles.txEmptyState}>
+                  <Text style={styles.txEmptyIcon}>{'\u{1F9FE}'}</Text>
+                  <Text style={styles.txEmptyText}>{t('cards.noTransactions')}</Text>
+                </View>
+              ) : (
+                groupedAllTransactions.map((group) => (
+                  <View key={group.date} style={styles.txGroup}>
+                    <Text style={styles.txDateHeader}>
+                      {group.date !== 'unknown' ? formatDate(group.date) : '-'}
                     </Text>
 
-                    {group.transactions.map((tx) => (
-                      <View
-                        key={tx.id}
-                        style={styles.transactionRow}
-                      >
-                        <Text style={styles.transactionIcon}>
-                          {categoryIcons[tx.category] ?? '\u{1F4B3}'}
-                        </Text>
-                        <View style={styles.transactionInfo}>
-                          <Text style={styles.transactionDescription}>
-                            {tx.description}
-                          </Text>
-                          {tx.installment ? (
-                            <Text style={styles.transactionInstallment}>
-                              {tx.installment}
+                    {group.transactions.map((tx) => {
+                      const cat = categorizeTransaction(
+                        tx.description || tx.merchant || tx.category || '',
+                      );
+                      return (
+                        <View key={tx.id} style={styles.txRow}>
+                          <View style={[styles.txIconCircle, { backgroundColor: cat.color + '25' }]}>
+                            <Text style={styles.txEmoji}>{cat.emoji}</Text>
+                          </View>
+                          <View style={styles.txInfo}>
+                            <Text style={styles.txDescription} numberOfLines={1}>
+                              {cleanDescription(tx.description || tx.merchant || '-')}
                             </Text>
-                          ) : null}
+                            <Text style={styles.txSubtext}>
+                              {cat.label}
+                              {tx.institution_name ? ` \u2022 ${tx.institution_name}` : ''}
+                            </Text>
+                          </View>
+                          <Text style={styles.txAmount}>
+                            {valuesHidden
+                              ? maskValue('')
+                              : formatCurrency(Math.abs(tx.amount), currency)}
+                          </Text>
                         </View>
-                        <Text style={styles.transactionAmount}>
-                          {displayValue(tx.amount)}
-                        </Text>
-                      </View>
-                    ))}
+                      );
+                    })}
                   </View>
-                ))}
-              </View>
-            )}
-
-            {/* -------------------------------------------------------------- */}
-            {/* Dashboard Transactions (with smart categorization)              */}
-            {/* -------------------------------------------------------------- */}
-            {filteredDashboardTx.length > 0 && (
-              <View style={styles.contentPadding}>
-                {selectedCard && selectedCard.transactions.length === 0 && (
-                  <Text style={styles.sectionTitle}>{t('cards.recentTransactions')}</Text>
-                )}
-                {selectedCard && selectedCard.transactions.length > 0 && (
-                  <Text style={styles.sectionTitle}>{t('cards.moreTransactions')}</Text>
-                )}
-
-                {filteredDashboardTx.map((tx) => {
-                  const cat = categorizeTransaction(tx.description || tx.merchant || '');
-                  return (
-                    <View key={tx.id} style={styles.dashTxRow}>
-                      <View style={[styles.dashTxIconCircle, { backgroundColor: cat.color + '25' }]}>
-                        <Text style={styles.dashTxEmoji}>{cat.emoji}</Text>
-                      </View>
-                      <View style={styles.dashTxInfo}>
-                        <Text style={styles.dashTxDescription} numberOfLines={1}>
-                          {tx.description || tx.merchant || '-'}
-                        </Text>
-                        <Text style={styles.dashTxDate}>
-                          {tx.date ? formatShortDate(tx.date) : ''}
-                          {tx.institution_name ? ` \u2022 ${tx.institution_name}` : ''}
-                        </Text>
-                      </View>
-                      <Text style={styles.dashTxAmount}>
-                        {valuesHidden
-                          ? maskValue('')
-                          : formatCurrency(Math.abs(tx.amount), currency)}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
+                ))
+              )}
+            </View>
           </>
         )}
       </ScrollView>
@@ -390,255 +374,97 @@ export default function CardsScreen() {
 }
 
 // ===========================================================================
+// Helpers
+// ===========================================================================
+
+/** Remove internal codes and clean up transaction descriptions */
+function cleanDescription(desc: string): string {
+  // Remove common prefixes like "COMPRA CARTAO -", "PAG*", "PG *"
+  let cleaned = desc
+    .replace(/^(COMPRA CARTAO\s*-?\s*)/i, '')
+    .replace(/^(PAG\*|PG\s*\*|PAGTO\s*)/i, '')
+    .replace(/^(PIX\s*(ENVIADO|RECEBIDO)?\s*-?\s*)/i, 'PIX ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  // Capitalize first letter, lowercase the rest if ALL CAPS
+  if (cleaned === cleaned.toUpperCase() && cleaned.length > 3) {
+    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+  }
+
+  return cleaned || desc;
+}
+
+// ===========================================================================
 // Styles
 // ===========================================================================
 
 const styles = StyleSheet.create({
-  // -- Layout ---------------------------------------------------------------
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
-    paddingBottom: 100,
-  },
-  contentPadding: {
-    paddingHorizontal: spacing.xl,
-  },
+  screen: { flex: 1, backgroundColor: colors.background },
+  scrollContent: { paddingBottom: 100 },
+  contentPadding: { paddingHorizontal: spacing.xl },
 
-  // -- Header ---------------------------------------------------------------
-  header: {
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xl,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text.primary,
-  },
+  // Header
+  header: { paddingTop: spacing.md, paddingBottom: spacing.xl, alignItems: 'center' },
+  headerTitle: { fontSize: 24, fontWeight: '700', color: colors.text.primary },
 
-  // -- Carousel -------------------------------------------------------------
-  carouselContent: {
-    paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2,
-  },
-  cardWrapper: {
-    width: CARD_WIDTH,
-    marginHorizontal: 8,
-  },
+  // Carousel
+  carouselContent: { paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2 },
+  cardWrapper: { width: CARD_WIDTH, marginHorizontal: 8 },
 
-  // -- Page dots -------------------------------------------------------------
-  dotsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: spacing.md,
-    marginBottom: spacing.xl,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginHorizontal: 4,
-  },
+  // Page dots
+  dotsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: spacing.md, marginBottom: spacing.xl },
+  dot: { width: 6, height: 6, borderRadius: 3, marginHorizontal: 4 },
 
-  // -- Invoice summary -------------------------------------------------------
+  // Invoice
   invoiceCard: {
-    backgroundColor: colors.card,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.xl,
-    marginBottom: spacing.xl,
+    backgroundColor: colors.card, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+    padding: spacing.xl, marginBottom: spacing.xl,
   },
-  invoiceColumns: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  invoiceColumn: {
-    flex: 1,
-  },
-  invoiceLabel: {
-    fontSize: 12,
-    color: colors.text.secondary,
-    marginBottom: spacing.xs,
-  },
-  invoiceValueLarge: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.text.primary,
-    fontVariant: ['tabular-nums'],
-  },
-  invoiceValueSecondary: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text.secondary,
-    fontVariant: ['tabular-nums'],
-  },
+  invoiceColumns: { flexDirection: 'row', justifyContent: 'space-between' },
+  invoiceColumn: { flex: 1 },
+  invoiceLabel: { fontSize: 12, color: colors.text.secondary, marginBottom: spacing.xs },
+  invoiceValueLarge: { fontSize: 22, fontWeight: '700', color: colors.text.primary, fontVariant: ['tabular-nums'] },
+  invoiceValueSecondary: { fontSize: 18, fontWeight: '600', color: colors.text.secondary, fontVariant: ['tabular-nums'] },
 
-  // -- Section titles --------------------------------------------------------
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text.primary,
-    marginBottom: spacing.md,
-    marginTop: spacing.sm,
-  },
+  // Section title
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.text.primary, marginBottom: spacing.md, marginTop: spacing.sm },
 
-  // -- Category spending -----------------------------------------------------
-  categoryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  categoryIcon: {
-    fontSize: 18,
-    width: 28,
-  },
-  categoryLabel: {
-    fontSize: 14,
-    color: colors.text.primary,
-    width: 100,
-  },
-  categoryBarTrack: {
-    flex: 1,
-    height: 6,
-    backgroundColor: colors.elevated,
-    borderRadius: 3,
-    marginHorizontal: spacing.sm,
-    overflow: 'hidden',
-  },
-  categoryBarFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  categoryValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text.secondary,
-    fontVariant: ['tabular-nums'],
-    textAlign: 'right',
-    minWidth: 80,
-  },
+  // Category spending
+  categoryRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
+  catIconCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm },
+  catEmoji: { fontSize: 16 },
+  categoryLabel: { fontSize: 14, color: colors.text.primary, width: 90 },
+  categoryBarTrack: { flex: 1, height: 6, backgroundColor: colors.elevated, borderRadius: 3, marginHorizontal: spacing.sm, overflow: 'hidden' },
+  categoryBarFill: { height: '100%', borderRadius: 3 },
+  categoryValue: { fontSize: 13, fontWeight: '600', color: colors.text.secondary, fontVariant: ['tabular-nums'], textAlign: 'right', minWidth: 80 },
 
-  // -- Card-embedded Transactions -------------------------------------------
-  transactionGroup: {
-    marginBottom: spacing.lg,
+  // Transactions
+  txGroup: { marginBottom: spacing.lg },
+  txDateHeader: { fontSize: 13, fontWeight: '600', color: colors.text.secondary, marginBottom: spacing.sm },
+  txRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.card, borderRadius: radius.md,
+    padding: spacing.md, marginBottom: spacing.xs,
+    borderWidth: 1, borderColor: colors.border,
   },
-  dateHeader: {
-    fontSize: 13,
-    color: colors.text.secondary,
-    marginBottom: spacing.sm,
-  },
-  transactionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  transactionIcon: {
-    fontSize: 20,
-    width: 32,
-  },
-  transactionInfo: {
-    flex: 1,
-    marginLeft: spacing.xs,
-  },
-  transactionDescription: {
-    fontSize: 14,
-    color: colors.text.primary,
-  },
-  transactionInstallment: {
-    fontSize: 12,
-    color: colors.text.muted,
-    marginTop: 2,
-  },
-  transactionAmount: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text.primary,
-    fontVariant: ['tabular-nums'],
-    textAlign: 'right',
-    minWidth: 90,
-  },
+  txIconCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md },
+  txEmoji: { fontSize: 18 },
+  txInfo: { flex: 1 },
+  txDescription: { fontSize: 14, fontWeight: '500', color: colors.text.primary },
+  txSubtext: { fontSize: 12, color: colors.text.muted, marginTop: 2 },
+  txAmount: { fontSize: 14, fontWeight: '600', color: '#FF6B6B', fontVariant: ['tabular-nums'], textAlign: 'right', minWidth: 80 },
 
-  // -- Dashboard Transactions (categorized) ---------------------------------
-  dashTxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  dashTxIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  dashTxEmoji: {
-    fontSize: 18,
-  },
-  dashTxInfo: {
-    flex: 1,
-  },
-  dashTxDescription: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text.primary,
-  },
-  dashTxDate: {
-    fontSize: 12,
-    color: colors.text.muted,
-    marginTop: 2,
-  },
-  dashTxAmount: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FF6B6B',
-    fontVariant: ['tabular-nums'],
-    textAlign: 'right',
-    minWidth: 80,
-  },
+  // Transaction empty state
+  txEmptyState: { alignItems: 'center', paddingVertical: spacing.xxxl },
+  txEmptyIcon: { fontSize: 40, marginBottom: spacing.md },
+  txEmptyText: { fontSize: 14, color: colors.text.secondary, textAlign: 'center' },
 
-  // -- Empty state -----------------------------------------------------------
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 80,
-    paddingHorizontal: spacing.xl,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: spacing.lg,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text.primary,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  emptyDescription: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-  },
-  emptyButton: {
-    backgroundColor: colors.accent,
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-  },
-  emptyButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.background,
-  },
+  // Empty state
+  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 80, paddingHorizontal: spacing.xl },
+  emptyIcon: { fontSize: 48, marginBottom: spacing.lg },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.text.primary, textAlign: 'center', marginBottom: spacing.sm },
+  emptyDescription: { fontSize: 14, color: colors.text.secondary, textAlign: 'center', marginBottom: spacing.xl },
+  emptyButton: { backgroundColor: colors.accent, paddingHorizontal: spacing.xxl, paddingVertical: spacing.md, borderRadius: radius.md },
+  emptyButtonText: { fontSize: 14, fontWeight: '600', color: colors.background },
 });

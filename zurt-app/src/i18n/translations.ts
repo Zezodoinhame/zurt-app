@@ -278,6 +278,7 @@ export const translations: Record<Language, Record<string, string>> = {
     // Cards - Transactions
     'cards.recentTransactions': 'Ultimas transacoes',
     'cards.moreTransactions': 'Mais transacoes',
+    'cards.noTransactions': 'Nenhuma transacao encontrada',
   },
   en: {
     // Tabs
@@ -556,6 +557,7 @@ export const translations: Record<Language, Record<string, string>> = {
     // Cards - Transactions
     'cards.recentTransactions': 'Recent transactions',
     'cards.moreTransactions': 'More transactions',
+    'cards.noTransactions': 'No transactions found',
   },
   zh: {
     // Tabs
@@ -834,6 +836,7 @@ export const translations: Record<Language, Record<string, string>> = {
     // Cards - Transactions
     'cards.recentTransactions': '最近交易',
     'cards.moreTransactions': '更多交易',
+    'cards.noTransactions': '未找到交易记录',
   },
   ar: {
     // Tabs
@@ -1112,5 +1115,6 @@ export const translations: Record<Language, Record<string, string>> = {
     // Cards - Transactions
     'cards.recentTransactions': 'المعاملات الأخيرة',
     'cards.moreTransactions': 'المزيد من المعاملات',
+    'cards.noTransactions': 'لم يتم العثور على معاملات',
   },
 };

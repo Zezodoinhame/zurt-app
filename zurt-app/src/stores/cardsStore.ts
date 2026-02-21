@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { CreditCard, CategorySpending } from '../types';
 import type { DashboardTransaction } from '../services/api';
-import { fetchCardsApi } from '../services/api';
+import { fetchCardsApi, fetchTransactions } from '../services/api';
 
 interface CardsState {
   cards: CreditCard[];
@@ -12,8 +12,10 @@ interface CardsState {
   isRefreshing: boolean;
   error: string | null;
   _loadedFromDashboard: boolean;
+  _transactionsLoaded: boolean;
 
   loadCards: () => Promise<void>;
+  loadTransactions: () => Promise<void>;
   refresh: () => Promise<void>;
   setSelectedCardIndex: (index: number) => void;
   getSelectedCard: () => CreditCard | null;
@@ -29,15 +31,42 @@ export const useCardsStore = create<CardsState>((set, get) => ({
   isRefreshing: false,
   error: null,
   _loadedFromDashboard: false,
+  _transactionsLoaded: false,
 
   _setCardsFromDashboard: (cards: CreditCard[], transactions?: DashboardTransaction[]) => {
+    const hasTx = transactions && transactions.length > 0;
     set({
       cards,
-      dashboardTransactions: transactions ?? get().dashboardTransactions,
+      dashboardTransactions: hasTx ? transactions : get().dashboardTransactions,
       _loadedFromDashboard: true,
+      _transactionsLoaded: hasTx ? true : get()._transactionsLoaded,
       isLoading: false,
       error: null,
     });
+  },
+
+  loadTransactions: async () => {
+    if (get()._transactionsLoaded && get().dashboardTransactions.length > 0) return;
+
+    try {
+      const data = await fetchTransactions({ limit: 30 });
+      console.log('[CardsStore] loadTransactions result:', data.transactions.length);
+      if (data.transactions.length > 0) {
+        const mapped: DashboardTransaction[] = data.transactions.map((t: any) => ({
+          id: String(t.id ?? ''),
+          date: t.date ?? t.created_at ?? '',
+          amount: parseFloat(t.amount ?? '0') || 0,
+          description: t.description ?? t.merchant ?? '',
+          merchant: t.merchant ?? '',
+          account_name: t.account_name ?? '',
+          institution_name: t.institution_name ?? '',
+          category: t.category ?? '',
+        }));
+        set({ dashboardTransactions: mapped, _transactionsLoaded: true });
+      }
+    } catch (err: any) {
+      console.log('[CardsStore] loadTransactions error:', err?.message);
+    }
   },
 
   loadCards: async () => {
@@ -62,12 +91,13 @@ export const useCardsStore = create<CardsState>((set, get) => ({
   },
 
   refresh: async () => {
-    set({ isRefreshing: true, error: null, _loadedFromDashboard: false });
+    set({ isRefreshing: true, error: null, _loadedFromDashboard: false, _transactionsLoaded: false });
     try {
       const data = await fetchCardsApi();
       set({
         cards: data.cards,
         categorySpending: data.categorySpending,
+        dashboardTransactions: [],
         isRefreshing: false,
         error: null,
       });
