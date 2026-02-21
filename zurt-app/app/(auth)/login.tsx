@@ -14,25 +14,25 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
-import * as AuthSession from 'expo-auth-session';
 import { colors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useAuthStore } from '../../src/stores/authStore';
 import { Button } from '../../src/components/ui/Button';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { Input } from '../../src/components/ui/Input';
-import { saveToken, fetchUserProfile } from '../../src/services/api';
+import { saveToken } from '../../src/services/api';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://zurt.com.br/api';
+const GOOGLE_CALLBACK_URL = 'zurt://auth-callback';
 
 type Mode = 'login' | 'register';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { login, register, loginDemo, isLoading, error: storeError, clearError, updateUser } = useAuthStore();
+  const { login, register, loginDemo, restoreSession, isLoading, error: storeError, clearError } = useAuthStore();
   const { t } = useSettingsStore();
 
   const [mode, setMode] = useState<Mode>('login');
@@ -111,26 +111,44 @@ export default function LoginScreen() {
     setGoogleLoading(true);
 
     try {
-      const redirectUri = AuthSession.makeRedirectUri({ preferLocalhost: false });
-      const authUrl = `${API_BASE}/auth/google?redirect_uri=${encodeURIComponent(redirectUri)}`;
+      // Open backend OAuth with zurt:// deep link as callback
+      const authUrl = `${API_BASE}/auth/google?redirect_uri=${encodeURIComponent(GOOGLE_CALLBACK_URL)}`;
+      console.log('[ZURT Auth] Opening Google OAuth:', authUrl);
+      console.log('[ZURT Auth] Expecting callback at:', GOOGLE_CALLBACK_URL);
 
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+      // openAuthSessionAsync listens for GOOGLE_CALLBACK_URL to close the browser
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, GOOGLE_CALLBACK_URL);
+      console.log('[ZURT Auth] WebBrowser result type:', result.type);
 
       if (result.type === 'success' && result.url) {
-        // Extract token from redirect URL
-        const url = new URL(result.url);
-        const token = url.searchParams.get('token') || url.hash?.match(/token=([^&]+)/)?.[1];
+        console.log('[ZURT Auth] Callback URL received:', result.url);
+
+        // Extract token from zurt://auth-callback?token=xxx
+        // new URL() may not work with custom schemes, so parse manually
+        let token: string | null = null;
+        const tokenMatch = result.url.match(/[?&]token=([^&]+)/);
+        if (tokenMatch) {
+          token = decodeURIComponent(tokenMatch[1]);
+        }
 
         if (token) {
+          console.log('[ZURT Auth] Token extracted, saving and restoring session...');
           await saveToken(token);
-          const user = await fetchUserProfile();
-          updateUser(user);
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          router.replace('/(tabs)');
+
+          // restoreSession calls GET /auth/me and sets full auth state
+          const restored = await restoreSession();
+          if (restored) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            router.replace('/(tabs)');
+          } else {
+            setError(t('login.connectionError'));
+          }
         } else {
+          console.log('[ZURT Auth] No token found in callback URL');
           setError(t('login.connectionError'));
         }
-      } else if (result.type === 'cancel') {
+      } else if (result.type === 'cancel' || result.type === 'dismiss') {
+        console.log('[ZURT Auth] Google login cancelled by user');
         // User cancelled, do nothing
       }
     } catch (err: any) {
@@ -139,7 +157,7 @@ export default function LoginScreen() {
     } finally {
       setGoogleLoading(false);
     }
-  }, [clearError, router, t, updateUser]);
+  }, [clearError, restoreSession, router, t]);
 
   const handleDemo = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
