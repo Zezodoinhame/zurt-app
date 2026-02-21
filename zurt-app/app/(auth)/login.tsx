@@ -52,10 +52,10 @@ export default function LoginScreen() {
   const displayError = error || storeError || '';
 
   // -------------------------------------------------------------------------
-  // Google Auth via WebBrowser — opens backend /api/auth/google in browser.
+  // Google Auth via WebBrowser — opens backend /api/auth/google?source=mobile.
   // Backend redirects to Google, user authenticates, backend redirects to
-  // https://zurt.com.br/auth/google?token=JWT. We intercept that redirect
-  // URL and extract the JWT from the query parameter.
+  // zurt://auth/callback?token=JWT. We intercept that deep link and extract
+  // the JWT from the query parameter.
   // -------------------------------------------------------------------------
   const handleGoogleLogin = useCallback(async () => {
     Keyboard.dismiss();
@@ -64,13 +64,13 @@ export default function LoginScreen() {
     setGoogleLoading(true);
 
     try {
-      // Open backend Google OAuth. The returnUrl tells the auth session
-      // to intercept when the browser navigates to this URL prefix.
-      // Backend flow: /api/auth/google → Google consent → callback →
-      // redirect to https://zurt.com.br/auth/google?token=JWT
+      // Open backend Google OAuth with ?source=mobile so the backend
+      // redirects to our deep link scheme instead of the website.
+      // Flow: /api/auth/google?source=mobile → Google consent → callback →
+      // redirect to zurt://auth/callback?token=JWT
       const result = await WebBrowser.openAuthSessionAsync(
-        GOOGLE_AUTH_URL,
-        'https://zurt.com.br/auth/google',
+        `${GOOGLE_AUTH_URL}?source=mobile`,
+        'zurt://auth/callback',
       );
 
       if (result.type === 'success' && result.url) {
