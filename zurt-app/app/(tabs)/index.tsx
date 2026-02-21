@@ -104,6 +104,9 @@ export default function HomeScreen() {
     refresh();
   }, [refresh]);
 
+  // ---- Debug logs ----------------------------------------------------------
+  console.log('[ZURT Home] netWorth:', summary?.totalValue, 'connections:', institutions?.length, 'allocations:', allocations?.length);
+
   // ---- Derived values -----------------------------------------------------
   const unreadCount = getUnreadCount();
   const firstName = user?.name?.split(' ')[0] ?? '';

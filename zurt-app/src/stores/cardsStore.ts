@@ -28,6 +28,7 @@ export const useCardsStore = create<CardsState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const data = await fetchCardsApi();
+      console.log('[ZURT Data] cards:', JSON.stringify(data).substring(0, 500));
       set({
         cards: data.cards,
         categorySpending: data.categorySpending,

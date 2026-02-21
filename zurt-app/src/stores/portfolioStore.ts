@@ -52,6 +52,9 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
         fetchInvestments(),
       ]);
 
+      console.log('[ZURT Data] dashboard:', JSON.stringify(dashboardData).substring(0, 500));
+      console.log('[ZURT Data] investments:', JSON.stringify(investmentData).substring(0, 500));
+
       // Recompute institution assetCount and totalValue from actual assets
       const assets = investmentData.assets;
       const institutions = investmentData.institutions.map((inst) => {
