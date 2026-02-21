@@ -1001,6 +1001,46 @@ export async function fetchAIInsights(message?: string): Promise<{
   };
 }
 
+export interface AIAlert {
+  id: string;
+  type: 'warning' | 'opportunity' | 'info';
+  title: string;
+  message: string;
+  severity: 'low' | 'medium' | 'high';
+}
+
+export async function fetchAIAlerts(): Promise<AIAlert[]> {
+  if (_isDemoMode) {
+    return [
+      {
+        id: 'demo-1',
+        type: 'info',
+        title: 'Modo demonstração',
+        message: 'Faça login para receber alertas inteligentes personalizados.',
+        severity: 'low',
+      },
+    ];
+  }
+
+  try {
+    const data = await apiRequest<any>('/ai/check-alerts', {
+      method: 'POST',
+    });
+    const alerts: any[] = data.alerts ?? data ?? [];
+    return Array.isArray(alerts)
+      ? alerts.map((a: any) => ({
+          id: String(a.id ?? Date.now()),
+          type: a.type ?? 'info',
+          title: a.title ?? '',
+          message: a.message ?? '',
+          severity: a.severity ?? 'low',
+        }))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function sendAIChat(
   message: string,
   conversationId?: string,

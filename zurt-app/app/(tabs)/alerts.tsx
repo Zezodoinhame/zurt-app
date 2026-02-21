@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -16,6 +17,7 @@ import { formatRelativeDate } from '../../src/utils/formatters';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { SkeletonList } from '../../src/components/skeletons/Skeleton';
 import { ErrorState } from '../../src/components/shared/ErrorState';
+import { fetchAIAlerts, type AIAlert } from '../../src/services/api';
 import type { NotificationType } from '../../src/types';
 
 const typeConfig: Record<
@@ -27,6 +29,12 @@ const typeConfig: Record<
   invoice: { icon: '💳', color: colors.info },
   insight: { icon: '💡', color: '#A855F7' },
   system: { icon: '🔔', color: colors.text.secondary },
+};
+
+const aiAlertConfig: Record<string, { icon: string; color: string }> = {
+  warning: { icon: '⚠️', color: colors.warning },
+  opportunity: { icon: '🚀', color: colors.positive },
+  info: { icon: '💡', color: colors.info },
 };
 
 const filterOptions: Array<{ key: NotificationType | 'all'; label: string }> = [
@@ -56,9 +64,34 @@ export default function AlertsScreen() {
   } = useNotificationStore();
   const { t } = useSettingsStore();
 
+  const [aiAlerts, setAiAlerts] = useState<AIAlert[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiCheckedThisSession, setAiCheckedThisSession] = useState(false);
+
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
+
+  // Auto-check AI alerts once per session
+  useEffect(() => {
+    if (!aiCheckedThisSession) {
+      handleCheckAIAlerts(true);
+    }
+  }, []);
+
+  const handleCheckAIAlerts = useCallback(async (silent = false) => {
+    if (!silent) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setAiLoading(true);
+    try {
+      const alerts = await fetchAIAlerts();
+      setAiAlerts(alerts);
+      setAiCheckedThisSession(true);
+    } catch {
+      // Silently fail
+    } finally {
+      setAiLoading(false);
+    }
+  }, []);
 
   const notifications = getFilteredNotifications();
   const unreadCount = getUnreadCount();
@@ -83,6 +116,11 @@ export default function AlertsScreen() {
     },
     [markAsRead]
   );
+
+  const dismissAIAlert = useCallback((id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setAiAlerts((prev) => prev.filter((a) => a.id !== id));
+  }, []);
 
   if (isLoading) {
     return (
@@ -158,13 +196,60 @@ export default function AlertsScreen() {
           />
         }
       >
-        {notifications.length === 0 ? (
+        {/* AI Alerts Section */}
+        <View style={styles.aiSection}>
+          <View style={styles.aiSectionHeader}>
+            <Text style={styles.aiSectionTitle}>
+              ✨ {t('alerts.aiSection')}
+            </Text>
+            <TouchableOpacity
+              style={styles.aiCheckButton}
+              onPress={() => handleCheckAIAlerts(false)}
+              disabled={aiLoading}
+              activeOpacity={0.7}
+            >
+              {aiLoading ? (
+                <ActivityIndicator size="small" color={colors.accent} />
+              ) : (
+                <Text style={styles.aiCheckText}>{t('alerts.aiCheck')}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {aiAlerts.length > 0 && (
+            <View style={styles.aiAlertsList}>
+              {aiAlerts.map((alert) => {
+                const config = aiAlertConfig[alert.type] ?? aiAlertConfig.info;
+                return (
+                  <View key={alert.id} style={[styles.aiAlertCard, { borderLeftColor: config.color }]}>
+                    <View style={styles.aiAlertRow}>
+                      <Text style={styles.aiAlertIcon}>{config.icon}</Text>
+                      <View style={styles.aiAlertContent}>
+                        <Text style={styles.aiAlertTitle}>{alert.title}</Text>
+                        <Text style={styles.aiAlertMessage}>{alert.message}</Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => dismissAIAlert(alert.id)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Text style={styles.dismissText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
+
+        {/* Regular notifications */}
+        {notifications.length === 0 && aiAlerts.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyIcon}>🔕</Text>
             <Text style={styles.emptyText}>{t('alerts.noNotifications')}</Text>
           </View>
         ) : (
-          notifications.map((notification, index) => {
+          notifications.map((notification) => {
             const config = typeConfig[notification.type];
 
             return (
@@ -293,6 +378,72 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingBottom: 100,
   },
+
+  // AI Alerts section
+  aiSection: {
+    marginBottom: spacing.lg,
+  },
+  aiSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  aiSectionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text.primary,
+  },
+  aiCheckButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  aiCheckText: {
+    fontSize: 12,
+    color: colors.accent,
+    fontWeight: '600',
+  },
+  aiAlertsList: {
+    gap: spacing.sm,
+  },
+  aiAlertCard: {
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderLeftWidth: 3,
+  },
+  aiAlertRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  aiAlertIcon: {
+    fontSize: 18,
+    marginRight: spacing.md,
+    marginTop: 2,
+  },
+  aiAlertContent: {
+    flex: 1,
+  },
+  aiAlertTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: 4,
+  },
+  aiAlertMessage: {
+    fontSize: 13,
+    color: colors.text.secondary,
+    lineHeight: 18,
+  },
+
+  // Notifications
   notificationCard: {
     backgroundColor: colors.card,
     borderRadius: radius.md,

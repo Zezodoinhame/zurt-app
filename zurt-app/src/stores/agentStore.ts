@@ -1,5 +1,9 @@
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchAIInsights, sendAIChat } from '../services/api';
+
+const STORAGE_KEY = '@zurt:agent_messages';
+const MAX_MESSAGES = 50;
 
 export interface ChatMessage {
   id: string;
@@ -15,9 +19,11 @@ interface AgentState {
   isLoading: boolean;
   error: string | null;
   rateLimited: boolean;
+  _initialized: boolean;
 
   loadInitialInsights: () => Promise<void>;
   sendMessage: (message: string) => Promise<void>;
+  clearHistory: () => Promise<void>;
   reset: () => void;
 }
 
@@ -26,33 +32,66 @@ function nextId() {
   return `msg_${Date.now()}_${++_msgCounter}`;
 }
 
+async function persistMessages(messages: ChatMessage[]) {
+  try {
+    const trimmed = messages.slice(-MAX_MESSAGES);
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+  } catch {
+    // Ignore write errors
+  }
+}
+
+async function loadPersistedMessages(): Promise<ChatMessage[] | null> {
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return null;
+}
+
 export const useAgentStore = create<AgentState>((set, get) => ({
   messages: [],
   conversationId: null,
   isLoading: false,
   error: null,
   rateLimited: false,
+  _initialized: false,
 
   loadInitialInsights: async () => {
-    if (get().messages.length > 0) return; // Already loaded
+    if (get()._initialized) return;
+    set({ _initialized: true });
+
+    // Try to restore persisted messages
+    const saved = await loadPersistedMessages();
+    if (saved && saved.length > 0) {
+      set({ messages: saved });
+      return; // User has history, don't auto-fetch
+    }
+
+    // No history — fetch initial insights
     set({ isLoading: true, error: null });
 
     try {
       const data = await fetchAIInsights();
-      set({
-        messages: [
-          {
-            id: nextId(),
-            role: 'assistant',
-            content: data.message,
-            suggestions: data.suggestions,
-            timestamp: Date.now(),
-          },
-        ],
-        isLoading: false,
-      });
+      const msgs: ChatMessage[] = [
+        {
+          id: nextId(),
+          role: 'assistant',
+          content: data.message,
+          suggestions: data.suggestions,
+          timestamp: Date.now(),
+        },
+      ];
+      set({ messages: msgs, isLoading: false });
+      await persistMessages(msgs);
     } catch (err: any) {
-      const isRateLimit = err?.message?.includes('429') || err?.message?.toLowerCase().includes('limit');
+      const isRateLimit =
+        err?.message?.includes('429') || err?.message?.toLowerCase().includes('limit');
       set({
         isLoading: false,
         error: isRateLimit ? null : (err?.message ?? 'Erro ao carregar insights'),
@@ -71,11 +110,9 @@ export const useAgentStore = create<AgentState>((set, get) => ({
       content: message,
       timestamp: Date.now(),
     };
-    set((s) => ({
-      messages: [...s.messages, userMsg],
-      isLoading: true,
-      error: null,
-    }));
+    const withUser = [...get().messages, userMsg].slice(-MAX_MESSAGES);
+    set({ messages: withUser, isLoading: true, error: null });
+    await persistMessages(withUser);
 
     try {
       const data = await sendAIChat(message, conversationId ?? undefined);
@@ -86,19 +123,38 @@ export const useAgentStore = create<AgentState>((set, get) => ({
         suggestions: data.suggestions,
         timestamp: Date.now(),
       };
-      set((s) => ({
-        messages: [...s.messages, aiMsg],
-        conversationId: data.conversationId ?? s.conversationId,
+      const updated = [...get().messages, aiMsg].slice(-MAX_MESSAGES);
+      set({
+        messages: updated,
+        conversationId: data.conversationId ?? get().conversationId,
         isLoading: false,
-      }));
+      });
+      await persistMessages(updated);
     } catch (err: any) {
-      const isRateLimit = err?.message?.includes('429') || err?.message?.toLowerCase().includes('limit');
+      const isRateLimit =
+        err?.message?.includes('429') || err?.message?.toLowerCase().includes('limit');
       set({
         isLoading: false,
         error: isRateLimit ? null : (err?.message ?? 'Erro ao enviar mensagem'),
         rateLimited: isRateLimit,
       });
     }
+  },
+
+  clearHistory: async () => {
+    try {
+      await AsyncStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // Ignore
+    }
+    set({
+      messages: [],
+      conversationId: null,
+      isLoading: false,
+      error: null,
+      rateLimited: false,
+      _initialized: false,
+    });
   },
 
   reset: () => {
@@ -108,6 +164,7 @@ export const useAgentStore = create<AgentState>((set, get) => ({
       isLoading: false,
       error: null,
       rateLimited: false,
+      _initialized: false,
     });
   },
 }));

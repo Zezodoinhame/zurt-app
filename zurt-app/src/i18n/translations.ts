@@ -240,6 +240,20 @@ export const translations: Record<Language, Record<string, string>> = {
     'agent.emptyDescription': 'Analiso seu portfólio real e gero insights personalizados com inteligência artificial.',
     'agent.inputPlaceholder': 'Pergunte sobre seus investimentos...',
     'agent.rateLimited': 'Você atingiu o limite de consultas do seu plano. Faça upgrade para continuar.',
+    'agent.clearTitle': 'Limpar conversa',
+    'agent.clearMessage': 'Deseja apagar todo o histórico de conversa com o Agent?',
+    'agent.clearConfirm': 'Apagar',
+    'agent.emptyHello': 'Olá! Sou o ZURT Agent',
+    'agent.emptyDescription2': 'Analiso seu portfólio em tempo real e respondo suas dúvidas sobre investimentos.',
+    'agent.suggestMarket': 'Como está o mercado hoje?',
+    'agent.suggestPortfolio': 'Analise meu portfólio',
+    'agent.suggestDollar': 'Cotação do dólar',
+    'agent.suggestSelic': 'Impacto da Selic',
+
+    // Alerts - AI
+    'alerts.aiSection': 'Alertas inteligentes',
+    'alerts.aiCheck': 'Verificar agora',
+    'alerts.aiChecking': 'Analisando...',
   },
   en: {
     // Tabs
@@ -480,6 +494,20 @@ export const translations: Record<Language, Record<string, string>> = {
     'agent.emptyDescription': 'I analyze your real portfolio and generate personalized insights with artificial intelligence.',
     'agent.inputPlaceholder': 'Ask about your investments...',
     'agent.rateLimited': 'You have reached your plan\'s query limit. Upgrade to continue.',
+    'agent.clearTitle': 'Clear conversation',
+    'agent.clearMessage': 'Do you want to delete all conversation history with the Agent?',
+    'agent.clearConfirm': 'Delete',
+    'agent.emptyHello': 'Hello! I\'m ZURT Agent',
+    'agent.emptyDescription2': 'I analyze your portfolio in real time and answer your investment questions.',
+    'agent.suggestMarket': 'How is the market today?',
+    'agent.suggestPortfolio': 'Analyze my portfolio',
+    'agent.suggestDollar': 'Dollar exchange rate',
+    'agent.suggestSelic': 'Selic rate impact',
+
+    // Alerts - AI
+    'alerts.aiSection': 'Smart alerts',
+    'alerts.aiCheck': 'Check now',
+    'alerts.aiChecking': 'Analyzing...',
   },
   zh: {
     // Tabs
@@ -720,6 +748,20 @@ export const translations: Record<Language, Record<string, string>> = {
     'agent.emptyDescription': '我分析您的真实投资组合，利用人工智能生成个性化洞察。',
     'agent.inputPlaceholder': '询问您的投资...',
     'agent.rateLimited': '您已达到计划的查询上限。升级以继续。',
+    'agent.clearTitle': '清除对话',
+    'agent.clearMessage': '您要删除与Agent的所有对话历史记录吗？',
+    'agent.clearConfirm': '删除',
+    'agent.emptyHello': '您好！我是ZURT Agent',
+    'agent.emptyDescription2': '我实时分析您的投资组合并回答您的投资问题。',
+    'agent.suggestMarket': '今天市场怎么样？',
+    'agent.suggestPortfolio': '分析我的投资组合',
+    'agent.suggestDollar': '美元汇率',
+    'agent.suggestSelic': 'Selic利率影响',
+
+    // Alerts - AI
+    'alerts.aiSection': '智能提醒',
+    'alerts.aiCheck': '立即检查',
+    'alerts.aiChecking': '分析中...',
   },
   ar: {
     // Tabs
@@ -960,5 +1002,19 @@ export const translations: Record<Language, Record<string, string>> = {
     'agent.emptyDescription': 'أحلل محفظتك الحقيقية وأقدم رؤى مخصصة باستخدام الذكاء الاصطناعي.',
     'agent.inputPlaceholder': 'اسأل عن استثماراتك...',
     'agent.rateLimited': 'لقد وصلت إلى حد الاستفسارات في خطتك. قم بالترقية للمتابعة.',
+    'agent.clearTitle': 'مسح المحادثة',
+    'agent.clearMessage': 'هل تريد حذف كل سجل المحادثات مع المساعد؟',
+    'agent.clearConfirm': 'حذف',
+    'agent.emptyHello': 'مرحباً! أنا ZURT Agent',
+    'agent.emptyDescription2': 'أحلل محفظتك في الوقت الفعلي وأجيب على أسئلتك حول الاستثمار.',
+    'agent.suggestMarket': 'كيف حال السوق اليوم؟',
+    'agent.suggestPortfolio': 'حلل محفظتي',
+    'agent.suggestDollar': 'سعر صرف الدولار',
+    'agent.suggestSelic': 'تأثير معدل Selic',
+
+    // Alerts - AI
+    'alerts.aiSection': 'تنبيهات ذكية',
+    'alerts.aiCheck': 'تحقق الآن',
+    'alerts.aiChecking': 'جارٍ التحليل...',
   },
 };
