@@ -22,11 +22,12 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { usePortfolioStore } from '../../src/stores/portfolioStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import type { Language } from '../../src/i18n/translations';
-import type { Currency, ThemeMode } from '../../src/stores/settingsStore';
+import type { Currency, ThemeMode, IconStyle } from '../../src/stores/settingsStore';
 import { Toggle } from '../../src/components/ui/Toggle';
 import { Card } from '../../src/components/ui/Card';
 import { formatDate, formatCurrency } from '../../src/utils/formatters';
 import { changePassword, updateUserProfile } from '../../src/services/api';
+import { AppIcon, type AppIconName } from '../../src/hooks/useIcon';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -65,6 +66,11 @@ const themeOptions: Array<{ key: ThemeMode; emoji: string; labelKey: string }> =
   { key: 'system', emoji: '\uD83D\uDCF1', labelKey: 'profile.themeSystem' },
 ];
 
+const iconStyleOptions: Array<{ key: IconStyle; emoji: string; labelKey: string }> = [
+  { key: 'icons', emoji: '\uD83C\uDFA8', labelKey: 'profile.iconStyleIcons' },
+  { key: 'emoji', emoji: '\uD83D\uDE0A', labelKey: 'profile.iconStyleEmoji' },
+];
+
 // ---------------------------------------------------------------------------
 // FAQ items
 // ---------------------------------------------------------------------------
@@ -81,7 +87,7 @@ const FAQ_KEYS = [
 // ---------------------------------------------------------------------------
 
 interface SettingRowProps {
-  icon: string;
+  iconName: AppIconName;
   label: string;
   value?: string;
   onPress?: () => void;
@@ -89,7 +95,7 @@ interface SettingRowProps {
   danger?: boolean;
 }
 
-function SettingRow({ icon, label, value, onPress, rightElement, danger }: SettingRowProps) {
+function SettingRow({ iconName, label, value, onPress, rightElement, danger }: SettingRowProps) {
   const colors = useSettingsStore((s) => s.colors);
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
@@ -101,12 +107,12 @@ function SettingRow({ icon, label, value, onPress, rightElement, danger }: Setti
       disabled={!onPress && !rightElement}
       accessibilityLabel={label}
     >
-      <Text style={styles.settingIcon}>{icon}</Text>
+      <View style={styles.settingIcon}><AppIcon name={iconName} size={16} color={colors.text.secondary} /></View>
       <Text style={[styles.settingLabel, danger && styles.dangerText]}>{label}</Text>
       {value && <Text style={styles.settingValue}>{value}</Text>}
       {rightElement}
       {onPress && !rightElement && (
-        <Text style={styles.chevron}>{'\u203A'}</Text>
+        <AppIcon name="chevron" size={20} color={colors.text.muted} />
       )}
     </TouchableOpacity>
   );
@@ -507,6 +513,8 @@ export default function ProfileScreen() {
   const colors = useSettingsStore((s) => s.colors);
   const theme = useSettingsStore((s) => s.theme);
   const setTheme = useSettingsStore((s) => s.setTheme);
+  const iconStyle = useSettingsStore((s) => s.iconStyle);
+  const setIconStyle = useSettingsStore((s) => s.setIconStyle);
 
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
@@ -612,6 +620,15 @@ export default function ProfileScreen() {
     [setTheme]
   );
 
+  // -- Icon style handler ---------------------------------------------------
+  const handleIconStyleSelect = useCallback(
+    (selected: IconStyle) => {
+      Haptics.selectionAsync();
+      setIconStyle(selected);
+    },
+    [setIconStyle]
+  );
+
   // -- About section handlers -----------------------------------------------
   const handleTerms = useCallback(() => {
     Linking.openURL(TERMS_URL).catch(() => {
@@ -687,7 +704,7 @@ export default function ProfileScreen() {
       <View>
         <View style={styles.section}>
           <SettingRow
-            icon={'\uD83D\uDC46'}
+            iconName="biometric"
             label={t('profile.biometric')}
             rightElement={
               <Toggle
@@ -697,7 +714,7 @@ export default function ProfileScreen() {
               />
             }
           />
-          <SettingRow icon={'\uD83D\uDD11'} label={t('profile.changePassword')} onPress={handleChangePassword} />
+          <SettingRow iconName="password" label={t('profile.changePassword')} onPress={handleChangePassword} />
         </View>
       </View>
 
@@ -706,7 +723,7 @@ export default function ProfileScreen() {
       <View>
         <View style={styles.section}>
           <SettingRow
-            icon={'\uD83D\uDD14'}
+            iconName="push"
             label={t('profile.pushNotifications')}
             rightElement={
               <Toggle
@@ -717,7 +734,7 @@ export default function ProfileScreen() {
             }
           />
           <SettingRow
-            icon={'\uD83D\uDC41\uFE0F'}
+            iconName="eye"
             label={t('profile.hideValuesOnOpen')}
             rightElement={
               <Toggle
@@ -728,13 +745,13 @@ export default function ProfileScreen() {
             }
           />
           <SettingRow
-            icon={'\uD83C\uDF10'}
+            iconName="globe"
             label={t('profile.language')}
             value={currentLanguageLabel}
             onPress={() => setShowLanguagePicker(true)}
           />
           <SettingRow
-            icon={'\uD83D\uDCB0'}
+            iconName="wallet"
             label={t('profile.defaultCurrency')}
             value={currentCurrencyLabel}
             onPress={() => setShowCurrencyPicker(true)}
@@ -757,6 +774,35 @@ export default function ProfileScreen() {
                     isSelected && styles.themeButtonSelected,
                   ]}
                   onPress={() => handleThemeSelect(opt.key)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.themeEmoji}>{opt.emoji}</Text>
+                  <Text
+                    style={[
+                      styles.themeLabel,
+                      isSelected && styles.themeLabelSelected,
+                    ]}
+                  >
+                    {t(opt.labelKey)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Icon style selector */}
+          <Text style={styles.iconStyleLabel}>{t('profile.iconStyle')}</Text>
+          <View style={styles.themeRow}>
+            {iconStyleOptions.map((opt) => {
+              const isSelected = iconStyle === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[
+                    styles.themeButton,
+                    isSelected && styles.themeButtonSelected,
+                  ]}
+                  onPress={() => handleIconStyleSelect(opt.key)}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.themeEmoji}>{opt.emoji}</Text>
@@ -851,17 +897,17 @@ export default function ProfileScreen() {
       <View>
         <View style={styles.section}>
           <SettingRow
-            icon={'\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67\u200D\uD83D\uDC66'}
+            iconName="family"
             label={t('family.title')}
             onPress={() => router.push('/family')}
           />
           <SettingRow
-            icon={'\uD83C\uDFDB\uFE0F'}
+            iconName="taxes"
             label={t('taxes.title')}
             onPress={() => router.push('/taxes')}
           />
           <SettingRow
-            icon={'\uD83D\uDCC4'}
+            iconName="report"
             label={t('report.title')}
             value={t('report.subtitle')}
             onPress={() => router.push('/report')}
@@ -873,17 +919,20 @@ export default function ProfileScreen() {
       <SectionTitle title={`\u2139\uFE0F ${t('profile.about')}`} />
       <View>
         <View style={styles.section}>
-          <SettingRow icon={'\uD83D\uDCC4'} label={t('profile.terms')} onPress={handleTerms} />
-          <SettingRow icon={'\uD83D\uDD12'} label={t('profile.privacy')} onPress={handlePrivacy} />
-          <SettingRow icon={'\u2753'} label={t('profile.help')} onPress={handleHelp} />
-          <SettingRow icon={'\uD83D\uDCAC'} label={t('profile.support')} onPress={handleSupport} />
+          <SettingRow iconName="report" label={t('profile.terms')} onPress={handleTerms} />
+          <SettingRow iconName="security" label={t('profile.privacy')} onPress={handlePrivacy} />
+          <SettingRow iconName="info" label={t('profile.help')} onPress={handleHelp} />
+          <SettingRow iconName="send" label={t('profile.support')} onPress={handleSupport} />
         </View>
       </View>
 
       {/* Logout */}
       <View>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>{'\uD83D\uDEAA'} {t('profile.logout')}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <AppIcon name="logout" size={15} color={colors.negative} />
+            <Text style={styles.logoutText}>{t('profile.logout')}</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -1015,10 +1064,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderBottomColor: colors.border + '50',
   },
   settingIcon: {
-    fontSize: 16,
     marginRight: spacing.md,
     width: 24,
-    textAlign: 'center',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
   settingLabel: {
     flex: 1,
@@ -1141,6 +1190,14 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   themeLabelSelected: {
     color: colors.accent,
     fontWeight: '700',
+  },
+  iconStyleLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text.secondary,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
   },
 
   logoutButton: {

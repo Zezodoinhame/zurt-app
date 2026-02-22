@@ -24,6 +24,7 @@ import * as Haptics from 'expo-haptics';
 import { type ThemeColors } from '../src/theme/colors';
 import { spacing, radius } from '../src/theme/spacing';
 import { useSettingsStore } from '../src/stores/settingsStore';
+import { AppIcon, useIconText } from '../src/hooks/useIcon';
 import {
   fetchFamilyGroup,
   createFamilyGroup,
@@ -48,10 +49,10 @@ const ROLE_COLORS: Record<string, string> = {
   member: '#A0AEC0',
 };
 
-const VISIBILITY_ICONS: Record<string, string> = {
-  total: '\uD83D\uDC41\uFE0F',
-  detailed: '\uD83D\uDC41\uFE0F\u200D\uD83D\uDDE8\uFE0F',
-  full: '\uD83D\uDD13',
+const VISIBILITY_ICON_NAMES: Record<string, 'eye' | 'info' | 'unlock'> = {
+  total: 'eye',
+  detailed: 'info',
+  full: 'unlock',
 };
 
 // =============================================================================
@@ -326,9 +327,9 @@ export default function FamilyScreen() {
   // Role options for invite
   // ---------------------------------------------------------------------------
   const roleOptions = useMemo(() => [
-    { key: 'spouse', label: t('family.spouse'), icon: '\uD83D\uDC91' },
-    { key: 'child', label: t('family.child'), icon: '\uD83D\uDC76' },
-    { key: 'member', label: t('family.member'), icon: '\uD83D\uDC64' },
+    { key: 'spouse', label: t('family.spouse'), iconName: 'spouse' as const },
+    { key: 'child', label: t('family.child'), iconName: 'child' as const },
+    { key: 'member', label: t('family.member'), iconName: 'person' as const },
   ], [t]);
 
   // ---------------------------------------------------------------------------
@@ -339,7 +340,7 @@ export default function FamilyScreen() {
       <View style={[styles.screen, { paddingTop: insets.top }]}>
         <View style={styles.headerBar}>
           <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
-            <Text style={styles.backIcon}>{'\u2190'}</Text>
+            <AppIcon name="back" size={22} color={colors.text.primary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('family.title')}</Text>
           <View style={styles.backBtn} />
@@ -427,7 +428,7 @@ export default function FamilyScreen() {
           {/* ============================================================== */}
           {group === null ? (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyEmoji}>{'\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67\u200D\uD83D\uDC66'}</Text>
+              <View style={styles.emptyEmoji}><AppIcon name="family" size={64} color={colors.accent} /></View>
               <Text style={styles.emptyTitle}>{t('family.noGroupTitle')}</Text>
               <Text style={styles.emptyDesc}>{t('family.noGroupDesc')}</Text>
               <TextInput
@@ -531,7 +532,7 @@ export default function FamilyScreen() {
                 const isAccepted = member.status === 'accepted';
                 const roleColor = ROLE_COLORS[role] || '#A0AEC0';
                 const nw = parseFloat(member.netWorth ?? member.net_worth ?? '0') || 0;
-                const visIcon = VISIBILITY_ICONS[member.visibility] || VISIBILITY_ICONS.total;
+                const visIconName = VISIBILITY_ICON_NAMES[member.visibility] || VISIBILITY_ICON_NAMES.total;
 
                 return (
                   <TouchableOpacity
@@ -572,7 +573,7 @@ export default function FamilyScreen() {
                           </Text>
                         </View>
                         {isAccepted && (
-                          <Text style={styles.visIcon}>{visIcon}</Text>
+                          <AppIcon name={visIconName} size={14} color={colors.text.muted} />
                         )}
                       </View>
                     </View>
@@ -584,9 +585,10 @@ export default function FamilyScreen() {
               {/* C3. Invite Section                                           */}
               {/* ========================================================== */}
               <View style={styles.inviteCard}>
-                <Text style={styles.inviteTitle}>
-                  {'\u2709\uFE0F'} {t('family.inviteSection')}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}>
+                  <AppIcon name="mail" size={18} color={colors.text.primary} />
+                  <Text style={[styles.inviteTitle, { marginBottom: 0, marginLeft: 8 }]}>{t('family.inviteSection')}</Text>
+                </View>
 
                 <TextInput
                   style={styles.inviteInput}
@@ -616,9 +618,12 @@ export default function FamilyScreen() {
                         disabled={inviting}
                         activeOpacity={0.7}
                       >
-                        <Text style={[styles.roleChipText, selected && { color: '#FFF' }]}>
-                          {opt.icon} {opt.label}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <AppIcon name={opt.iconName} size={14} color={selected ? '#FFF' : colors.text.secondary} />
+                          <Text style={[styles.roleChipText, selected && { color: '#FFF' }]}>
+                            {opt.label}
+                          </Text>
+                        </View>
                       </TouchableOpacity>
                     );
                   })}
@@ -646,21 +651,22 @@ export default function FamilyScreen() {
               {/* C5. Education Section                                        */}
               {/* ========================================================== */}
               <View style={styles.eduCard}>
-                <Text style={styles.eduTitle}>
-                  {'\uD83C\uDF93'} {t('family.educationTitle')}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}>
+                  <AppIcon name="education" size={20} color={colors.text.primary} />
+                  <Text style={[styles.eduTitle, { marginBottom: 0, marginLeft: 8 }]}>{t('family.educationTitle')}</Text>
+                </View>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.eduScroll}
                 >
-                  {[
-                    { icon: '\uD83D\uDCCA', title: t('family.edu1'), desc: t('family.edu1Desc') },
-                    { icon: '\uD83C\uDFAF', title: t('family.edu2'), desc: t('family.edu2Desc') },
-                    { icon: '\uD83D\uDCA1', title: t('family.edu3'), desc: t('family.edu3Desc') },
-                  ].map((item, i) => (
+                  {([
+                    { iconName: 'chart' as const, title: t('family.edu1'), desc: t('family.edu1Desc') },
+                    { iconName: 'goal' as const, title: t('family.edu2'), desc: t('family.edu2Desc') },
+                    { iconName: 'idea' as const, title: t('family.edu3'), desc: t('family.edu3Desc') },
+                  ]).map((item, i) => (
                     <View key={`edu-${i}`} style={styles.eduMini}>
-                      <Text style={styles.eduMiniIcon}>{item.icon}</Text>
+                      <View style={{ marginBottom: spacing.sm }}><AppIcon name={item.iconName} size={28} color={colors.accent} /></View>
                       <Text style={styles.eduMiniTitle}>{item.title}</Text>
                       <Text style={styles.eduMiniDesc}>{item.desc}</Text>
                     </View>
@@ -694,11 +700,11 @@ export default function FamilyScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{t('family.changeVisibility')}</Text>
 
-            {[
-              { key: 'total', label: t('family.visibilityTotal'), desc: t('family.visDescTotal'), icon: '\uD83D\uDC41\uFE0F' },
-              { key: 'detailed', label: t('family.visibilityDetailed'), desc: t('family.visDescDetailed'), icon: '\uD83D\uDC41\uFE0F\u200D\uD83D\uDDE8\uFE0F' },
-              { key: 'full', label: t('family.visibilityFull'), desc: t('family.visDescFull'), icon: '\uD83D\uDD13' },
-            ].map((opt) => {
+            {([
+              { key: 'total', label: t('family.visibilityTotal'), desc: t('family.visDescTotal'), iconName: 'eye' as const },
+              { key: 'detailed', label: t('family.visibilityDetailed'), desc: t('family.visDescDetailed'), iconName: 'info' as const },
+              { key: 'full', label: t('family.visibilityFull'), desc: t('family.visDescFull'), iconName: 'unlock' as const },
+            ]).map((opt) => {
               const selected = visModalValue === opt.key;
               return (
                 <TouchableOpacity
@@ -707,7 +713,7 @@ export default function FamilyScreen() {
                   onPress={() => setVisModalValue(opt.key)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.visOptionIcon}>{opt.icon}</Text>
+                  <AppIcon name={opt.iconName} size={24} color={selected ? colors.accent : colors.text.secondary} />
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.visOptionLabel, selected && { color: colors.accent }]}>
                       {opt.label}

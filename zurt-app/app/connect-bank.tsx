@@ -17,6 +17,7 @@ import {
 import { type ThemeColors } from '../src/theme/colors';
 import { spacing, radius } from '../src/theme/spacing';
 import { useSettingsStore } from '../src/stores/settingsStore';
+import { AppIcon } from '../src/hooks/useIcon';
 
 interface InstitutionResult {
   id: string | number;
@@ -192,7 +193,7 @@ export default function ConnectBankScreen() {
     <View style={styles.header}>
       <TouchableOpacity style={styles.backButton} onPress={handleGoBack} activeOpacity={0.7}
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-        <Text style={styles.backArrow}>{'\u2039'}</Text>
+        <AppIcon name="back" size={22} color={colors.text.primary} />
       </TouchableOpacity>
       <View style={styles.headerTitleContainer}>
         <Text style={styles.headerTitle}>
@@ -209,14 +210,14 @@ export default function ConnectBankScreen() {
   const renderSearch = () => (
     <View style={styles.searchContainer}>
       <View style={styles.searchInputWrapper}>
-        <Text style={styles.searchIcon}>{'\uD83D\uDD0D'}</Text>
+        <AppIcon name="search" size={16} color={colors.text.muted} />
         <TextInput style={styles.searchInput} placeholder={t('connect.searchPlaceholder')}
           placeholderTextColor={colors.text.muted} value={searchText} onChangeText={handleSearch}
           autoCapitalize="none" autoCorrect={false} returnKeyType="search" />
         {searchText.length > 0 && (
           <TouchableOpacity onPress={() => { setSearchText(''); setInstitutions([]); }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.clearButton}>{'\u2715'}</Text>
+            <AppIcon name="close" size={14} color={colors.text.muted} />
           </TouchableOpacity>
         )}
       </View>
@@ -245,7 +246,7 @@ export default function ConnectBankScreen() {
           <Text style={styles.institutionName} numberOfLines={1}>{item.name}</Text>
           {item.type && <Text style={styles.institutionType}>{item.type}</Text>}
         </View>
-        <Text style={styles.chevron}>{'\u203A'}</Text>
+        <AppIcon name="chevron" size={22} color={colors.text.muted} />
       </TouchableOpacity>
     );
   };
@@ -255,26 +256,26 @@ export default function ConnectBankScreen() {
     if (searchText.length === 0) {
       return (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>{'\uD83C\uDFE6'}</Text>
+          <AppIcon name="bank" size={48} color={colors.accent} />
           <Text style={styles.emptyTitle}>{t('connect.connectYourBank')}</Text>
           <Text style={styles.emptyDescription}>
             {t('connect.connectDescription')}
           </Text>
           <View style={styles.featuresContainer}>
             <View style={styles.featureRow}>
-              <Text style={styles.featureIcon}>{'\uD83D\uDD12'}</Text>
+              <View style={styles.featureIcon}><AppIcon name="security" size={18} color={colors.text.secondary} /></View>
               <Text style={styles.featureText}>{t('connect.bankEncryption')}</Text>
             </View>
             <View style={styles.featureRow}>
-              <Text style={styles.featureIcon}>{'\u26A1'}</Text>
+              <View style={styles.featureIcon}><AppIcon name="plug" size={18} color={colors.text.secondary} /></View>
               <Text style={styles.featureText}>{t('connect.autoSync')}</Text>
             </View>
             <View style={styles.featureRow}>
-              <Text style={styles.featureIcon}>{'\uD83D\uDCCA'}</Text>
+              <View style={styles.featureIcon}><AppIcon name="chart" size={18} color={colors.text.secondary} /></View>
               <Text style={styles.featureText}>{t('connect.investmentsAccountsCards')}</Text>
             </View>
             <View style={styles.featureRow}>
-              <Text style={styles.featureIcon}>{'\uD83D\uDD04'}</Text>
+              <View style={styles.featureIcon}><AppIcon name="refresh" size={18} color={colors.text.secondary} /></View>
               <Text style={styles.featureText}>{t('connect.regulatedByCB')}</Text>
             </View>
           </View>
@@ -284,7 +285,7 @@ export default function ConnectBankScreen() {
     if (searchText.length >= 2 && institutions.length === 0) {
       return (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>{'\uD83D\uDD0D'}</Text>
+          <AppIcon name="search" size={48} color={colors.text.secondary} />
           <Text style={styles.emptyTitle}>{t('connect.noResults')}</Text>
           <Text style={styles.emptyDescription}>
             {t('connect.noResultsFor')} "{searchText}". {t('connect.tryDifferent')}
@@ -353,7 +354,7 @@ export default function ConnectBankScreen() {
   const renderSuccess = () => (
     <View style={styles.centerContainer}>
       <View style={styles.successIconContainer}>
-        <Text style={styles.successIcon}>{'\u2713'}</Text>
+        <AppIcon name="success" size={32} color={colors.accent} />
       </View>
       <Text style={styles.statusTitle}>{t('connect.bankConnected')}</Text>
       <Text style={styles.statusDescription}>
@@ -472,7 +473,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, padding: spacing.lg, gap: spacing.md,
   },
   featureRow: { flexDirection: 'row', alignItems: 'center' },
-  featureIcon: { fontSize: 18, marginRight: spacing.md, width: 28, textAlign: 'center' },
+  featureIcon: { marginRight: spacing.md, width: 28, alignItems: 'center' as const },
   featureText: { fontSize: 14, color: colors.text.secondary, flex: 1 },
   centerContainer: {
     flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xxxl,

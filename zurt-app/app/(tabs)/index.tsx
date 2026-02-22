@@ -35,6 +35,7 @@ import {
   maskValue,
 } from '../../src/utils/formatters';
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import { AppIcon } from '../../src/hooks/useIcon';
 
 // ---------------------------------------------------------------------------
 // Time range options for the chart
@@ -167,7 +168,7 @@ export default function HomeScreen() {
             activeOpacity={0.7}
             accessibilityLabel={`${t('home.notifications')}, ${unreadCount} ${t('home.unread')}`}
           >
-            <Text style={styles.bellIcon}>🔔</Text>
+            <AppIcon name="notification" size={22} color={colors.text.primary} />
             {unreadCount > 0 && (
               <DotBadge
                 count={unreadCount}
@@ -209,9 +210,7 @@ export default function HomeScreen() {
                       valuesHidden ? t('home.showValues') : t('home.hideValues')
                     }
                   >
-                    <Text style={styles.eyeIcon}>
-                      {valuesHidden ? '👁‍🗨' : '👁'}
-                    </Text>
+                    <AppIcon name="eye" size={22} color={colors.text.primary} />
                   </TouchableOpacity>
                 </View>
 
@@ -260,7 +259,7 @@ export default function HomeScreen() {
             {allocations.length === 0 && institutions.length === 0 && (
               <Card delay={200}>
                 <View style={styles.emptyState}>
-                  <Text style={styles.emptyIcon}>🏦</Text>
+                  <AppIcon name="bank" size={48} color={colors.text.secondary} />
                   <Text style={styles.emptyText}>{t('home.emptyTitle')}</Text>
                   <TouchableOpacity
                     style={styles.emptyButton}

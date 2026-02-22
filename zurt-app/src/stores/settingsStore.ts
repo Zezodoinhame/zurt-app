@@ -7,11 +7,13 @@ import { darkColors, lightColors, type ThemeColors } from '../theme/colors';
 
 export type Currency = 'BRL' | 'USD' | 'EUR';
 export type ThemeMode = 'dark' | 'light' | 'system';
+export type IconStyle = 'icons' | 'emoji';
 
 interface SettingsState {
   language: Language;
   currency: Currency;
   theme: ThemeMode;
+  iconStyle: IconStyle;
   isDark: boolean;
   colors: ThemeColors;
   isLoaded: boolean;
@@ -20,12 +22,14 @@ interface SettingsState {
   setLanguage: (language: Language) => Promise<void>;
   setCurrency: (currency: Currency) => Promise<void>;
   setTheme: (theme: ThemeMode) => Promise<void>;
+  setIconStyle: (style: IconStyle) => Promise<void>;
   t: (key: string) => string;
 }
 
 const LANGUAGE_KEY = 'zurt:language';
 const CURRENCY_KEY = 'zurt:currency';
 const THEME_KEY = '@zurt:theme';
+const ICON_STYLE_KEY = '@zurt:iconStyle';
 
 // Exchange rates (hardcoded for now)
 export const exchangeRates: Record<Currency, number> = {
@@ -61,20 +65,23 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   language: 'pt',
   currency: 'BRL',
   theme: 'dark',
+  iconStyle: 'icons',
   isDark: true,
   colors: darkColors,
   isLoaded: false,
 
   loadSettings: async () => {
     try {
-      const [lang, curr, themeStr] = await Promise.all([
+      const [lang, curr, themeStr, iconStr] = await Promise.all([
         AsyncStorage.getItem(LANGUAGE_KEY),
         AsyncStorage.getItem(CURRENCY_KEY),
         AsyncStorage.getItem(THEME_KEY),
+        AsyncStorage.getItem(ICON_STYLE_KEY),
       ]);
       const language = (lang as Language) || 'pt';
       const currency = (curr as Currency) || 'BRL';
       const theme = (themeStr as ThemeMode) || 'dark';
+      const iconStyle = (iconStr as IconStyle) || 'icons';
       const isDark = resolveIsDark(theme);
 
       // Handle RTL for Arabic
@@ -84,7 +91,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         I18nManager.forceRTL(false);
       }
 
-      set({ language, currency, theme, isDark, colors: resolveColors(isDark), isLoaded: true });
+      set({ language, currency, theme, iconStyle, isDark, colors: resolveColors(isDark), isLoaded: true });
     } catch {
       set({ isLoaded: true });
     }
@@ -129,6 +136,15 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     set({ theme, isDark, colors: resolveColors(isDark) });
     try {
       await AsyncStorage.setItem(THEME_KEY, theme);
+    } catch {
+      // ignore
+    }
+  },
+
+  setIconStyle: async (iconStyle: IconStyle) => {
+    set({ iconStyle });
+    try {
+      await AsyncStorage.setItem(ICON_STYLE_KEY, iconStyle);
     } catch {
       // ignore
     }

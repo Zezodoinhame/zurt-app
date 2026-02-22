@@ -18,6 +18,7 @@ import { spacing, radius } from '../../src/theme/spacing';
 import { useCardsStore } from '../../src/stores/cardsStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import { AppIcon } from '../../src/hooks/useIcon';
 import { CreditCardVisual } from '../../src/components/cards/CreditCardVisual';
 import { SkeletonCard, SkeletonList } from '../../src/components/skeletons/Skeleton';
 import { ErrorState } from '../../src/components/shared/ErrorState';
@@ -214,7 +215,7 @@ export default function CardsScreen() {
           <ErrorState message={error} onRetry={loadCards} />
         ) : cards.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>{'\u{1F4B3}'}</Text>
+            <AppIcon name="card" size={48} color={colors.text.secondary} />
             <Text style={styles.emptyTitle}>{t('cards.emptyTitle')}</Text>
             <Text style={styles.emptyDescription}>{t('cards.emptyDescription')}</Text>
             <TouchableOpacity
@@ -328,7 +329,7 @@ export default function CardsScreen() {
 
               {groupedAllTransactions.length === 0 ? (
                 <View style={styles.txEmptyState}>
-                  <Text style={styles.txEmptyIcon}>{'\u{1F9FE}'}</Text>
+                  <AppIcon name="wallet" size={40} color={colors.text.secondary} />
                   <Text style={styles.txEmptyText}>{t('cards.noTransactions')}</Text>
                 </View>
               ) : (

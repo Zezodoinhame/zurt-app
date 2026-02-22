@@ -19,6 +19,7 @@ import { SkeletonList } from '../../src/components/skeletons/Skeleton';
 import { ErrorState } from '../../src/components/shared/ErrorState';
 import { fetchAIAlerts, type AIAlert } from '../../src/services/api';
 import type { NotificationType } from '../../src/types';
+import { AppIcon, type AppIconName } from '../../src/hooks/useIcon';
 
 const filterOptions: Array<{ key: NotificationType | 'all'; label: string }> = [
   { key: 'all', label: 'Todos' },
@@ -52,19 +53,19 @@ export default function AlertsScreen() {
 
   const typeConfig: Record<
     NotificationType,
-    { icon: string; color: string }
+    { iconName: AppIconName; color: string }
   > = useMemo(() => ({
-    distribution: { icon: '💎', color: colors.accent },
-    maturity: { icon: '⚠️', color: colors.warning },
-    invoice: { icon: '💳', color: colors.info },
-    insight: { icon: '💡', color: '#A855F7' },
-    system: { icon: '🔔', color: colors.text.secondary },
+    distribution: { iconName: 'token', color: colors.accent },
+    maturity: { iconName: 'warning', color: colors.warning },
+    invoice: { iconName: 'card', color: colors.info },
+    insight: { iconName: 'idea', color: '#A855F7' },
+    system: { iconName: 'notification', color: colors.text.secondary },
   }), [colors]);
 
-  const aiAlertConfig: Record<string, { icon: string; color: string }> = useMemo(() => ({
-    warning: { icon: '⚠️', color: colors.warning },
-    opportunity: { icon: '🚀', color: colors.positive },
-    info: { icon: '💡', color: colors.info },
+  const aiAlertConfig: Record<string, { iconName: AppIconName; color: string }> = useMemo(() => ({
+    warning: { iconName: 'warning', color: colors.warning },
+    opportunity: { iconName: 'trending', color: colors.positive },
+    info: { iconName: 'idea', color: colors.info },
   }), [colors]);
 
   const [aiAlerts, setAiAlerts] = useState<AIAlert[]>([]);
@@ -203,7 +204,7 @@ export default function AlertsScreen() {
         <View style={styles.aiSection}>
           <View style={styles.aiSectionHeader}>
             <Text style={styles.aiSectionTitle}>
-              ✨ {t('alerts.aiSection')}
+              <AppIcon name="sparkle" size={15} color={colors.accent} /> {t('alerts.aiSection')}
             </Text>
             <TouchableOpacity
               style={styles.aiCheckButton}
@@ -226,7 +227,7 @@ export default function AlertsScreen() {
                 return (
                   <View key={`ai-alert-${index}-${alert.title}`} style={[styles.aiAlertCard, { borderLeftColor: config.color }]}>
                     <View style={styles.aiAlertRow}>
-                      <Text style={styles.aiAlertIcon}>{config.icon}</Text>
+                      <AppIcon name={config.iconName} size={18} color={config.color} />
                       <View style={styles.aiAlertContent}>
                         <Text style={styles.aiAlertTitle}>{alert.title}</Text>
                         <Text style={styles.aiAlertMessage}>{alert.message}</Text>
@@ -235,7 +236,7 @@ export default function AlertsScreen() {
                         onPress={() => dismissAIAlert(alert.id)}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
-                        <Text style={styles.dismissText}>✕</Text>
+                        <AppIcon name="close" size={12} color={colors.text.muted} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -248,7 +249,7 @@ export default function AlertsScreen() {
         {/* Regular notifications */}
         {notifications.length === 0 && aiAlerts.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>🔕</Text>
+            <AppIcon name="notification" size={48} color={colors.text.secondary} />
             <Text style={styles.emptyText}>{t('alerts.noNotifications')}</Text>
           </View>
         ) : (
@@ -273,7 +274,7 @@ export default function AlertsScreen() {
                         { backgroundColor: config.color + '15' },
                       ]}
                     >
-                      <Text style={styles.icon}>{config.icon}</Text>
+                      <AppIcon name={config.iconName} size={18} color={config.color} />
                     </View>
 
                     <View style={styles.notificationContent}>

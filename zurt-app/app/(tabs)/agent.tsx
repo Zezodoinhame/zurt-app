@@ -17,6 +17,7 @@ import { type ThemeColors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useAgentStore, type ChatMessage } from '../../src/stores/agentStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import { AppIcon } from '../../src/hooks/useIcon';
 
 // ===========================================================================
 // Markdown Styles (dynamic theme)
@@ -87,7 +88,7 @@ function TypingIndicator() {
   return (
     <View style={styles.messageRow}>
       <View style={styles.avatarCol}>
-        <View style={styles.avatar}><Text style={styles.avatarText}>&#x2728;</Text></View>
+        <View style={styles.avatar}><AppIcon name="sparkle" size={14} color={colors.accent} /></View>
       </View>
       <View style={styles.aiBubble}>
         <View style={styles.typingDots}>
@@ -130,7 +131,9 @@ function EmptyState({ t, onSuggestion }: { t: (k: string) => string; onSuggestio
 
   return (
     <View style={styles.emptyState}>
-      <Animated.Text style={[styles.emptyIcon, { opacity: fadeAnim }]}>&#x2728;</Animated.Text>
+      <Animated.View style={{ opacity: fadeAnim, marginBottom: spacing.xl }}>
+        <AppIcon name="sparkle" size={56} color={colors.accent} />
+      </Animated.View>
       <Text style={styles.emptyTitle}>{t('agent.emptyHello')}</Text>
       <Text style={styles.emptyDescription}>{t('agent.emptyDescription2')}</Text>
       <View style={styles.initialSuggestions}>
@@ -178,7 +181,7 @@ function MessageBubble({ message, onSuggestionPress, isLast }: {
       {/* Avatar for AI */}
       {!isUser && (
         <View style={styles.avatarCol}>
-          <View style={styles.avatar}><Text style={styles.avatarText}>&#x2728;</Text></View>
+          <View style={styles.avatar}><AppIcon name="sparkle" size={14} color={colors.accent} /></View>
         </View>
       )}
 
@@ -285,7 +288,7 @@ export default function AgentScreen() {
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerIcon}>&#x2728;</Text>
+        <AppIcon name="sparkle" size={28} color={colors.accent} />
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>{t('agent.title')}</Text>
           <Text style={styles.headerSubtitle}>{t('agent.subtitle')}</Text>
@@ -296,7 +299,7 @@ export default function AgentScreen() {
             onPress={handleClearHistory}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <Text style={styles.clearIcon}>&#x1F5D1;&#xFE0F;</Text>
+            <AppIcon name="delete" size={20} color={colors.text.secondary} />
           </TouchableOpacity>
         )}
       </View>
@@ -322,7 +325,7 @@ export default function AgentScreen() {
           {/* Rate limited */}
           {rateLimited && (
             <View style={styles.rateLimitCard}>
-              <Text style={styles.rateLimitIcon}>&#x26A0;&#xFE0F;</Text>
+              <AppIcon name="warning" size={32} color={colors.warning} />
               <Text style={styles.rateLimitText}>{t('agent.rateLimited')}</Text>
             </View>
           )}
@@ -379,7 +382,7 @@ export default function AgentScreen() {
             activeOpacity={0.7}
             disabled={!inputText.trim() || isLoading}
           >
-            <Text style={styles.sendIcon}>&#x27A4;</Text>
+            <AppIcon name="send" size={18} color={colors.background} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

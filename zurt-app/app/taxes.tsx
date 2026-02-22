@@ -19,6 +19,7 @@ import * as Haptics from 'expo-haptics';
 import { type ThemeColors } from '../src/theme/colors';
 import { spacing, radius } from '../src/theme/spacing';
 import { useSettingsStore } from '../src/stores/settingsStore';
+import { AppIcon } from '../src/hooks/useIcon';
 import { usePortfolioStore } from '../src/stores/portfolioStore';
 import { sendAIChat } from '../src/services/api';
 import {
@@ -147,12 +148,14 @@ export default function TaxesScreen() {
       {/* Header */}
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
-          <Text style={styles.backIcon}>{'\u2190'}</Text>
+          <AppIcon name="back" size={22} color={colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerBarTitle}>
-          {t('taxes.title') !== 'taxes.title' ? t('taxes.title') : 'Tributacao'}{' '}
-          {'\uD83C\uDFDB\uFE0F'}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={styles.headerBarTitle}>
+            {t('taxes.title') !== 'taxes.title' ? t('taxes.title') : 'Tributacao'}
+          </Text>
+          <AppIcon name="taxes" size={18} color={colors.text.primary} />
+        </View>
         <View style={styles.backBtn} />
       </View>
 
@@ -504,7 +507,7 @@ export default function TaxesScreen() {
           onPress={handleGenerateDARF}
           activeOpacity={0.8}
         >
-          <Text style={styles.primaryButtonEmoji}>{'\uD83D\uDCCB'}</Text>
+          <AppIcon name="report" size={20} color={colors.background} />
           <Text style={styles.primaryButtonText}>Gerar DARF</Text>
         </TouchableOpacity>
 
@@ -518,7 +521,7 @@ export default function TaxesScreen() {
             <ActivityIndicator size="small" color={colors.accent} />
           ) : (
             <>
-              <Text style={styles.secondaryButtonEmoji}>{'\uD83E\uDD16'}</Text>
+              <AppIcon name="agent" size={20} color={colors.accent} />
               <Text style={styles.secondaryButtonText}>
                 Pedir analise da IA
               </Text>

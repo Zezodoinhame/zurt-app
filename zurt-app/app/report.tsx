@@ -21,6 +21,7 @@ import { type ThemeColors } from '../src/theme/colors';
 import { spacing, radius } from '../src/theme/spacing';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { generateReportApi } from '../src/services/api';
+import { AppIcon } from '../src/hooks/useIcon';
 
 // =============================================================================
 // Types
@@ -969,7 +970,7 @@ export default function ReportScreen() {
       {/* Header */}
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
-          <Text style={styles.backIcon}>{'\u2190'}</Text>
+          <AppIcon name="back" size={22} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerBarTitle}>{t('report.title')}</Text>
         <View style={styles.backBtn} />
@@ -1036,7 +1037,7 @@ export default function ReportScreen() {
           onPress={handleGenerate}
           activeOpacity={0.8}
         >
-          <Text style={styles.generateButtonEmoji}>{'\uD83D\uDCC4'}</Text>
+          <AppIcon name="report" size={20} color={colors.background} />
           <Text style={styles.generateButtonText}>
             {t('report.generate') || 'Gerar Relatorio'}
           </Text>
