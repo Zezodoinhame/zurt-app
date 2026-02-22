@@ -1218,6 +1218,7 @@ export async function fetchAIAlerts(): Promise<AIAlert[]> {
   try {
     const data = await apiRequest<any>('/ai/check-alerts', {
       method: 'POST',
+      body: JSON.stringify({}),
     });
     const alerts: any[] = data.alerts ?? data ?? [];
     return Array.isArray(alerts)
