@@ -914,7 +914,7 @@ export async function fetchReports(): Promise<any[]> {
   );
 }
 
-export async function generateReportApi(period: string): Promise<any> {
+export async function generateReportApi(period: string, language?: string): Promise<any> {
   if (_isDemoMode) {
     return {
       analysis: 'Relatório demonstrativo. Conecte suas contas para gerar um relatório real com análise personalizada da IA.\n\n1. RESUMO EXECUTIVO\nNo modo demonstração, não temos acesso aos seus dados reais.\n\n2. ANALISE DO PATRIMONIO\nConecte suas instituições financeiras para uma análise completa.\n\n3. CARTEIRA DE INVESTIMENTOS\nSeus investimentos aparecerão aqui após conectar suas contas.\n\n4. CARTOES E GASTOS\nSeus cartões e gastos serão analisados após a conexão.\n\n5. CENARIO DE MERCADO\nIBOV em alta, Selic em 13,25%, Dólar estável.\n\n6. RECOMENDACOES\n1. Conecte suas contas reais para análise personalizada\n2. Diversifique seus investimentos\n3. Mantenha uma reserva de emergência\n\n7. PERSPECTIVAS\nAguardamos a conexão das suas contas para fornecer perspectivas personalizadas.',
@@ -926,7 +926,7 @@ export async function generateReportApi(period: string): Promise<any> {
   }
   return apiRequest('/ai/report', {
     method: 'POST',
-    body: JSON.stringify({ period }),
+    body: JSON.stringify({ period, language: language || 'pt' }),
   });
 }
 
@@ -1050,23 +1050,35 @@ export async function fetchAssetDetail(ticker: string): Promise<any> {
   }
 }
 
-export async function fetchAIInsights(message?: string): Promise<{
+export async function fetchAIInsights(message?: string, language?: string): Promise<{
   message: string;
   suggestions: string[];
 }> {
   if (_isDemoMode) {
-    return {
-      message:
-        'Olá! Sou o ZURT Agent, seu consultor financeiro inteligente. ' +
-        'No modo demonstração, não tenho acesso a dados reais. ' +
-        'Faça login com sua conta para receber insights personalizados sobre seu portfólio.',
-      suggestions: ['Como funciona?', 'Quais análises você faz?'],
+    const demoResponses: Record<string, { message: string; suggestions: string[] }> = {
+      pt: {
+        message: 'Olá! Sou o ZURT Agent, seu consultor financeiro inteligente. No modo demonstração, não tenho acesso a dados reais. Faça login com sua conta para receber insights personalizados sobre seu portfólio.',
+        suggestions: ['Como funciona?', 'Quais análises você faz?'],
+      },
+      en: {
+        message: 'Hello! I\'m ZURT Agent, your intelligent financial advisor. In demo mode, I don\'t have access to real data. Log in with your account to receive personalized insights about your portfolio.',
+        suggestions: ['How does it work?', 'What analyses do you do?'],
+      },
+      zh: {
+        message: '您好！我是ZURT Agent，您的智能金融顾问。在演示模式下，我无法访问真实数据。请登录您的账户以获取关于您投资组合的个性化洞察。',
+        suggestions: ['如何运作？', '您做哪些分析？'],
+      },
+      ar: {
+        message: 'مرحباً! أنا ZURT Agent، مستشارك المالي الذكي. في الوضع التجريبي، لا يمكنني الوصول إلى البيانات الحقيقية. سجل الدخول بحسابك للحصول على رؤى مخصصة حول محفظتك.',
+        suggestions: ['كيف يعمل؟', 'ما التحليلات التي تقوم بها؟'],
+      },
     };
+    return demoResponses[language || 'pt'] || demoResponses.pt;
   }
 
   const data = await apiRequest<any>('/ai/insights', {
     method: 'POST',
-    body: JSON.stringify({ message: message ?? undefined }),
+    body: JSON.stringify({ message: message ?? undefined, language: language || 'pt' }),
   });
 
   return {
@@ -1118,21 +1130,28 @@ export async function fetchAIAlerts(): Promise<AIAlert[]> {
 export async function sendAIChat(
   message: string,
   conversationId?: string,
+  language?: string,
 ): Promise<{
   message: string;
   conversationId: string;
   suggestions?: string[];
 }> {
   if (_isDemoMode) {
+    const demoMessages: Record<string, string> = {
+      pt: 'No modo demonstração, o ZURT Agent não está disponível. Faça login para usar.',
+      en: 'In demo mode, ZURT Agent is not available. Log in to use.',
+      zh: '在演示模式下，ZURT Agent不可用。请登录使用。',
+      ar: 'في الوضع التجريبي، ZURT Agent غير متاح. سجل الدخول للاستخدام.',
+    };
     return {
-      message: 'No modo demonstração, o ZURT Agent não está disponível. Faça login para usar.',
+      message: demoMessages[language || 'pt'] || demoMessages.pt,
       conversationId: 'demo',
     };
   }
 
   const data = await apiRequest<any>('/ai/chat', {
     method: 'POST',
-    body: JSON.stringify({ message, conversationId }),
+    body: JSON.stringify({ message, conversationId, language: language || 'pt' }),
   });
 
   return {

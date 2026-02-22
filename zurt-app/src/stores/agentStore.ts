@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchAIInsights, sendAIChat } from '../services/api';
+import { useSettingsStore } from './settingsStore';
 
 const STORAGE_KEY = '@zurt:agent_messages';
 const MAX_MESSAGES = 50;
@@ -77,7 +78,8 @@ export const useAgentStore = create<AgentState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const data = await fetchAIInsights();
+      const { language } = useSettingsStore.getState();
+      const data = await fetchAIInsights(undefined, language);
       const msgs: ChatMessage[] = [
         {
           id: nextId(),
@@ -115,7 +117,8 @@ export const useAgentStore = create<AgentState>((set, get) => ({
     await persistMessages(withUser);
 
     try {
-      const data = await sendAIChat(message, conversationId ?? undefined);
+      const { language } = useSettingsStore.getState();
+      const data = await sendAIChat(message, conversationId ?? undefined, language);
       const aiMsg: ChatMessage = {
         id: nextId(),
         role: 'assistant',
