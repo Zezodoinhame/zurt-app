@@ -13,7 +13,7 @@ import {
   allocations as demoAllocations,
   creditCards as demoCards,
   notifications as demoNotifications,
-  insights as demoInsights,
+  insights as demoInsightsData,
   categorySpending as demoCategorySpending,
 } from '../data/demo';
 import type {
@@ -34,7 +34,8 @@ import type {
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://zurt.com.br/api';
 const TOKEN_KEY = 'zurt_session';
-const REQUEST_TIMEOUT = 15000; // 15s
+const REQUEST_TIMEOUT = 15000; // 15s for normal endpoints
+const AI_REQUEST_TIMEOUT = 30000; // 30s for AI endpoints (they are slower)
 const MAX_RETRIES = 1;
 
 // =============================================================================
@@ -111,6 +112,7 @@ async function apiRequest<T>(
   path: string,
   options?: RequestInit,
   retryCount = 0,
+  timeout?: number,
 ): Promise<T> {
   const url = `${API_BASE}${path}`;
   console.log(`[ZURT API] >> ${options?.method ?? 'GET'} ${url}`);
@@ -122,8 +124,9 @@ async function apiRequest<T>(
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
+  const effectiveTimeout = timeout ?? REQUEST_TIMEOUT;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+  const timeoutId = setTimeout(() => controller.abort(), effectiveTimeout);
 
   try {
     const response = await fetch(url, {
@@ -156,7 +159,7 @@ async function apiRequest<T>(
     return await response.json();
   } catch (err: any) {
     if (err?.name === 'AbortError') {
-      console.log(`[ZURT API] !! TIMEOUT after ${REQUEST_TIMEOUT}ms: ${path}`);
+      console.log(`[ZURT API] !! TIMEOUT after ${effectiveTimeout}ms: ${path}`);
     } else {
       console.log(`[ZURT API] !! ERROR ${path}:`, err?.message ?? err);
     }
@@ -355,7 +358,7 @@ export async function fetchDashboardSummary(): Promise<{
     summary: portfolioSummary,
     institutions: demoInstitutions,
     allocations: demoAllocations,
-    insights: demoInsights,
+    insights: demoInsightsData,
     cards: demoCards,
     assets: demoAssets,
     transactions: [] as DashboardTransaction[],
@@ -1009,15 +1012,121 @@ export async function fetchInvestmentSummary(): Promise<any> {
 }
 
 // =============================================================================
-// AI Agent
-// =============================================================================
-
-// =============================================================================
-// Market / Asset Detail (brapi.dev via backend proxy)
+// AI Agent — brapi helpers & demo functions
 // =============================================================================
 
 const BRAPI_URL = 'https://brapi.dev/api/quote';
 const BRAPI_TOKEN = '5kSd6kh79GgVf2X4ncFacn';
+
+async function demoInsights(): Promise<{ message: string; suggestions: string[] }> {
+  try {
+    console.log('[AGENT] demoInsights: fetching IBOV + USD from brapi...');
+    const [ibovRes, moedaRes] = await Promise.all([
+      fetch(`https://brapi.dev/api/quote/^BVSP?token=${BRAPI_TOKEN}`),
+      fetch(`https://brapi.dev/api/v2/currency?currency=USD-BRL&token=${BRAPI_TOKEN}`),
+    ]);
+    const ibov = await ibovRes.json();
+    const moeda = await moedaRes.json();
+    const ibovPrice = ibov?.results?.[0]?.regularMarketPrice?.toLocaleString('pt-BR') || '-';
+    const ibovVar = ibov?.results?.[0]?.regularMarketChangePercent?.toFixed(2) || '-';
+    const dolar = moeda?.currency?.[0]?.bidPrice || '-';
+    console.log('[AGENT] demoInsights: IBOV=', ibovPrice, 'USD=', dolar);
+    return {
+      message: `Olá! Sou o ZURT Agent 🤖\n\nMercado agora:\n\n📊 IBOVESPA: ${ibovPrice} pts (${ibovVar}%)\n💵 Dólar: R$ ${dolar}\n\nEsta é uma conta demo. Conecte suas contas reais para insights personalizados!`,
+      suggestions: ['Quanto está a Petrobras?', 'Qual a Selic atual?', 'O que é CDI?'],
+    };
+  } catch (e: any) {
+    console.log('[AGENT] demoInsights error:', e?.message);
+    return {
+      message: 'Olá! Sou o ZURT Agent 🤖\n\nEstou no modo demonstração. Conecte suas contas para receber análises personalizadas do seu portfólio!',
+      suggestions: ['Como funciona o ZURT?', 'O que é Open Finance?', 'Quais bancos são suportados?'],
+    };
+  }
+}
+
+async function demoChat(userMessage: string): Promise<{ message: string; conversationId: string; suggestions: string[] }> {
+  try {
+    const query = userMessage.toLowerCase();
+    let response = '';
+
+    console.log('[AGENT] demoChat: query=', query.substring(0, 60));
+
+    if (query.includes('petr') || query.includes('petrobras')) {
+      const res = await fetch(`https://brapi.dev/api/quote/PETR4?token=${BRAPI_TOKEN}`);
+      const data = await res.json();
+      const stock = data?.results?.[0];
+      if (stock) {
+        response = `PETR4 (Petrobras PN):\n\n💰 Preço: R$ ${stock.regularMarketPrice?.toFixed(2)}\n📈 Variação: ${stock.regularMarketChangePercent?.toFixed(2)}%\n📊 Volume: ${(stock.regularMarketVolume / 1000000)?.toFixed(1)}M`;
+      }
+    } else if (query.includes('selic')) {
+      const res = await fetch(`https://brapi.dev/api/v2/prime-rate?country=brazil&token=${BRAPI_TOKEN}`);
+      const data = await res.json();
+      const rate = data?.['prime-rate']?.[0];
+      if (rate) response = `A taxa Selic atual está em ${rate.value}% a.a.`;
+    } else if (query.includes('dolar') || query.includes('dólar') || query.includes('dollar') || query.includes('usd')) {
+      const res = await fetch(`https://brapi.dev/api/v2/currency?currency=USD-BRL&token=${BRAPI_TOKEN}`);
+      const data = await res.json();
+      const cur = data?.currency?.[0];
+      if (cur) response = `Dólar (USD/BRL):\n\n💵 Compra: R$ ${cur.bidPrice}\n💵 Venda: R$ ${cur.askPrice}`;
+    } else if (query.includes('vale')) {
+      const res = await fetch(`https://brapi.dev/api/quote/VALE3?token=${BRAPI_TOKEN}`);
+      const data = await res.json();
+      const stock = data?.results?.[0];
+      if (stock) response = `VALE3:\n\n💰 Preço: R$ ${stock.regularMarketPrice?.toFixed(2)}\n📈 Variação: ${stock.regularMarketChangePercent?.toFixed(2)}%`;
+    } else if (query.includes('bitcoin') || query.includes('btc') || query.includes('cripto') || query.includes('crypto')) {
+      const res = await fetch(`https://brapi.dev/api/v2/crypto?coin=BTC&currency=BRL&token=${BRAPI_TOKEN}`);
+      const data = await res.json();
+      const coin = data?.coins?.[0];
+      if (coin) response = `Bitcoin (BTC):\n\n💰 Preço: R$ ${parseFloat(coin.regularMarketPrice)?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    } else if (query.includes('euro') || query.includes('eur')) {
+      const res = await fetch(`https://brapi.dev/api/v2/currency?currency=EUR-BRL&token=${BRAPI_TOKEN}`);
+      const data = await res.json();
+      const cur = data?.currency?.[0];
+      if (cur) response = `Euro (EUR/BRL):\n\n💶 Compra: R$ ${cur.bidPrice}\n💶 Venda: R$ ${cur.askPrice}`;
+    } else if (query.includes('ibov') || query.includes('bolsa') || query.includes('mercado')) {
+      const res = await fetch(`https://brapi.dev/api/quote/^BVSP?token=${BRAPI_TOKEN}`);
+      const data = await res.json();
+      const idx = data?.results?.[0];
+      if (idx) response = `IBOVESPA:\n\n📊 Pontos: ${idx.regularMarketPrice?.toLocaleString('pt-BR')}\n📈 Variação: ${idx.regularMarketChangePercent?.toFixed(2)}%`;
+    } else {
+      // Try as ticker directly
+      const ticker = userMessage.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (ticker.length >= 4 && ticker.length <= 6) {
+        try {
+          const res = await fetch(`https://brapi.dev/api/quote/${ticker}?token=${BRAPI_TOKEN}`);
+          const data = await res.json();
+          const stock = data?.results?.[0];
+          if (stock) {
+            response = `${stock.symbol} (${stock.shortName ?? stock.longName ?? ''}):\n\n💰 Preço: R$ ${stock.regularMarketPrice?.toFixed(2)}\n📈 Variação: ${stock.regularMarketChangePercent?.toFixed(2)}%`;
+          }
+        } catch {
+          // Not a valid ticker, fall through
+        }
+      }
+    }
+
+    if (!response) {
+      response = `No modo demonstração, posso consultar dados reais do mercado!\n\nTente perguntar sobre:\n• Ações (Petrobras, Vale, ou digite o ticker)\n• Dólar ou Euro\n• Selic\n• Bitcoin\n• IBOVESPA\n\nPara análise completa do seu portfólio, crie uma conta e conecte seus bancos!`;
+    }
+
+    return {
+      message: response,
+      conversationId: 'demo-' + Date.now(),
+      suggestions: ['Quanto está a PETR4?', 'E a VALE3?', 'Qual o dólar hoje?'],
+    };
+  } catch (e: any) {
+    console.log('[AGENT] demoChat error:', e?.message);
+    return {
+      message: 'Desculpe, não consegui buscar os dados no momento. Tente novamente!',
+      conversationId: 'demo-' + Date.now(),
+      suggestions: ['Tentar novamente'],
+    };
+  }
+}
+
+// =============================================================================
+// Market / Asset Detail (brapi.dev via backend proxy)
+// =============================================================================
 
 async function fetchFromBrapi(ticker: string): Promise<any> {
   const url = `${BRAPI_URL}/${encodeURIComponent(ticker)}?token=${BRAPI_TOKEN}&fundamental=true&dividends=true&range=1y&interval=1d&modules=summaryProfile,defaultKeyStatistics,financialData`;
@@ -1054,32 +1163,23 @@ export async function fetchAIInsights(message?: string, language?: string): Prom
   message: string;
   suggestions: string[];
 }> {
+  console.log('[AGENT] fetchAIInsights called, demoMode:', _isDemoMode, 'language:', language);
+
   if (_isDemoMode) {
-    const demoResponses: Record<string, { message: string; suggestions: string[] }> = {
-      pt: {
-        message: 'Olá! Sou o ZURT Agent, seu consultor financeiro inteligente. No modo demonstração, não tenho acesso a dados reais. Faça login com sua conta para receber insights personalizados sobre seu portfólio.',
-        suggestions: ['Como funciona?', 'Quais análises você faz?'],
-      },
-      en: {
-        message: 'Hello! I\'m ZURT Agent, your intelligent financial advisor. In demo mode, I don\'t have access to real data. Log in with your account to receive personalized insights about your portfolio.',
-        suggestions: ['How does it work?', 'What analyses do you do?'],
-      },
-      zh: {
-        message: '您好！我是ZURT Agent，您的智能金融顾问。在演示模式下，我无法访问真实数据。请登录您的账户以获取关于您投资组合的个性化洞察。',
-        suggestions: ['如何运作？', '您做哪些分析？'],
-      },
-      ar: {
-        message: 'مرحباً! أنا ZURT Agent، مستشارك المالي الذكي. في الوضع التجريبي، لا يمكنني الوصول إلى البيانات الحقيقية. سجل الدخول بحسابك للحصول على رؤى مخصصة حول محفظتك.',
-        suggestions: ['كيف يعمل؟', 'ما التحليلات التي تقوم بها؟'],
-      },
-    };
-    return demoResponses[language || 'pt'] || demoResponses.pt;
+    console.log('[AGENT] fetchAIInsights: using demoInsights()');
+    return demoInsights();
   }
 
-  const data = await apiRequest<any>('/ai/insights', {
-    method: 'POST',
-    body: JSON.stringify({ message: message ?? undefined, language: language || 'pt' }),
-  });
+  console.log('[AGENT] fetchAIInsights: calling backend /ai/insights...');
+  const data = await apiRequest<any>(
+    '/ai/insights',
+    {
+      method: 'POST',
+      body: JSON.stringify({ message: message ?? undefined, language: language || 'pt' }),
+    },
+    0,
+    AI_REQUEST_TIMEOUT,
+  );
 
   return {
     message: data.message ?? '',
@@ -1136,23 +1236,23 @@ export async function sendAIChat(
   conversationId: string;
   suggestions?: string[];
 }> {
+  console.log('[AGENT] sendAIChat called, demoMode:', _isDemoMode, 'message:', message.substring(0, 60));
+
   if (_isDemoMode) {
-    const demoMessages: Record<string, string> = {
-      pt: 'No modo demonstração, o ZURT Agent não está disponível. Faça login para usar.',
-      en: 'In demo mode, ZURT Agent is not available. Log in to use.',
-      zh: '在演示模式下，ZURT Agent不可用。请登录使用。',
-      ar: 'في الوضع التجريبي، ZURT Agent غير متاح. سجل الدخول للاستخدام.',
-    };
-    return {
-      message: demoMessages[language || 'pt'] || demoMessages.pt,
-      conversationId: 'demo',
-    };
+    console.log('[AGENT] sendAIChat: using demoChat()');
+    return demoChat(message);
   }
 
-  const data = await apiRequest<any>('/ai/chat', {
-    method: 'POST',
-    body: JSON.stringify({ message, conversationId, language: language || 'pt' }),
-  });
+  console.log('[AGENT] sendAIChat: calling backend /ai/chat...');
+  const data = await apiRequest<any>(
+    '/ai/chat',
+    {
+      method: 'POST',
+      body: JSON.stringify({ message, conversationId, language: language || 'pt' }),
+    },
+    0,
+    AI_REQUEST_TIMEOUT,
+  );
 
   return {
     message: data.message ?? '',
