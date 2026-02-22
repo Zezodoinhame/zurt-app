@@ -21,13 +21,13 @@ import { fetchAIAlerts, type AIAlert } from '../../src/services/api';
 import type { NotificationType } from '../../src/types';
 import { AppIcon, type AppIconName } from '../../src/hooks/useIcon';
 
-const filterOptions: Array<{ key: NotificationType | 'all'; label: string; iconName?: AppIconName }> = [
-  { key: 'all', label: 'Todos' },
-  { key: 'distribution', label: 'Dist.', iconName: 'diamond' },
-  { key: 'maturity', label: 'Venc.', iconName: 'warning' },
-  { key: 'invoice', label: 'Fatura', iconName: 'card' },
-  { key: 'insight', label: 'Insight', iconName: 'idea' },
-  { key: 'system', label: 'Sistema', iconName: 'notification' },
+const filterOptions: Array<{ key: NotificationType | 'all'; labelKey: string; iconName?: AppIconName }> = [
+  { key: 'all', labelKey: 'alerts.all' },
+  { key: 'distribution', labelKey: 'alerts.distribution', iconName: 'diamond' },
+  { key: 'maturity', labelKey: 'alerts.maturity', iconName: 'warning' },
+  { key: 'invoice', labelKey: 'alerts.invoice', iconName: 'card' },
+  { key: 'insight', labelKey: 'alerts.insight', iconName: 'idea' },
+  { key: 'system', labelKey: 'alerts.system', iconName: 'notification' },
 ];
 
 export default function AlertsScreen() {
@@ -184,7 +184,7 @@ export default function AlertsScreen() {
                   filter === opt.key && styles.filterChipTextActive,
                 ]}
               >
-                {opt.label}
+                {t(opt.labelKey)}
               </Text>
             </View>
           </TouchableOpacity>
@@ -206,9 +206,10 @@ export default function AlertsScreen() {
         {/* AI Alerts Section */}
         <View style={styles.aiSection}>
           <View style={styles.aiSectionHeader}>
-            <Text style={styles.aiSectionTitle}>
-              <AppIcon name="sparkle" size={15} color={colors.accent} /> {t('alerts.aiSection')}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <AppIcon name="sparkle" size={15} color={colors.accent} />
+              <Text style={styles.aiSectionTitle}>{t('alerts.aiSection')}</Text>
+            </View>
             <TouchableOpacity
               style={styles.aiCheckButton}
               onPress={() => handleCheckAIAlerts(false)}
@@ -435,11 +436,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
-  aiAlertIcon: {
-    fontSize: 18,
-    marginRight: spacing.md,
-    marginTop: 2,
-  },
   aiAlertContent: {
     flex: 1,
   },
@@ -483,9 +479,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: 'center',
     marginRight: spacing.md,
   },
-  icon: {
-    fontSize: 18,
-  },
   notificationContent: {
     flex: 1,
   },
@@ -523,18 +516,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     marginLeft: spacing.sm,
     padding: spacing.xs,
   },
-  dismissText: {
-    color: colors.text.muted,
-    fontSize: 12,
-  },
   empty: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 80,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: spacing.lg,
   },
   emptyText: {
     fontSize: 16,

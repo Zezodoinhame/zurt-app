@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { CreditCard, CategorySpending } from '../types';
 import type { DashboardTransaction } from '../services/api';
 import { fetchCardsApi, fetchTransactions } from '../services/api';
+import { logger } from '../utils/logger';
 
 interface CardsState {
   cards: CreditCard[];
@@ -50,7 +51,7 @@ export const useCardsStore = create<CardsState>((set, get) => ({
 
     try {
       const data = await fetchTransactions({ limit: 30 });
-      console.log('[CardsStore] loadTransactions result:', data.transactions.length);
+      logger.log('[CardsStore] loadTransactions result:', data.transactions.length);
       if (data.transactions.length > 0) {
         const mapped: DashboardTransaction[] = data.transactions.map((t: any) => ({
           id: String(t.id ?? ''),
@@ -65,7 +66,7 @@ export const useCardsStore = create<CardsState>((set, get) => ({
         set({ dashboardTransactions: mapped, _transactionsLoaded: true });
       }
     } catch (err: any) {
-      console.log('[CardsStore] loadTransactions error:', err?.message);
+      logger.log('[CardsStore] loadTransactions error:', err?.message);
     }
   },
 

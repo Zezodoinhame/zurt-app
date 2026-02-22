@@ -22,6 +22,7 @@ import { spacing, radius } from '../src/theme/spacing';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { generateReportApi } from '../src/services/api';
 import { AppIcon } from '../src/hooks/useIcon';
+import { logger } from '../src/utils/logger';
 
 // =============================================================================
 // Types
@@ -923,11 +924,11 @@ export default function ReportScreen() {
         UTI: 'com.adobe.pdf',
       });
     } catch (err: any) {
-      console.log('[Report] Error generating report:', err?.message ?? err);
+      logger.log('[Report] Error generating report:', err?.message ?? err);
       Alert.alert(
-        t('report.errorTitle') || 'Erro',
-        t('report.errorMessage') || 'Nao foi possivel gerar o relatorio. Tente novamente.',
-        [{ text: 'OK' }],
+        t('common.error'),
+        t('report.error'),
+        [{ text: t('common.ok') }],
       );
     } finally {
       setGenerating(false);

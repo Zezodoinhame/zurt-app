@@ -27,6 +27,7 @@ import type {
   Insight,
   CategorySpending,
 } from '../types';
+import { logger } from '../utils/logger';
 
 // =============================================================================
 // Config
@@ -115,7 +116,7 @@ async function apiRequest<T>(
   timeout?: number,
 ): Promise<T> {
   const url = `${API_BASE}${path}`;
-  console.log(`[ZURT API] >> ${options?.method ?? 'GET'} ${url}`);
+  logger.log(`[ZURT API] >> ${options?.method ?? 'GET'} ${url}`);
 
   const token = await getToken();
   const headers: Record<string, string> = {
@@ -138,7 +139,7 @@ async function apiRequest<T>(
       signal: controller.signal,
     });
 
-    console.log(`[ZURT API] << ${response.status} ${path}`);
+    logger.log(`[ZURT API] << ${response.status} ${path}`);
 
     if (response.status === 401) {
       await clearToken();
@@ -154,17 +155,18 @@ async function apiRequest<T>(
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => '');
-      throw new Error(
-        `API ${response.status}: ${errorBody || response.statusText}`,
-      );
+      if (__DEV__) {
+        logger.log(`[ZURT API] Error body: ${errorBody}`);
+      }
+      throw new Error('Request failed. Please try again.');
     }
 
     return await response.json();
   } catch (err: any) {
     if (err?.name === 'AbortError') {
-      console.log(`[ZURT API] !! TIMEOUT after ${effectiveTimeout}ms: ${path}`);
+      logger.log(`[ZURT API] !! TIMEOUT after ${effectiveTimeout}ms: ${path}`);
     } else {
-      console.log(`[ZURT API] !! ERROR ${path}:`, err?.message ?? err);
+      logger.log(`[ZURT API] !! ERROR ${path}:`, err?.message ?? err);
     }
     throw err;
   } finally {
@@ -771,7 +773,7 @@ export async function searchInstitutions(search: string): Promise<any[]> {
     const data = await apiRequest<any>(
       `/connections/institutions?search=${encodeURIComponent(search)}`,
     );
-    console.log('[ZURT API] searchInstitutions raw response:', JSON.stringify(data).slice(0, 500));
+    logger.log('[ZURT API] searchInstitutions raw response:', JSON.stringify(data).slice(0, 500));
 
     // Handle all possible response shapes
     let results: any[] = [];
@@ -1030,7 +1032,7 @@ const BRAPI_TOKEN = '5kSd6kh79GgVf2X4ncFacn';
 
 async function demoInsights(): Promise<{ message: string; suggestions: string[] }> {
   try {
-    console.log('[AGENT] demoInsights: fetching IBOV + USD from brapi...');
+    logger.log('[AGENT] demoInsights: fetching IBOV + USD from brapi...');
     const [ibovRes, moedaRes] = await Promise.all([
       fetch(`https://brapi.dev/api/quote/^BVSP?token=${BRAPI_TOKEN}`),
       fetch(`https://brapi.dev/api/v2/currency?currency=USD-BRL&token=${BRAPI_TOKEN}`),
@@ -1040,13 +1042,13 @@ async function demoInsights(): Promise<{ message: string; suggestions: string[] 
     const ibovPrice = ibov?.results?.[0]?.regularMarketPrice?.toLocaleString('pt-BR') || '-';
     const ibovVar = ibov?.results?.[0]?.regularMarketChangePercent?.toFixed(2) || '-';
     const dolar = moeda?.currency?.[0]?.bidPrice || '-';
-    console.log('[AGENT] demoInsights: IBOV=', ibovPrice, 'USD=', dolar);
+    logger.log('[AGENT] demoInsights: IBOV=', ibovPrice, 'USD=', dolar);
     return {
       message: `Olá! Sou o ZURT Agent 🤖\n\nMercado agora:\n\n📊 IBOVESPA: ${ibovPrice} pts (${ibovVar}%)\n💵 Dólar: R$ ${dolar}\n\nEsta é uma conta demo. Conecte suas contas reais para insights personalizados!`,
       suggestions: ['Quanto está a Petrobras?', 'Qual a Selic atual?', 'O que é CDI?'],
     };
   } catch (e: any) {
-    console.log('[AGENT] demoInsights error:', e?.message);
+    logger.log('[AGENT] demoInsights error:', e?.message);
     return {
       message: 'Olá! Sou o ZURT Agent 🤖\n\nEstou no modo demonstração. Conecte suas contas para receber análises personalizadas do seu portfólio!',
       suggestions: ['Como funciona o ZURT?', 'O que é Open Finance?', 'Quais bancos são suportados?'],
@@ -1059,7 +1061,7 @@ async function demoChat(userMessage: string): Promise<{ message: string; convers
     const query = userMessage.toLowerCase();
     let response = '';
 
-    console.log('[AGENT] demoChat: query=', query.substring(0, 60));
+    logger.log('[AGENT] demoChat: query=', query.substring(0, 60));
 
     if (query.includes('petr') || query.includes('petrobras')) {
       const res = await fetch(`https://brapi.dev/api/quote/PETR4?token=${BRAPI_TOKEN}`);
@@ -1125,7 +1127,7 @@ async function demoChat(userMessage: string): Promise<{ message: string; convers
       suggestions: ['Quanto está a PETR4?', 'E a VALE3?', 'Qual o dólar hoje?'],
     };
   } catch (e: any) {
-    console.log('[AGENT] demoChat error:', e?.message);
+    logger.log('[AGENT] demoChat error:', e?.message);
     return {
       message: 'Desculpe, não consegui buscar os dados no momento. Tente novamente!',
       conversationId: 'demo-' + Date.now(),
@@ -1140,7 +1142,7 @@ async function demoChat(userMessage: string): Promise<{ message: string; convers
 
 async function fetchFromBrapi(ticker: string): Promise<any> {
   const url = `${BRAPI_URL}/${encodeURIComponent(ticker)}?token=${BRAPI_TOKEN}&fundamental=true&dividends=true&range=1y&interval=1d&modules=summaryProfile,defaultKeyStatistics,financialData`;
-  console.log('[ZURT API] >> brapi fallback:', url.substring(0, 80));
+  logger.log('[ZURT API] >> brapi fallback:', url.substring(0, 80));
   const res = await fetch(url);
   if (!res.ok) throw new Error(`brapi ${res.status}`);
   return await res.json();
@@ -1152,7 +1154,7 @@ export async function fetchAssetDetail(ticker: string): Promise<any> {
     try {
       return await fetchFromBrapi(ticker);
     } catch (err: any) {
-      console.log('[ZURT API] !! brapi error:', err?.message);
+      logger.log('[ZURT API] !! brapi error:', err?.message);
       return { results: [] };
     }
   }
@@ -1173,14 +1175,14 @@ export async function fetchAIInsights(message?: string, language?: string): Prom
   message: string;
   suggestions: string[];
 }> {
-  console.log('[AGENT] fetchAIInsights called, demoMode:', _isDemoMode, 'language:', language);
+  logger.log('[AGENT] fetchAIInsights called, demoMode:', _isDemoMode, 'language:', language);
 
   if (_isDemoMode) {
-    console.log('[AGENT] fetchAIInsights: using demoInsights()');
+    logger.log('[AGENT] fetchAIInsights: using demoInsights()');
     return demoInsights();
   }
 
-  console.log('[AGENT] fetchAIInsights: calling backend /ai/insights...');
+  logger.log('[AGENT] fetchAIInsights: calling backend /ai/insights...');
   const data = await apiRequest<any>(
     '/ai/insights',
     {
@@ -1247,14 +1249,14 @@ export async function sendAIChat(
   conversationId: string;
   suggestions?: string[];
 }> {
-  console.log('[AGENT] sendAIChat called, demoMode:', _isDemoMode, 'message:', message.substring(0, 60));
+  logger.log('[AGENT] sendAIChat called, demoMode:', _isDemoMode, 'message:', message.substring(0, 60));
 
   if (_isDemoMode) {
-    console.log('[AGENT] sendAIChat: using demoChat()');
+    logger.log('[AGENT] sendAIChat: using demoChat()');
     return demoChat(message);
   }
 
-  console.log('[AGENT] sendAIChat: calling backend /ai/chat...');
+  logger.log('[AGENT] sendAIChat: calling backend /ai/chat...');
   const data = await apiRequest<any>(
     '/ai/chat',
     {

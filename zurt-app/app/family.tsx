@@ -24,7 +24,7 @@ import * as Haptics from 'expo-haptics';
 import { type ThemeColors } from '../src/theme/colors';
 import { spacing, radius } from '../src/theme/spacing';
 import { useSettingsStore } from '../src/stores/settingsStore';
-import { AppIcon, useIconText } from '../src/hooks/useIcon';
+import { AppIcon } from '../src/hooks/useIcon';
 import {
   fetchFamilyGroup,
   createFamilyGroup,
@@ -37,6 +37,8 @@ import {
   removeFamilyMember,
   isDemoMode,
 } from '../src/services/api';
+import { logger } from '../src/utils/logger';
+import { formatCurrency } from '../src/utils/formatters';
 
 // =============================================================================
 // Constants
@@ -64,16 +66,6 @@ function getInitial(name: string): string {
   return name.trim().charAt(0).toUpperCase();
 }
 
-function formatCurrency(value: number): string {
-  if (value == null || isNaN(value)) return 'R$ 0,00';
-  return value.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
 function getMemberName(member: any): string {
   return member.full_name || member.name || member.invited_email || '';
 }
@@ -87,6 +79,7 @@ export default function FamilyScreen() {
   const router = useRouter();
   const t = useSettingsStore((s) => s.t);
   const colors = useSettingsStore((s) => s.colors);
+  const currency = useSettingsStore((s) => s.currency);
   const styles = useMemo(() => createStyles(colors), [colors]);
   const isDemo = isDemoMode();
 
@@ -133,7 +126,7 @@ export default function FamilyScreen() {
       setSummary(summaryData);
       setPendingInvites(pendingData?.invites ?? []);
     } catch (err: any) {
-      console.log('[Family] Error loading:', err?.message);
+      logger.log('[Family] Error loading:', err?.message);
       setGroup(null);
       setMembers([]);
     }
@@ -470,7 +463,7 @@ export default function FamilyScreen() {
               {/* ========================================================== */}
               <View style={styles.wealthCard}>
                 <Text style={styles.wealthLabel}>{t('family.totalWealth')}</Text>
-                <Text style={styles.wealthValue}>{formatCurrency(totalWealth)}</Text>
+                <Text style={styles.wealthValue}>{formatCurrency(totalWealth, currency)}</Text>
                 <Text style={styles.wealthSub}>
                   {(t('family.activeMembers') || '{n} membros ativos').replace('{n}', String(acceptedMembers.length))}
                 </Text>
@@ -561,7 +554,7 @@ export default function FamilyScreen() {
                         {isPending ? (
                           <Text style={styles.pendingLabel}>{t('family.inviteSent') || 'Convite enviado'}</Text>
                         ) : isAccepted && nw > 0 ? (
-                          <Text style={styles.memberWealth}>{formatCurrency(nw)}</Text>
+                          <Text style={styles.memberWealth}>{formatCurrency(nw, currency)}</Text>
                         ) : null}
                       </View>
 

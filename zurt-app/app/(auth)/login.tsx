@@ -23,6 +23,7 @@ import { Button } from '../../src/components/ui/Button';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { Input } from '../../src/components/ui/Input';
 import { saveToken } from '../../src/services/api';
+import { logger } from '../../src/utils/logger';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -76,7 +77,7 @@ export default function LoginScreen() {
     googleResponse = res;
     googlePromptAsync = prompt;
   } catch (err: any) {
-    console.log('[ZURT Auth] Google hook init error:', err?.message ?? err);
+    logger.log('[ZURT Auth] Google hook init error:', err?.message ?? err);
     // Will be caught — googleAvailable stays true but googleRequest stays null
   }
 
@@ -86,12 +87,12 @@ export default function LoginScreen() {
     if (googleResponse.type === 'success') {
       handleGoogleAuth(googleResponse);
     } else if (googleResponse.type === 'error') {
-      console.log('[ZURT Auth] Google OAuth error');
+      logger.log('[ZURT Auth] Google OAuth error');
       setGoogleLoading(false);
       setGoogleAvailable(false);
     } else {
       // cancel / dismiss
-      console.log('[ZURT Auth] Google OAuth:', googleResponse.type);
+      logger.log('[ZURT Auth] Google OAuth:', googleResponse.type);
       setGoogleLoading(false);
     }
   }, [googleResponse]);
@@ -106,12 +107,12 @@ export default function LoginScreen() {
         response.authentication?.accessToken ||
         response.params?.access_token;
 
-      console.log('[ZURT Auth] idToken:', idToken ? 'YES' : 'NO', 'accessToken:', accessToken ? 'YES' : 'NO');
+      logger.log('[ZURT Auth] idToken:', idToken ? 'YES' : 'NO', 'accessToken:', accessToken ? 'YES' : 'NO');
 
       // Step 1: Try POST /api/auth/google/mobile with id_token
       if (idToken) {
         try {
-          console.log('[ZURT Auth] Trying POST /auth/google/mobile...');
+          logger.log('[ZURT Auth] Trying POST /auth/google/mobile...');
           const res = await fetch(`${API_BASE}/auth/google/mobile`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -121,7 +122,7 @@ export default function LoginScreen() {
             const data = await res.json();
             const jwt = data.token ?? data.access_token ?? data.jwt;
             if (jwt) {
-              console.log('[ZURT Auth] /auth/google/mobile success');
+              logger.log('[ZURT Auth] /auth/google/mobile success');
               await saveToken(jwt);
               const restored = await restoreSession();
               if (restored) {
@@ -131,9 +132,9 @@ export default function LoginScreen() {
               }
             }
           }
-          console.log('[ZURT Auth] /auth/google/mobile status:', res.status);
+          logger.log('[ZURT Auth] /auth/google/mobile status:', res.status);
         } catch (err: any) {
-          console.log('[ZURT Auth] /auth/google/mobile error:', err?.message);
+          logger.log('[ZURT Auth] /auth/google/mobile error:', err?.message);
         }
       }
 
@@ -162,7 +163,7 @@ export default function LoginScreen() {
       }
 
       if (googleEmail) {
-        console.log('[ZURT Auth] Trying POST /auth/login with email:', googleEmail);
+        logger.log('[ZURT Auth] Trying POST /auth/login with email:', googleEmail);
         try {
           const res = await fetch(`${API_BASE}/auth/login`, {
             method: 'POST',
@@ -173,7 +174,7 @@ export default function LoginScreen() {
             const data = await res.json();
             const jwt = data.token ?? data.access_token ?? data.jwt;
             if (jwt) {
-              console.log('[ZURT Auth] /auth/login with email success');
+              logger.log('[ZURT Auth] /auth/login with email success');
               await saveToken(jwt);
               const restored = await restoreSession();
               if (restored) {
@@ -184,15 +185,15 @@ export default function LoginScreen() {
             }
           }
         } catch (err: any) {
-          console.log('[ZURT Auth] /auth/login error:', err?.message);
+          logger.log('[ZURT Auth] /auth/login error:', err?.message);
         }
       }
 
       // All attempts failed
-      console.log('[ZURT Auth] All Google auth attempts failed');
+      logger.log('[ZURT Auth] All Google auth attempts failed');
       Alert.alert(t('common.error'), t('login.googleCreateAccount'));
     } catch (err: any) {
-      console.log('[ZURT Auth] handleGoogleAuth error:', err?.message ?? err);
+      logger.log('[ZURT Auth] handleGoogleAuth error:', err?.message ?? err);
       setError(t('login.googleUnavailable'));
     } finally {
       setGoogleLoading(false);
@@ -214,7 +215,7 @@ export default function LoginScreen() {
     try {
       await googlePromptAsync();
     } catch (err: any) {
-      console.log('[ZURT Auth] googlePromptAsync error:', err?.message ?? err);
+      logger.log('[ZURT Auth] googlePromptAsync error:', err?.message ?? err);
       setGoogleAvailable(false);
       setGoogleLoading(false);
     }

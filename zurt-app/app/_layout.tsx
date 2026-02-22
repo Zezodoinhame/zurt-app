@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -6,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '../src/stores/authStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
+import { logger } from '../src/utils/logger';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -17,21 +19,21 @@ export default function RootLayout() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    console.log('[ZURT App] RootLayout mounted, restoring session...');
+    logger.log('[ZURT App] RootLayout mounted, restoring session...');
     (async () => {
       try {
         await Promise.all([restoreSession(), loadSettings()]);
       } catch (err: any) {
-        console.log('[ZURT App] restoreSession error:', err?.message ?? err);
+        logger.log('[ZURT App] restoreSession error:', err?.message ?? err);
       } finally {
-        console.log('[ZURT App] Ready! Showing app.');
+        logger.log('[ZURT App] Ready! Showing app.');
         setReady(true);
         SplashScreen.hideAsync();
       }
     })();
   }, []);
 
-  if (!ready) return null;
+  if (!ready) return <View style={{ flex: 1, backgroundColor: colors.background }} />;
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>

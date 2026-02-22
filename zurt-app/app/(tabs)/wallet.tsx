@@ -24,19 +24,13 @@ import { ErrorState } from '../../src/components/shared/ErrorState';
 import { formatPct, maskValue, formatCurrency } from '../../src/utils/formatters';
 import type { Asset, AssetClass, InstitutionId } from '../../src/types';
 import { AppIcon } from '../../src/hooks/useIcon';
+import { logger } from '../../src/utils/logger';
 
 // ---------------------------------------------------------------------------
 // Label Maps
 // ---------------------------------------------------------------------------
 
-const assetClassLabels: Record<AssetClass, string> = {
-  fixedIncome: 'Renda Fixa',
-  stocks: 'Ações',
-  fiis: 'FIIs',
-  crypto: 'Cripto',
-  international: 'Internacional',
-  pension: 'Previdência',
-};
+// assetClassLabels — resolved dynamically via t(`class.${cls}`) in the component
 
 const institutionNames: Record<InstitutionId, string> = {
   xp: 'XP Investimentos',
@@ -168,7 +162,7 @@ export default function WalletScreen() {
   );
 
   const handleAssetPress = useCallback((asset: Asset) => {
-    console.log('ASSET PRESS:', asset.name, 'ticker:', asset.ticker);
+    logger.log('ASSET PRESS:', asset.name, 'ticker:', asset.ticker);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     // Navigate to full asset detail if ticker exists
     if (asset.ticker) {
@@ -368,8 +362,7 @@ export default function WalletScreen() {
     const institutionName =
       institutionNames[selectedAsset.institution] ??
       selectedAsset.institution;
-    const classLabel =
-      assetClassLabels[selectedAsset.class] ?? selectedAsset.class;
+    const classLabel = t(`class.${selectedAsset.class}`);
     const classColor =
       colors.assetClasses[selectedAsset.class] ?? colors.accent;
 
@@ -728,10 +721,6 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
       paddingVertical: 80,
       paddingHorizontal: spacing.xl,
-    },
-    emptyIcon: {
-      fontSize: 48,
-      marginBottom: spacing.lg,
     },
     emptyTitle: {
       fontSize: 18,

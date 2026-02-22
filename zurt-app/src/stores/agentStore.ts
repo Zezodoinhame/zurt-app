@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchAIInsights, sendAIChat, isDemoMode } from '../services/api';
 import { useSettingsStore } from './settingsStore';
+import { logger } from '../utils/logger';
 
 const STORAGE_KEY = '@zurt:agent_messages';
 const MAX_MESSAGES = 50;
@@ -64,27 +65,27 @@ export const useAgentStore = create<AgentState>((set, get) => ({
   _initialized: false,
 
   loadInitialInsights: async () => {
-    console.log('[AGENT] loadInitialInsights called, demoMode:', isDemoMode(), 'initialized:', get()._initialized);
+    logger.log('[AGENT] loadInitialInsights called, demoMode:', isDemoMode(), 'initialized:', get()._initialized);
     if (get()._initialized) return;
     set({ _initialized: true });
 
     // Try to restore persisted messages
     const saved = await loadPersistedMessages();
     if (saved && saved.length > 0) {
-      console.log('[AGENT] loadInitialInsights: restored', saved.length, 'persisted messages');
+      logger.log('[AGENT] loadInitialInsights: restored', saved.length, 'persisted messages');
       set({ messages: saved });
       return; // User has history, don't auto-fetch
     }
 
     // No history — fetch initial insights
-    console.log('[AGENT] loadInitialInsights: no history, fetching insights...');
+    logger.log('[AGENT] loadInitialInsights: no history, fetching insights...');
     set({ isLoading: true, error: null });
 
     try {
       const { language } = useSettingsStore.getState();
-      console.log('[AGENT] loadInitialInsights: calling fetchAIInsights, language:', language);
+      logger.log('[AGENT] loadInitialInsights: calling fetchAIInsights, language:', language);
       const data = await fetchAIInsights(undefined, language);
-      console.log('[AGENT] loadInitialInsights: got response, length:', data?.message?.length);
+      logger.log('[AGENT] loadInitialInsights: got response, length:', data?.message?.length);
       const msgs: ChatMessage[] = [
         {
           id: nextId(),
@@ -97,7 +98,7 @@ export const useAgentStore = create<AgentState>((set, get) => ({
       set({ messages: msgs, isLoading: false });
       await persistMessages(msgs);
     } catch (err: any) {
-      console.log('[AGENT] loadInitialInsights ERROR:', err?.message, err?.name, JSON.stringify(err).substring(0, 200));
+      logger.log('[AGENT] loadInitialInsights ERROR:', err?.message, err?.name, JSON.stringify(err).substring(0, 200));
       const isAbort = err?.name === 'AbortError';
       const isRateLimit =
         err?.message?.includes('429') || err?.message?.toLowerCase().includes('limit');
@@ -110,7 +111,7 @@ export const useAgentStore = create<AgentState>((set, get) => ({
   },
 
   sendMessage: async (message: string) => {
-    console.log('[AGENT] sendMessage called, demoMode:', isDemoMode(), 'message:', message.substring(0, 60));
+    logger.log('[AGENT] sendMessage called, demoMode:', isDemoMode(), 'message:', message.substring(0, 60));
     const { conversationId } = get();
 
     // Add user message immediately
@@ -126,9 +127,9 @@ export const useAgentStore = create<AgentState>((set, get) => ({
 
     try {
       const { language } = useSettingsStore.getState();
-      console.log('[AGENT] sendMessage: calling sendAIChat, language:', language);
+      logger.log('[AGENT] sendMessage: calling sendAIChat, language:', language);
       const data = await sendAIChat(message, conversationId ?? undefined, language);
-      console.log('[AGENT] sendMessage: got response, length:', data?.message?.length);
+      logger.log('[AGENT] sendMessage: got response, length:', data?.message?.length);
       const aiMsg: ChatMessage = {
         id: nextId(),
         role: 'assistant',
@@ -144,7 +145,7 @@ export const useAgentStore = create<AgentState>((set, get) => ({
       });
       await persistMessages(updated);
     } catch (err: any) {
-      console.log('[AGENT] sendMessage ERROR:', err?.message, err?.name, JSON.stringify(err).substring(0, 200));
+      logger.log('[AGENT] sendMessage ERROR:', err?.message, err?.name, JSON.stringify(err).substring(0, 200));
       const isAbort = err?.name === 'AbortError';
       const isRateLimit =
         err?.message?.includes('429') || err?.message?.toLowerCase().includes('limit');

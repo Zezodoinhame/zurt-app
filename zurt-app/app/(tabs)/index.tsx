@@ -167,6 +167,7 @@ export default function HomeScreen() {
             style={styles.bellContainer}
             activeOpacity={0.7}
             accessibilityLabel={`${t('home.notifications')}, ${unreadCount} ${t('home.unread')}`}
+            onPress={() => router.push('/(tabs)/alerts')}
           >
             <AppIcon name="notification" size={22} color={colors.text.primary} />
             {unreadCount > 0 && (
@@ -385,6 +386,7 @@ export default function HomeScreen() {
                         <TouchableOpacity
                           style={styles.insightAction}
                           activeOpacity={0.7}
+                          onPress={() => router.push('/(tabs)/agent')}
                         >
                           <Text
                             style={[
@@ -446,9 +448,6 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    bellIcon: {
-      fontSize: 22,
-    },
     dotBadge: {
       position: 'absolute',
       top: 2,
@@ -472,10 +471,6 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: '700',
       color: colors.text.primary,
       fontVariant: ['tabular-nums'],
-    },
-    eyeIcon: {
-      fontSize: 22,
-      marginLeft: spacing.md,
     },
     badgeRow: {
       flexDirection: 'row',
@@ -611,10 +606,6 @@ const createStyles = (colors: ThemeColors) =>
     emptyState: {
       alignItems: 'center',
       paddingVertical: spacing.xl,
-    },
-    emptyIcon: {
-      fontSize: 48,
-      marginBottom: spacing.lg,
     },
     emptyText: {
       fontSize: 15,

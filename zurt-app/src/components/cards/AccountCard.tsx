@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { type ThemeColors } from '../../theme/colors';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { spacing, radius } from '../../theme/spacing';
-import { formatBRL } from '../../utils/formatters';
+import { formatCurrency } from '../../utils/formatters';
 import type { Institution } from '../../types';
 
 interface AccountCardProps {
@@ -14,6 +14,7 @@ interface AccountCardProps {
 
 export function AccountCard({ institution, index, onPress }: AccountCardProps) {
   const colors = useSettingsStore((s) => s.colors);
+  const { t, currency } = useSettingsStore();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const statusColor =
@@ -25,10 +26,10 @@ export function AccountCard({ institution, index, onPress }: AccountCardProps) {
 
   const statusLabel =
     institution.status === 'connected'
-      ? 'Conectado'
+      ? t('status.connected')
       : institution.status === 'syncing'
-        ? 'Sincronizando'
-        : 'Erro';
+        ? t('status.syncing')
+        : t('status.error');
 
   return (
     <View>
@@ -36,7 +37,7 @@ export function AccountCard({ institution, index, onPress }: AccountCardProps) {
         style={styles.container}
         onPress={() => onPress?.(institution)}
         activeOpacity={0.7}
-        accessibilityLabel={`${institution.name}, ${formatBRL(institution.totalValue)}, ${statusLabel}`}
+        accessibilityLabel={`${institution.name}, ${formatCurrency(institution.totalValue, currency)}, ${statusLabel}`}
       >
         <View
           style={[
@@ -52,12 +53,12 @@ export function AccountCard({ institution, index, onPress }: AccountCardProps) {
         <View style={styles.info}>
           <Text style={styles.name}>{institution.name}</Text>
           <Text style={styles.assetCount}>
-            {institution.assetCount} ativos
+            {institution.assetCount} {t('wallet.assets')}
           </Text>
         </View>
 
         <View style={styles.right}>
-          <Text style={styles.value}>{formatBRL(institution.totalValue)}</Text>
+          <Text style={styles.value}>{formatCurrency(institution.totalValue, currency)}</Text>
           <View style={styles.statusRow}>
             <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
             <Text style={[styles.statusText, { color: statusColor }]}>

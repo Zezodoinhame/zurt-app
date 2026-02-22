@@ -18,6 +18,7 @@ import { type ThemeColors } from '../src/theme/colors';
 import { spacing, radius } from '../src/theme/spacing';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { AppIcon } from '../src/hooks/useIcon';
+import { logger } from '../src/utils/logger';
 
 interface InstitutionResult {
   id: string | number;
@@ -59,15 +60,15 @@ export default function ConnectBankScreen() {
     const currentCount = ++searchCounterRef.current;
     debounceRef.current = setTimeout(async () => {
       try {
-        console.log('[ConnectBank] Searching for:', text.trim());
+        logger.log('[ConnectBank] Searching for:', text.trim());
         const results = await searchInstitutions(text.trim());
         // Only update if this is still the latest search
         if (currentCount === searchCounterRef.current) {
-          console.log('[ConnectBank] Results count:', results?.length ?? 0, 'for query:', text.trim());
+          logger.log('[ConnectBank] Results count:', results?.length ?? 0, 'for query:', text.trim());
           setInstitutions(results ?? []);
         }
       } catch (err) {
-        console.log('[ConnectBank] Search error:', err);
+        logger.log('[ConnectBank] Search error:', err);
         if (currentCount === searchCounterRef.current) {
           setInstitutions([]);
         }
@@ -90,15 +91,15 @@ export default function ConnectBankScreen() {
     setErrorMessage('');
     try {
       const token = await getConnectToken(String(institution.id));
-      if (!token) throw new Error('No connect token received from the server.');
+      if (!token) throw new Error(t('connect.noTokenError'));
       setConnectToken(token);
       setScreenState('webview');
     } catch (err: any) {
-      console.log('[ConnectBank] getConnectToken error:', err);
-      setErrorMessage(err?.message ?? 'Failed to initiate connection. Please try again.');
+      logger.log('[ConnectBank] getConnectToken error:', err);
+      setErrorMessage(err?.message ?? t('connect.initiateError'));
       setScreenState('error');
     }
-  }, []);
+  }, [t]);
 
   const handleWebViewNavigationChange = useCallback(
     async (navState: WebViewNavigation) => {
@@ -119,8 +120,8 @@ export default function ConnectBankScreen() {
             await syncAllFinance();
             setScreenState('success');
           } catch (err: any) {
-            console.log('[ConnectBank] createConnection/sync error:', err);
-            setErrorMessage(err?.message ?? 'Connection saved but sync failed. Data will sync shortly.');
+            logger.log('[ConnectBank] createConnection/sync error:', err);
+            setErrorMessage(err?.message ?? t('connect.syncFailedLong'));
             setScreenState('error');
           }
         } else {
@@ -132,7 +133,7 @@ export default function ConnectBankScreen() {
           setScreenState('search'); setConnectToken(null); setSelectedInstitution(null);
         }
       }
-    }, [screenState],
+    }, [screenState, t],
   );
 
   const handleWebViewMessage = useCallback(
@@ -147,8 +148,8 @@ export default function ConnectBankScreen() {
             await syncAllFinance();
             setScreenState('success');
           } catch (err: any) {
-            console.log('[ConnectBank] postMessage handler error:', err);
-            setErrorMessage(err?.message ?? 'Connection saved but sync failed.');
+            logger.log('[ConnectBank] postMessage handler error:', err);
+            setErrorMessage(err?.message ?? t('connect.syncFailedShort'));
             setScreenState('error');
           }
         }
@@ -156,7 +157,7 @@ export default function ConnectBankScreen() {
           setScreenState('search'); setConnectToken(null); setSelectedInstitution(null);
         }
       } catch { /* ignore */ }
-    }, [],
+    }, [t],
   );
 
   const handleGoBack = useCallback(() => {
@@ -323,15 +324,15 @@ export default function ConnectBankScreen() {
           )}
           onError={(syntheticEvent) => {
             const { nativeEvent } = syntheticEvent;
-            console.log('[ConnectBank] WebView error:', nativeEvent);
-            setErrorMessage('Failed to load the connection page. Please try again.');
+            logger.log('[ConnectBank] WebView error:', nativeEvent);
+            setErrorMessage(t('connect.webviewLoadError'));
             setScreenState('error');
           }}
           onHttpError={(syntheticEvent) => {
             const { nativeEvent } = syntheticEvent;
-            console.log('[ConnectBank] WebView HTTP error:', nativeEvent.statusCode);
+            logger.log('[ConnectBank] WebView HTTP error:', nativeEvent.statusCode);
             if (nativeEvent.statusCode >= 400) {
-              setErrorMessage('Connection page returned an error. Please try again.');
+              setErrorMessage(t('connect.webviewHttpError'));
               setScreenState('error');
             }
           }}
@@ -373,7 +374,7 @@ export default function ConnectBankScreen() {
       </View>
       <Text style={styles.statusTitle}>{t('connect.connectionFailed')}</Text>
       <Text style={styles.statusDescription}>
-        {errorMessage || 'Something went wrong. Please try again.'}
+        {errorMessage || t('connect.somethingWentWrong')}
       </Text>
       <TouchableOpacity style={styles.primaryButton} onPress={handleRetry} activeOpacity={0.8}>
         <Text style={styles.primaryButtonText}>{t('connect.tryAgain')}</Text>

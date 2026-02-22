@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -16,6 +17,7 @@ import { spacing, radius } from '../src/theme/spacing';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { fetchAssetDetail } from '../src/services/api';
 import { formatCurrency, formatBRLCompact, formatNumber, formatPct, formatDate } from '../src/utils/formatters';
+import { logger } from '../src/utils/logger';
 
 // ===========================================================================
 // Types
@@ -182,9 +184,9 @@ export default function AssetDetailScreen() {
   const [logoError, setLogoError] = useState(false);
 
   const loadData = useCallback(async () => {
-    console.log('ASSET DETAIL - ticker param:', ticker);
+    logger.log('ASSET DETAIL - ticker param:', ticker);
     if (!ticker) {
-      console.log('ASSET DETAIL - ticker is undefined/empty, aborting');
+      logger.log('ASSET DETAIL - ticker is undefined/empty, aborting');
       setLoading(false);
       setError('Ticker not provided');
       return;
@@ -193,7 +195,7 @@ export default function AssetDetailScreen() {
     setError(null);
     try {
       const response = await fetchAssetDetail(ticker);
-      console.log('ASSET DETAIL - response:', JSON.stringify(response).substring(0, 300));
+      logger.log('ASSET DETAIL - response:', JSON.stringify(response).substring(0, 300));
       const results = response?.results ?? [];
       if (results.length > 0) {
         setData(results[0]);
@@ -201,7 +203,7 @@ export default function AssetDetailScreen() {
         setError(t('asset.noData'));
       }
     } catch (err: any) {
-      console.log('ASSET DETAIL - error:', err?.message);
+      logger.log('ASSET DETAIL - error:', err?.message);
       setError(err?.message ?? t('common.error'));
     } finally {
       setLoading(false);
@@ -444,7 +446,7 @@ export default function AssetDetailScreen() {
             ))}
           </View>
           <View style={styles.chartContainer}>
-            <PriceChart data={chartData} width={320} height={160} colors={colors} />
+            <PriceChart data={chartData} width={Dimensions.get('window').width - (spacing.xl * 4 + 2)} height={160} colors={colors} />
           </View>
         </View>
 

@@ -62,9 +62,10 @@ export function formatNumber(value: number, decimals = 2): string {
 }
 
 /**
- * Format relative date: "ha 2h", "ontem", "ha 3 dias"
+ * Format relative date with optional i18n support.
+ * If `t` is provided, uses time.* translation keys.
  */
-export function formatRelativeDate(dateString: string): string {
+export function formatRelativeDate(dateString: string, t?: (key: string) => string): string {
   const date = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -72,12 +73,21 @@ export function formatRelativeDate(dateString: string): string {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return 'agora';
-  if (diffMins < 60) return `há ${diffMins}min`;
-  if (diffHours < 24) return `há ${diffHours}h`;
-  if (diffDays === 1) return 'ontem';
-  if (diffDays < 7) return `há ${diffDays} dias`;
-  if (diffDays < 30) return `há ${Math.floor(diffDays / 7)} sem`;
+  if (t) {
+    if (diffMins < 1) return t('time.now');
+    if (diffMins < 60) return t('time.minutesAgo').replace('{n}', String(diffMins));
+    if (diffHours < 24) return t('time.hoursAgo').replace('{n}', String(diffHours));
+    if (diffDays === 1) return t('time.yesterday');
+    if (diffDays < 7) return t('time.daysAgo').replace('{n}', String(diffDays));
+    if (diffDays < 30) return t('time.weeksAgo').replace('{n}', String(Math.floor(diffDays / 7)));
+  } else {
+    if (diffMins < 1) return 'agora';
+    if (diffMins < 60) return `há ${diffMins}min`;
+    if (diffHours < 24) return `há ${diffHours}h`;
+    if (diffDays === 1) return 'ontem';
+    if (diffDays < 7) return `há ${diffDays} dias`;
+    if (diffDays < 30) return `há ${Math.floor(diffDays / 7)} sem`;
+  }
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
@@ -112,12 +122,3 @@ export function maskValue(value: string, curr?: Currency): string {
   return `${symbol} •••••`;
 }
 
-/**
- * Get greeting based on time of day
- */
-export function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Bom dia';
-  if (hour < 18) return 'Boa tarde';
-  return 'Boa noite';
-}

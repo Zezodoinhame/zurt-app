@@ -152,6 +152,7 @@ function PickerModal<T extends string>({
   onClose,
 }: PickerModalProps<T>) {
   const colors = useSettingsStore((s) => s.colors);
+  const { t } = useSettingsStore();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   return (
@@ -189,7 +190,7 @@ function PickerModal<T extends string>({
             </TouchableOpacity>
           ))}
           <TouchableOpacity style={styles.modalClose} onPress={onClose}>
-            <Text style={styles.modalCloseText}>Fechar</Text>
+            <Text style={styles.modalCloseText}>{t('common.close')}</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -211,6 +212,7 @@ function PasswordModal({
   isDemoMode: boolean;
 }) {
   const colors = useSettingsStore((s) => s.colors);
+  const { t } = useSettingsStore();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   const [currentPw, setCurrentPw] = useState('');
@@ -222,27 +224,27 @@ function PasswordModal({
   const handleSave = async () => {
     setError('');
     if (!currentPw || !newPw || !confirmPw) {
-      setError('Preencha todos os campos');
+      setError(t('password.allFieldsRequired'));
       return;
     }
     if (newPw !== confirmPw) {
-      setError('As senhas n\u00E3o coincidem');
+      setError(t('password.mismatch'));
       return;
     }
     if (newPw.length < 6) {
-      setError('A nova senha deve ter pelo menos 6 caracteres');
+      setError(t('password.minLength'));
       return;
     }
     setIsLoading(true);
     try {
       await changePassword(currentPw, newPw);
-      Alert.alert('Sucesso', 'Senha alterada com sucesso!');
+      Alert.alert(t('common.ok'), t('password.success'));
       setCurrentPw('');
       setNewPw('');
       setConfirmPw('');
       onClose();
     } catch (err: any) {
-      setError(err?.message ?? 'Erro ao alterar senha');
+      setError(t('password.error'));
     } finally {
       setIsLoading(false);
     }
@@ -264,11 +266,11 @@ function PasswordModal({
         onPress={handleClose}
       >
         <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
-          <Text style={styles.modalTitle}>Alterar senha</Text>
+          <Text style={styles.modalTitle}>{t('password.title')}</Text>
 
           <TextInput
             style={styles.passwordInput}
-            placeholder="Senha atual"
+            placeholder={t('password.current')}
             placeholderTextColor={colors.text.muted}
             secureTextEntry
             value={currentPw}
@@ -277,7 +279,7 @@ function PasswordModal({
           />
           <TextInput
             style={styles.passwordInput}
-            placeholder="Nova senha"
+            placeholder={t('password.new')}
             placeholderTextColor={colors.text.muted}
             secureTextEntry
             value={newPw}
@@ -286,7 +288,7 @@ function PasswordModal({
           />
           <TextInput
             style={styles.passwordInput}
-            placeholder="Confirmar nova senha"
+            placeholder={t('password.confirm')}
             placeholderTextColor={colors.text.muted}
             secureTextEntry
             value={confirmPw}
@@ -304,12 +306,12 @@ function PasswordModal({
             {isLoading ? (
               <ActivityIndicator color={colors.background} size="small" />
             ) : (
-              <Text style={styles.saveButtonText}>Salvar</Text>
+              <Text style={styles.saveButtonText}>{t('password.save')}</Text>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.modalClose} onPress={handleClose}>
-            <Text style={styles.modalCloseText}>Cancelar</Text>
+            <Text style={styles.modalCloseText}>{t('common.cancel')}</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -1084,11 +1086,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 13,
     color: colors.text.secondary,
     marginRight: spacing.sm,
-  },
-  chevron: {
-    fontSize: 20,
-    color: colors.text.muted,
-    fontWeight: '300',
   },
   dangerText: {
     color: colors.negative,

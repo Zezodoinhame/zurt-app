@@ -23,6 +23,7 @@ export function Header({
   onRightPress,
 }: HeaderProps) {
   const colors = useSettingsStore((s) => s.colors);
+  const { t } = useSettingsStore();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
 
@@ -35,7 +36,7 @@ export function Header({
           <TouchableOpacity
             onPress={onLeftPress}
             style={styles.action}
-            accessibilityLabel="Voltar"
+            accessibilityLabel={t('common.back')}
           >
             {leftAction}
           </TouchableOpacity>
@@ -52,7 +53,7 @@ export function Header({
           <TouchableOpacity
             onPress={onRightPress}
             style={styles.action}
-            accessibilityLabel="Ação"
+            accessibilityLabel={t('common.action')}
           >
             {rightAction}
           </TouchableOpacity>

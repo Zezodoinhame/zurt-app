@@ -11,6 +11,7 @@ import {
   setOnUnauthorized,
 } from '../services/api';
 import { clearSession } from '../services/auth';
+import { logger } from '../utils/logger';
 
 interface AuthState {
   user: User | null;
@@ -60,12 +61,12 @@ export const useAuthStore = create<AuthState>((set, get) => {
     error: null,
 
     login: async (email: string, password: string) => {
-      console.log('[ZURT Auth] login() called with email:', email);
+      logger.log('[ZURT Auth] login() called with email:', email);
       set({ isLoading: true, error: null });
 
       try {
         const { user } = await loginApi(email, password);
-        console.log('[ZURT Auth] login() success, user:', user?.name);
+        logger.log('[ZURT Auth] login() success, user:', user?.name);
         setDemoMode(false);
         set({
           user,
@@ -76,10 +77,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
         });
         return true;
       } catch (err: any) {
-        console.log('[ZURT Auth] login() failed:', err?.message ?? err);
+        logger.log('[ZURT Auth] login() failed:', err?.message ?? err);
         // API failed - fall back to demo mode if credentials match demo user
         if (email === 'diego@zurt.io') {
-          console.log('[ZURT Auth] falling back to demo mode');
+          logger.log('[ZURT Auth] falling back to demo mode');
           setDemoMode(true);
           set({
             user: demoUser,
@@ -140,14 +141,14 @@ export const useAuthStore = create<AuthState>((set, get) => {
     },
 
     restoreSession: async () => {
-      console.log('[ZURT Auth] restoreSession() called');
+      logger.log('[ZURT Auth] restoreSession() called');
       const token = await getToken();
-      console.log('[ZURT Auth] restoreSession() token:', token ? 'EXISTS' : 'NONE');
+      logger.log('[ZURT Auth] restoreSession() token:', token ? 'EXISTS' : 'NONE');
       if (!token) return false;
 
       try {
         const user = await fetchUserProfile();
-        console.log('[ZURT Auth] restoreSession() success, user:', user?.name);
+        logger.log('[ZURT Auth] restoreSession() success, user:', user?.name);
         setDemoMode(false);
         set({
           user,
@@ -156,7 +157,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         });
         return true;
       } catch (err: any) {
-        console.log('[ZURT Auth] restoreSession() failed:', err?.message ?? err);
+        logger.log('[ZURT Auth] restoreSession() failed:', err?.message ?? err);
         await clearToken();
         return false;
       }

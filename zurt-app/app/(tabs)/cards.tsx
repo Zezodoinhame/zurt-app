@@ -26,6 +26,7 @@ import { formatShortDate, formatDate, maskValue, formatCurrency } from '../../sr
 import { categorizeTransaction } from '../../src/utils/transactionCategories';
 import type { TransactionCategory } from '../../src/types';
 import type { DashboardTransaction } from '../../src/services/api';
+import { logger } from '../../src/utils/logger';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -73,9 +74,9 @@ export default function CardsScreen() {
   // Fetch transactions from /finance/transactions if dashboard didn't provide them
   useEffect(() => {
     if (cards.length > 0) {
-      console.log('[Cards] dashboardTransactions:', dashboardTransactions.length);
+      logger.log('[Cards] dashboardTransactions:', dashboardTransactions.length);
       if (dashboardTransactions.length === 0) {
-        console.log('[Cards] No dashboard TX, fetching from /finance/transactions...');
+        logger.log('[Cards] No dashboard TX, fetching from /finance/transactions...');
         loadTransactions();
       }
     }

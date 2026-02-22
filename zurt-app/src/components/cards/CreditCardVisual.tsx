@@ -36,7 +36,7 @@ function VisaLogo() {
 
 export function CreditCardVisual({ card }: CreditCardVisualProps) {
   const colors = useSettingsStore((s) => s.colors);
-  const { currency } = useSettingsStore();
+  const { currency, t } = useSettingsStore();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const hasLimit = card.limit > 0;
@@ -99,11 +99,11 @@ export function CreditCardVisual({ card }: CreditCardVisualProps) {
         {/* Invoice + Due date */}
         <View style={styles.footer}>
           <View>
-            <Text style={styles.footerLabel}>Fatura atual</Text>
+            <Text style={styles.footerLabel}>{t('cards.currentInvoice')}</Text>
             <Text style={styles.footerValue}>{formatCurrency(card.currentInvoice, currency)}</Text>
           </View>
           <View style={styles.footerRight}>
-            <Text style={styles.footerLabel}>Vencimento</Text>
+            <Text style={styles.footerLabel}>{t('cards.dueDate')}</Text>
             <Text style={styles.footerValue}>{formatDueDate(card.dueDate)}</Text>
           </View>
         </View>

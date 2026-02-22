@@ -31,6 +31,7 @@ export function BottomSheet({
   height = SCREEN_HEIGHT * 0.65,
 }: BottomSheetProps) {
   const colors = useSettingsStore((s) => s.colors);
+  const { t } = useSettingsStore();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   if (!visible) return null;
@@ -59,7 +60,7 @@ export function BottomSheet({
               <TouchableOpacity
                 onPress={onClose}
                 style={styles.closeButton}
-                accessibilityLabel="Fechar"
+                accessibilityLabel={t('common.close')}
               >
                 <Text style={styles.closeText}>✕</Text>
               </TouchableOpacity>

@@ -152,7 +152,7 @@ export default function TaxesScreen() {
         </TouchableOpacity>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Text style={styles.headerBarTitle}>
-            {t('taxes.title') !== 'taxes.title' ? t('taxes.title') : 'Tributacao'}
+            {t('taxes.title')}
           </Text>
           <AppIcon name="taxes" size={18} color={colors.text.primary} />
         </View>
@@ -197,37 +197,31 @@ export default function TaxesScreen() {
         {/* Card 1: Monthly Tax Summary */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>
-            {t('taxes.monthSummary') !== 'taxes.monthSummary'
-              ? t('taxes.monthSummary')
-              : 'Resumo Tributario do Mes'}
+            {t('taxes.monthSummary')}
           </Text>
 
           <Text style={styles.totalIRValue}>{fmt(taxResult.totalIR)}</Text>
-          <Text style={styles.totalIRLabel}>Total IR estimado</Text>
+          <Text style={styles.totalIRLabel}>{t('taxes.totalEstimated')}</Text>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Prazo de pagamento</Text>
+            <Text style={styles.summaryLabel}>{t('taxes.paymentDeadline')}</Text>
             <Text style={styles.summaryValue}>
-              Ultimo dia util do mes seguinte
+              {t('taxes.deadlineDesc')}
             </Text>
           </View>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Status</Text>
+            <Text style={styles.summaryLabel}>{t('taxes.status')}</Text>
             {taxResult.totalIR === 0 ? (
               <View style={[styles.badge, styles.badgeGreen]}>
                 <Text style={styles.badgeGreenText}>
-                  {t('taxes.upToDate') !== 'taxes.upToDate'
-                    ? t('taxes.upToDate')
-                    : 'Em dia'}
+                  {t('taxes.upToDate')}
                 </Text>
               </View>
             ) : (
               <View style={[styles.badge, styles.badgeYellow]}>
                 <Text style={styles.badgeYellowText}>
-                  {t('taxes.pending') !== 'taxes.pending'
-                    ? t('taxes.pending')
-                    : 'Pendente'}
+                  {t('taxes.pending')}
                 </Text>
               </View>
             )}
@@ -238,24 +232,18 @@ export default function TaxesScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
             <Text style={styles.cardTitle}>
-              {t('taxes.stocks') !== 'taxes.stocks'
-                ? t('taxes.stocks')
-                : 'Renda Variavel (Acoes)'}
+              {t('taxes.stocks')}
             </Text>
             {taxResult.rendaVariavel.isento ? (
               <View style={[styles.chipBadge, styles.chipGreen]}>
                 <Text style={styles.chipGreenText}>
-                  {t('taxes.exempt') !== 'taxes.exempt'
-                    ? t('taxes.exempt')
-                    : 'Isento'}
+                  {t('taxes.exempt')}
                 </Text>
               </View>
             ) : (
               <View style={[styles.chipBadge, styles.chipYellow]}>
                 <Text style={styles.chipYellowText}>
-                  {t('taxes.taxable') !== 'taxes.taxable'
-                    ? t('taxes.taxable')
-                    : 'Tributavel'}
+                  {t('taxes.taxable')}
                 </Text>
               </View>
             )}
@@ -263,9 +251,7 @@ export default function TaxesScreen() {
 
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>
-              {t('taxes.sales') !== 'taxes.sales'
-                ? t('taxes.sales')
-                : 'Vendas no mes'}
+              {t('taxes.sales')}
             </Text>
             <Text style={styles.dataValue}>
               {fmt(taxResult.rendaVariavel.vendasMes)}
@@ -274,9 +260,7 @@ export default function TaxesScreen() {
 
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>
-              {t('taxes.profit') !== 'taxes.profit'
-                ? t('taxes.profit')
-                : 'Lucro/Prejuizo'}
+              {t('taxes.profit')}
             </Text>
             <Text
               style={[
@@ -292,9 +276,7 @@ export default function TaxesScreen() {
 
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>
-              {t('taxes.accLoss') !== 'taxes.accLoss'
-                ? t('taxes.accLoss')
-                : 'Prejuizo acumulado'}
+              {t('taxes.accLoss')}
             </Text>
             <Text style={styles.dataValue}>
               {fmt(taxResult.rendaVariavel.prejuizoAcumulado)}
@@ -302,10 +284,10 @@ export default function TaxesScreen() {
           </View>
 
           <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>IR devido</Text>
+            <Text style={styles.dataLabel}>{t('taxes.irDue')}</Text>
             {taxResult.rendaVariavel.isento ? (
               <View style={[styles.badge, styles.badgeGreen]}>
-                <Text style={styles.badgeGreenText}>Isento</Text>
+                <Text style={styles.badgeGreenText}>{t('taxes.exempt')}</Text>
               </View>
             ) : (
               <Text style={styles.dataValue}>
@@ -315,18 +297,15 @@ export default function TaxesScreen() {
           </View>
 
           <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Aliquota</Text>
+            <Text style={styles.dataLabel}>{t('taxes.rate')}</Text>
             <Text style={styles.dataValue}>
-              {(taxResult.rendaVariavel.aliquota * 100).toFixed(0)}% (swing
-              trade)
+              {(taxResult.rendaVariavel.aliquota * 100).toFixed(0)}% ({t('taxes.swingTrade')})
             </Text>
           </View>
 
           <View style={styles.infoNote}>
             <Text style={styles.infoNoteText}>
-              {t('taxes.exemptNote') !== 'taxes.exemptNote'
-                ? t('taxes.exemptNote')
-                : 'Vendas de acoes ate R$ 20.000/mes sao isentas de IR para pessoa fisica (swing trade).'}
+              {t('taxes.exemptNote')}
             </Text>
           </View>
         </View>
@@ -334,32 +313,30 @@ export default function TaxesScreen() {
         {/* Card 3: FIIs */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>
-            {t('taxes.fiis') !== 'taxes.fiis'
-              ? t('taxes.fiis')
-              : 'Fundos Imobiliarios'}
+            {t('taxes.fiis')}
           </Text>
 
           <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Rendimentos</Text>
+            <Text style={styles.dataLabel}>{t('taxes.income')}</Text>
             <View style={styles.rowValueBadge}>
               <Text style={styles.dataValue}>
                 {fmt(taxResult.fiis.rendimentos)}
               </Text>
               <View style={[styles.miniBadge, styles.badgeGreen]}>
-                <Text style={styles.badgeGreenText}>Isentos</Text>
+                <Text style={styles.badgeGreenText}>{t('taxes.exemptPlural')}</Text>
               </View>
             </View>
           </View>
 
           <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Lucro na venda</Text>
+            <Text style={styles.dataLabel}>{t('taxes.saleProfit')}</Text>
             <Text style={styles.dataValue}>
               {fmt(taxResult.fiis.lucroVenda)}
             </Text>
           </View>
 
           <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>IR devido (20%)</Text>
+            <Text style={styles.dataLabel}>{t('taxes.irDue20')}</Text>
             <Text style={styles.dataValue}>
               {fmt(taxResult.fiis.irDevido)}
             </Text>
@@ -367,9 +344,7 @@ export default function TaxesScreen() {
 
           <View style={styles.infoNote}>
             <Text style={styles.infoNoteText}>
-              {t('taxes.fiisNote') !== 'taxes.fiisNote'
-                ? t('taxes.fiisNote')
-                : 'Rendimentos de FIIs sao isentos para pessoa fisica. Lucro na venda de cotas e tributado em 20%.'}
+              {t('taxes.fiisNote')}
             </Text>
           </View>
         </View>
@@ -377,22 +352,18 @@ export default function TaxesScreen() {
         {/* Card 4: Fixed Income (Renda Fixa) */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>
-            {t('taxes.fixedIncome') !== 'taxes.fixedIncome'
-              ? t('taxes.fixedIncome')
-              : 'Renda Fixa'}
+            {t('taxes.fixedIncome')}
           </Text>
 
           <Text style={styles.sectionSubtitle}>
-            {t('taxes.regressiveTable') !== 'taxes.regressiveTable'
-              ? t('taxes.regressiveTable')
-              : 'Tabela Regressiva do IR'}
+            {t('taxes.regressiveTable')}
           </Text>
 
           {/* Regressive tax table */}
           <View style={styles.taxTable}>
             <View style={styles.taxTableHeader}>
               <Text style={[styles.taxTableHeaderText, { flex: 2 }]}>
-                Prazo
+                {t('taxes.term')}
               </Text>
               <Text
                 style={[
@@ -400,14 +371,14 @@ export default function TaxesScreen() {
                   { flex: 1, textAlign: 'right' },
                 ]}
               >
-                Aliquota
+                {t('taxes.rate')}
               </Text>
             </View>
             {[
-              { label: 'Ate 180 dias', rate: '22,5%' },
-              { label: '181-360 dias', rate: '20%' },
-              { label: '361-720 dias', rate: '17,5%' },
-              { label: 'Acima de 720 dias', rate: '15%' },
+              { label: t('taxes.termUpTo180'), rate: '22,5%' },
+              { label: t('taxes.term181_360'), rate: '20%' },
+              { label: t('taxes.term361_720'), rate: '17,5%' },
+              { label: t('taxes.termOver720'), rate: '15%' },
             ].map((tier, idx) => (
               <View
                 key={tier.label}
@@ -434,7 +405,7 @@ export default function TaxesScreen() {
           </View>
 
           <View style={[styles.dataRow, { marginTop: spacing.md }]}>
-            <Text style={styles.dataLabel}>IR retido na fonte</Text>
+            <Text style={styles.dataLabel}>{t('taxes.withheldTax')}</Text>
             <Text style={styles.dataValue}>
               {fmt(taxResult.rendaFixa.irRetido)}
             </Text>
@@ -442,7 +413,7 @@ export default function TaxesScreen() {
 
           <View style={styles.infoNote}>
             <Text style={styles.infoNoteText}>
-              Isentos: LCI, LCA, CRI, CRA, debentures incentivadas
+              {t('taxes.exempt_list_full')}
             </Text>
           </View>
         </View>
@@ -451,24 +422,18 @@ export default function TaxesScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
             <Text style={styles.cardTitle}>
-              {t('taxes.crypto') !== 'taxes.crypto'
-                ? t('taxes.crypto')
-                : 'Criptomoedas'}
+              {t('taxes.crypto')}
             </Text>
             {taxResult.cripto.isento ? (
               <View style={[styles.chipBadge, styles.chipGreen]}>
                 <Text style={styles.chipGreenText}>
-                  {t('taxes.exempt') !== 'taxes.exempt'
-                    ? t('taxes.exempt')
-                    : 'Isento'}
+                  {t('taxes.exempt')}
                 </Text>
               </View>
             ) : (
               <View style={[styles.chipBadge, styles.chipYellow]}>
                 <Text style={styles.chipYellowText}>
-                  {t('taxes.taxable') !== 'taxes.taxable'
-                    ? t('taxes.taxable')
-                    : 'Tributavel'}
+                  {t('taxes.taxable')}
                 </Text>
               </View>
             )}
@@ -476,9 +441,7 @@ export default function TaxesScreen() {
 
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>
-              {t('taxes.sales') !== 'taxes.sales'
-                ? t('taxes.sales')
-                : 'Vendas no mes'}
+              {t('taxes.sales')}
             </Text>
             <Text style={styles.dataValue}>
               {fmt(taxResult.cripto.vendasMes)}
@@ -486,7 +449,7 @@ export default function TaxesScreen() {
           </View>
 
           <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>IR devido</Text>
+            <Text style={styles.dataLabel}>{t('taxes.irDue')}</Text>
             <Text style={styles.dataValue}>
               {fmt(taxResult.cripto.irDevido)}
             </Text>
@@ -494,9 +457,7 @@ export default function TaxesScreen() {
 
           <View style={styles.infoNote}>
             <Text style={styles.infoNoteText}>
-              {t('taxes.cryptoNote') !== 'taxes.cryptoNote'
-                ? t('taxes.cryptoNote')
-                : 'Vendas de criptomoedas ate R$ 35.000/mes sao isentas de IR. Acima, aliquota de 15%.'}
+              {t('taxes.cryptoNote')}
             </Text>
           </View>
         </View>
@@ -508,7 +469,7 @@ export default function TaxesScreen() {
           activeOpacity={0.8}
         >
           <AppIcon name="report" size={20} color={colors.background} />
-          <Text style={styles.primaryButtonText}>Gerar DARF</Text>
+          <Text style={styles.primaryButtonText}>{t('taxes.generateDARF')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -523,7 +484,7 @@ export default function TaxesScreen() {
             <>
               <AppIcon name="agent" size={20} color={colors.accent} />
               <Text style={styles.secondaryButtonText}>
-                Pedir analise da IA
+                {t('taxes.askAI')}
               </Text>
             </>
           )}

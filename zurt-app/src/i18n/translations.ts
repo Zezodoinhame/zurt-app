@@ -190,6 +190,13 @@ export const translations: Record<Language, Record<string, string>> = {
     'connect.cancelMessage': 'Tem certeza que deseja cancelar a conexão bancária?',
     'connect.continue': 'Continuar',
     'connect.cancel': 'Cancelar',
+    'connect.noTokenError': 'Nenhum token de conexão recebido do servidor.',
+    'connect.initiateError': 'Falha ao iniciar a conexão. Tente novamente.',
+    'connect.syncFailedShort': 'Conexão salva, mas a sincronização falhou.',
+    'connect.syncFailedLong': 'Conexão salva, mas a sincronização falhou. Os dados serão sincronizados em breve.',
+    'connect.webviewLoadError': 'Falha ao carregar a página de conexão. Tente novamente.',
+    'connect.webviewHttpError': 'A página de conexão retornou um erro. Tente novamente.',
+    'connect.somethingWentWrong': 'Algo deu errado. Tente novamente.',
 
     // Common
     'common.loading': 'Carregando...',
@@ -263,43 +270,44 @@ export const translations: Record<Language, Record<string, string>> = {
     'alerts.aiChecking': 'Analisando...',
 
     // Asset Detail
-    'asset.noData': 'Dados do ativo nao encontrados',
-    'asset.quoteOfDay': 'Cotacao do Dia',
+    'asset.noData': 'Dados do ativo não encontrados',
+    'asset.quoteOfDay': 'Cotação do Dia',
     'asset.open': 'Abertura',
-    'asset.high': 'Maxima',
-    'asset.low': 'Minima',
+    'asset.high': 'Máxima',
+    'asset.low': 'Mínima',
     'asset.prevClose': 'Fechamento anterior',
     'asset.volume': 'Volume',
     'asset.fundamentals': 'Indicadores Fundamentalistas',
-    'asset.netMargin': 'Margem Liquida',
-    'asset.debtEbitda': 'Divida Liq./EBITDA',
-    'asset.priceHistory': 'Historico de Preco',
+    'asset.netMargin': 'Margem Líquida',
+    'asset.debtEbitda': 'Dívida Líq./EBITDA',
+    'asset.priceHistory': 'Histórico de Preço',
     'asset.dividends': 'Dividendos (12m)',
     'asset.about': 'Sobre a Empresa',
     'asset.seeMore': 'Ver mais',
     'asset.seeLess': 'Ver menos',
     'asset.sector': 'Setor',
-    'asset.industry': 'Industria',
-    'asset.employees': 'Funcionarios',
+    'asset.industry': 'Indústria',
+    'asset.employees': 'Funcionários',
 
     // Cards - Transactions
-    'cards.recentTransactions': 'Ultimas transacoes',
-    'cards.moreTransactions': 'Mais transacoes',
-    'cards.noTransactions': 'Nenhuma transacao encontrada',
+    'cards.recentTransactions': 'Últimas transações',
+    'cards.moreTransactions': 'Mais transações',
+    'cards.noTransactions': 'Nenhuma transação encontrada',
+    'cards.dueDate': 'Vencimento',
 
     // Onboarding
     'onboarding.title1': 'Tudo em um lugar',
-    'onboarding.desc1': 'Conecte bancos, corretoras e carteiras. Veja todo o seu patrimonio em uma unica tela.',
+    'onboarding.desc1': 'Conecte bancos, corretoras e carteiras. Veja todo o seu patrimônio em uma única tela.',
     'onboarding.title2': 'Insights com IA',
-    'onboarding.desc2': 'Nosso agente inteligente analisa sua carteira e gera recomendacoes personalizadas em tempo real.',
-    'onboarding.title3': 'Acompanhe sua evolucao',
-    'onboarding.desc3': 'Graficos detalhados, alertas inteligentes e historico completo para voce tomar as melhores decisoes.',
+    'onboarding.desc2': 'Nosso agente inteligente analisa sua carteira e gera recomendações personalizadas em tempo real.',
+    'onboarding.title3': 'Acompanhe sua evolução',
+    'onboarding.desc3': 'Gráficos detalhados, alertas inteligentes e histórico completo para você tomar as melhores decisões.',
     'onboarding.title4': 'Comece agora',
-    'onboarding.desc4': 'Crie sua conta gratuita e conecte suas instituicoes em segundos via Open Finance.',
+    'onboarding.desc4': 'Crie sua conta gratuita e conecte suas instituições em segundos via Open Finance.',
     'onboarding.skip': 'Pular',
-    'onboarding.next': 'Proximo',
+    'onboarding.next': 'Próximo',
     'onboarding.createAccount': 'Criar conta',
-    'onboarding.alreadyHaveAccount': 'Ja tem uma conta? Entrar',
+    'onboarding.alreadyHaveAccount': 'Já tem uma conta? Entrar',
     // Report
     'report.title': 'Relatório Patrimonial',
     'report.subtitle': 'Gerado pela IA do ZURT Agent',
@@ -393,6 +401,38 @@ export const translations: Record<Language, Record<string, string>> = {
     'taxes.irDue': 'IR devido',
     'taxes.rate': 'Alíquota',
     'taxes.exempt_list': 'Isentos: LCI, LCA, CRI, CRA',
+    'taxes.totalEstimated': 'Total IR estimado',
+    'taxes.paymentDeadline': 'Prazo de pagamento',
+    'taxes.deadlineDesc': 'Último dia útil do mês seguinte',
+    'taxes.status': 'Status',
+    'taxes.income': 'Rendimentos',
+    'taxes.exemptPlural': 'Isentos',
+    'taxes.saleProfit': 'Lucro na venda',
+    'taxes.irDue20': 'IR devido (20%)',
+    'taxes.withheldTax': 'IR retido na fonte',
+    'taxes.swingTrade': 'swing trade',
+    'taxes.term': 'Prazo',
+    'taxes.termUpTo180': 'Até 180 dias',
+    'taxes.term181_360': '181-360 dias',
+    'taxes.term361_720': '361-720 dias',
+    'taxes.termOver720': 'Acima de 720 dias',
+    'taxes.exempt_list_full': 'Isentos: LCI, LCA, CRI, CRA, debêntures incentivadas',
+
+    // Password validation
+    'password.allFieldsRequired': 'Preencha todos os campos',
+    'password.minLength': 'A nova senha deve ter pelo menos 6 caracteres',
+
+    // Time relative
+    'time.now': 'agora',
+    'time.minutesAgo': 'há {n}min',
+    'time.hoursAgo': 'há {n}h',
+    'time.yesterday': 'ontem',
+    'time.daysAgo': 'há {n} dias',
+    'time.weeksAgo': 'há {n} sem',
+
+    // Accessibility
+    'common.back': 'Voltar',
+    'common.action': 'Ação',
 
     // Profile tools
     'profile.tools': 'Ferramentas',
@@ -586,6 +626,13 @@ export const translations: Record<Language, Record<string, string>> = {
     'connect.cancelMessage': 'Are you sure you want to cancel the bank connection?',
     'connect.continue': 'Continue',
     'connect.cancel': 'Cancel',
+    'connect.noTokenError': 'No connect token received from the server.',
+    'connect.initiateError': 'Failed to initiate connection. Please try again.',
+    'connect.syncFailedShort': 'Connection saved but sync failed.',
+    'connect.syncFailedLong': 'Connection saved but sync failed. Data will sync shortly.',
+    'connect.webviewLoadError': 'Failed to load the connection page. Please try again.',
+    'connect.webviewHttpError': 'Connection page returned an error. Please try again.',
+    'connect.somethingWentWrong': 'Something went wrong. Please try again.',
 
     // Common
     'common.loading': 'Loading...',
@@ -789,6 +836,41 @@ export const translations: Record<Language, Record<string, string>> = {
     'taxes.irDue': 'Tax due',
     'taxes.rate': 'Rate',
     'taxes.exempt_list': 'Exempt: LCI, LCA, CRI, CRA',
+    'taxes.totalEstimated': 'Total estimated IR',
+    'taxes.paymentDeadline': 'Payment deadline',
+    'taxes.deadlineDesc': 'Last business day of the following month',
+    'taxes.status': 'Status',
+    'taxes.income': 'Income',
+    'taxes.exemptPlural': 'Exempt',
+    'taxes.saleProfit': 'Sale profit',
+    'taxes.irDue20': 'Tax due (20%)',
+    'taxes.withheldTax': 'Withholding tax',
+    'taxes.swingTrade': 'swing trade',
+    'taxes.term': 'Term',
+    'taxes.termUpTo180': 'Up to 180 days',
+    'taxes.term181_360': '181-360 days',
+    'taxes.term361_720': '361-720 days',
+    'taxes.termOver720': 'Over 720 days',
+    'taxes.exempt_list_full': 'Exempt: LCI, LCA, CRI, CRA, incentivized debentures',
+
+    // Password validation
+    'password.allFieldsRequired': 'Please fill in all fields',
+    'password.minLength': 'New password must be at least 6 characters',
+
+    // Time relative
+    'time.now': 'now',
+    'time.minutesAgo': '{n}m ago',
+    'time.hoursAgo': '{n}h ago',
+    'time.yesterday': 'yesterday',
+    'time.daysAgo': '{n}d ago',
+    'time.weeksAgo': '{n}w ago',
+
+    // Accessibility
+    'common.back': 'Back',
+    'common.action': 'Action',
+
+    // Cards
+    'cards.dueDate': 'Due date',
 
     // Profile tools
     'profile.tools': 'Tools',
@@ -982,6 +1064,13 @@ export const translations: Record<Language, Record<string, string>> = {
     'connect.cancelMessage': '确定要取消银行连接吗？',
     'connect.continue': '继续',
     'connect.cancel': '取消',
+    'connect.noTokenError': '未从服务器收到连接令牌。',
+    'connect.initiateError': '无法启动连接。请重试。',
+    'connect.syncFailedShort': '连接已保存，但同步失败。',
+    'connect.syncFailedLong': '连接已保存，但同步失败。数据将很快同步。',
+    'connect.webviewLoadError': '无法加载连接页面。请重试。',
+    'connect.webviewHttpError': '连接页面返回错误。请重试。',
+    'connect.somethingWentWrong': '出了点问题。请重试。',
 
     // Common
     'common.loading': '加载中...',
@@ -1185,6 +1274,41 @@ export const translations: Record<Language, Record<string, string>> = {
     'taxes.irDue': '应缴税款',
     'taxes.rate': '税率',
     'taxes.exempt_list': '免税：LCI、LCA、CRI、CRA',
+    'taxes.totalEstimated': '预估总IR',
+    'taxes.paymentDeadline': '付款截止日期',
+    'taxes.deadlineDesc': '下月最后一个工作日',
+    'taxes.status': '状态',
+    'taxes.income': '收入',
+    'taxes.exemptPlural': '免税',
+    'taxes.saleProfit': '出售利润',
+    'taxes.irDue20': '应缴税款 (20%)',
+    'taxes.withheldTax': '源泉扣缴税',
+    'taxes.swingTrade': 'swing trade',
+    'taxes.term': '期限',
+    'taxes.termUpTo180': '180天以内',
+    'taxes.term181_360': '181-360天',
+    'taxes.term361_720': '361-720天',
+    'taxes.termOver720': '720天以上',
+    'taxes.exempt_list_full': '免税：LCI、LCA、CRI、CRA、激励型债券',
+
+    // Password validation
+    'password.allFieldsRequired': '请填写所有字段',
+    'password.minLength': '新密码至少6个字符',
+
+    // Time relative
+    'time.now': '刚刚',
+    'time.minutesAgo': '{n}分钟前',
+    'time.hoursAgo': '{n}小时前',
+    'time.yesterday': '昨天',
+    'time.daysAgo': '{n}天前',
+    'time.weeksAgo': '{n}周前',
+
+    // Accessibility
+    'common.back': '返回',
+    'common.action': '操作',
+
+    // Cards
+    'cards.dueDate': '到期日',
 
     // Profile tools
     'profile.tools': '工具',
@@ -1378,6 +1502,13 @@ export const translations: Record<Language, Record<string, string>> = {
     'connect.cancelMessage': 'هل أنت متأكد من إلغاء اتصال البنك؟',
     'connect.continue': 'استمرار',
     'connect.cancel': 'إلغاء',
+    'connect.noTokenError': 'لم يتم استلام رمز الاتصال من الخادم.',
+    'connect.initiateError': 'فشل في بدء الاتصال. يرجى المحاولة مرة أخرى.',
+    'connect.syncFailedShort': 'تم حفظ الاتصال لكن المزامنة فشلت.',
+    'connect.syncFailedLong': 'تم حفظ الاتصال لكن المزامنة فشلت. سيتم مزامنة البيانات قريبًا.',
+    'connect.webviewLoadError': 'فشل تحميل صفحة الاتصال. يرجى المحاولة مرة أخرى.',
+    'connect.webviewHttpError': 'صفحة الاتصال أرجعت خطأ. يرجى المحاولة مرة أخرى.',
+    'connect.somethingWentWrong': 'حدث خطأ ما. يرجى المحاولة مرة أخرى.',
 
     // Common
     'common.loading': 'جارٍ التحميل...',
@@ -1581,6 +1712,41 @@ export const translations: Record<Language, Record<string, string>> = {
     'taxes.irDue': 'الضريبة المستحقة',
     'taxes.rate': 'المعدل',
     'taxes.exempt_list': 'معفى: LCI، LCA، CRI، CRA',
+    'taxes.totalEstimated': 'إجمالي الضريبة المقدرة',
+    'taxes.paymentDeadline': 'موعد الدفع',
+    'taxes.deadlineDesc': 'آخر يوم عمل من الشهر التالي',
+    'taxes.status': 'الحالة',
+    'taxes.income': 'الدخل',
+    'taxes.exemptPlural': 'معفاة',
+    'taxes.saleProfit': 'ربح البيع',
+    'taxes.irDue20': 'الضريبة المستحقة (20%)',
+    'taxes.withheldTax': 'الضريبة المستقطعة',
+    'taxes.swingTrade': 'swing trade',
+    'taxes.term': 'المدة',
+    'taxes.termUpTo180': 'حتى 180 يوم',
+    'taxes.term181_360': '181-360 يوم',
+    'taxes.term361_720': '361-720 يوم',
+    'taxes.termOver720': 'أكثر من 720 يوم',
+    'taxes.exempt_list_full': 'معفى: LCI، LCA، CRI، CRA، سندات تحفيزية',
+
+    // Password validation
+    'password.allFieldsRequired': 'يرجى ملء جميع الحقول',
+    'password.minLength': 'يجب أن تكون كلمة المرور الجديدة 6 أحرف على الأقل',
+
+    // Time relative
+    'time.now': 'الآن',
+    'time.minutesAgo': 'منذ {n} دقيقة',
+    'time.hoursAgo': 'منذ {n} ساعة',
+    'time.yesterday': 'أمس',
+    'time.daysAgo': 'منذ {n} أيام',
+    'time.weeksAgo': 'منذ {n} أسابيع',
+
+    // Accessibility
+    'common.back': 'رجوع',
+    'common.action': 'إجراء',
+
+    // Cards
+    'cards.dueDate': 'تاريخ الاستحقاق',
 
     // Profile tools
     'profile.tools': 'أدوات',
