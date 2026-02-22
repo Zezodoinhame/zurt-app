@@ -26,6 +26,7 @@ import {
   createFamilyGroup,
   inviteFamilyMember,
   fetchFamilySummary,
+  isDemoMode,
 } from '../src/services/api';
 
 // =============================================================================
@@ -83,6 +84,7 @@ export default function FamilyScreen() {
   const [inviting, setInviting] = useState(false);
   const [creating, setCreating] = useState(false);
   const [groupName, setGroupName] = useState('Minha Família');
+  const isDemo = isDemoMode();
 
   // ---------------------------------------------------------------------------
   // Computed values
@@ -172,6 +174,13 @@ export default function FamilyScreen() {
       setShowInviteModal(false);
       setInviteEmail('');
       setInviteRole('member');
+      if (isDemo) {
+        Alert.alert(
+          'Demo',
+          t('family.demoInviteSent') || 'No modo demo, convites são simulados. Crie uma conta real para convidar membros!',
+          [{ text: 'OK' }],
+        );
+      }
       await loadData();
     } catch (err: any) {
       console.log('[Family] Error inviting member:', err?.message ?? err);
@@ -183,7 +192,7 @@ export default function FamilyScreen() {
     } finally {
       setInviting(false);
     }
-  }, [inviteEmail, inviteRole, loadData, t]);
+  }, [inviteEmail, inviteRole, loadData, t, isDemo]);
 
   const handleOpenCreateModal = useCallback(() => {
     setGroupName('Minha Família');
@@ -337,6 +346,17 @@ export default function FamilyScreen() {
                 )}
               </View>
             </View>
+
+            {/* ============================================================ */}
+            {/* Demo Banner                                                   */}
+            {/* ============================================================ */}
+            {isDemo && (
+              <View style={styles.demoBanner}>
+                <Text style={styles.demoBannerText}>
+                  {t('family.demoBanner') || 'Modo demonstração — dados fictícios. Crie uma conta para usar o grupo familiar real.'}
+                </Text>
+              </View>
+            )}
 
             {/* ============================================================ */}
             {/* Members List                                                  */}
@@ -786,6 +806,24 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 11,
       color: colors.text.muted,
       maxWidth: 100,
+    },
+
+    // -------------------------------------------------------------------------
+    // Demo Banner
+    // -------------------------------------------------------------------------
+    demoBanner: {
+      backgroundColor: '#FFD93D20',
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: '#E6A817',
+      padding: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    demoBannerText: {
+      fontSize: 13,
+      color: '#E6A817',
+      textAlign: 'center',
+      lineHeight: 18,
     },
 
     // -------------------------------------------------------------------------

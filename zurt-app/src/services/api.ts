@@ -919,12 +919,19 @@ export async function fetchReports(): Promise<any[]> {
 
 export async function generateReportApi(period: string, language?: string): Promise<any> {
   if (_isDemoMode) {
+    const lang = language || 'pt';
+    const analyses: Record<string, string> = {
+      pt: '**RESUMO EXECUTIVO**\nEste é um relatório demonstrativo. Conecte suas contas reais para gerar um relatório patrimonial personalizado com análise de IA.\n\n**ANÁLISE DO PATRIMÔNIO**\nNo modo demonstração, seus dados reais não estão disponíveis. O ZURT analisa suas contas bancárias, investimentos e cartões de crédito para gerar insights personalizados.\n\n**CENÁRIO DE MERCADO**\nIBOVESPA em tendência de alta, Selic em 15,00% a.a., Dólar estável na faixa de R$ 5,20.\n\n**RECOMENDAÇÕES**\n1. Conecte suas contas bancárias via Open Finance\n2. Adicione seus investimentos para acompanhar performance\n3. Use o ZURT Agent para insights personalizados\n4. Diversifique seus investimentos entre renda fixa e variável\n5. Mantenha uma reserva de emergência de 6 a 12 meses',
+      en: '**EXECUTIVE SUMMARY**\nThis is a demo report. Connect your real accounts to generate a personalized patrimonial report with AI analysis.\n\n**PORTFOLIO ANALYSIS**\nIn demo mode, your real data is not available. ZURT analyzes your bank accounts, investments and credit cards to generate personalized insights.\n\n**MARKET OVERVIEW**\nIBOVESPA trending up, Selic rate at 15.00% p.a., USD/BRL stable around R$ 5.20.\n\n**RECOMMENDATIONS**\n1. Connect your bank accounts via Open Finance\n2. Add your investments to track performance\n3. Use ZURT Agent for personalized insights\n4. Diversify between fixed income and equities\n5. Maintain an emergency fund of 6 to 12 months',
+      zh: '**执行摘要**\n这是一份演示报告。连接您的真实账户以生成带有AI分析的个性化资产报告。\n\n**投资组合分析**\n在演示模式下，您的真实数据不可用。ZURT分析您的银行账户、投资和信用卡以生成个性化洞察。\n\n**市场概况**\nIBOVESPA呈上升趋势，Selic利率为15.00%，美元/巴西雷亚尔稳定在R$ 5.20左右。\n\n**建议**\n1. 通过Open Finance连接您的银行账户\n2. 添加您的投资以跟踪表现\n3. 使用ZURT Agent获取个性化洞察',
+      ar: '**الملخص التنفيذي**\nهذا تقرير تجريبي. قم بربط حساباتك الحقيقية لإنشاء تقرير مالي مخصص مع تحليل الذكاء الاصطناعي.\n\n**تحليل المحفظة**\nفي الوضع التجريبي، بياناتك الحقيقية غير متوفرة.\n\n**التوصيات**\n1. قم بربط حساباتك المصرفية عبر Open Finance\n2. أضف استثماراتك لتتبع الأداء\n3. استخدم ZURT Agent للحصول على رؤى مخصصة',
+    };
     return {
-      analysis: 'Relatório demonstrativo. Conecte suas contas para gerar um relatório real com análise personalizada da IA.\n\n1. RESUMO EXECUTIVO\nNo modo demonstração, não temos acesso aos seus dados reais.\n\n2. ANALISE DO PATRIMONIO\nConecte suas instituições financeiras para uma análise completa.\n\n3. CARTEIRA DE INVESTIMENTOS\nSeus investimentos aparecerão aqui após conectar suas contas.\n\n4. CARTOES E GASTOS\nSeus cartões e gastos serão analisados após a conexão.\n\n5. CENARIO DE MERCADO\nIBOV em alta, Selic em 13,25%, Dólar estável.\n\n6. RECOMENDACOES\n1. Conecte suas contas reais para análise personalizada\n2. Diversifique seus investimentos\n3. Mantenha uma reserva de emergência\n\n7. PERSPECTIVAS\nAguardamos a conexão das suas contas para fornecer perspectivas personalizadas.',
+      analysis: analyses[lang] || analyses.pt,
       portfolio: { contas: [], investimentos: [], cartoes: [] },
-      market: {},
+      market: { ibovespa: { pontos: 190534, var: 1.06 }, dolar: { bid: '5.20' }, selic: '15%' },
       generatedAt: new Date().toISOString(),
-      investorName: 'Investidor Demo',
+      investorName: lang === 'en' ? 'Demo Investor' : lang === 'zh' ? '演示投资者' : lang === 'ar' ? 'مستثمر تجريبي' : 'Investidor Demo',
     };
   }
   return apiRequest('/ai/report', {
@@ -1266,7 +1273,16 @@ export async function sendAIChat(
 // =============================================================================
 
 export async function fetchFamilyGroup(): Promise<any> {
-  if (_isDemoMode) return { group: null, members: [] };
+  if (_isDemoMode) {
+    return {
+      group: { id: 'demo', name: 'Família Demo', owner_id: 'demo', created_at: new Date().toISOString() },
+      members: [
+        { id: 'demo-1', user_id: 'demo-1', name: 'Você (Demo)', role: 'owner', status: 'accepted', invited_email: 'demo@zurt.com.br', netWorth: 325000 },
+        { id: 'demo-2', user_id: 'demo-2', name: 'Maria Demo', role: 'spouse', status: 'accepted', invited_email: 'maria@demo.com', netWorth: 162350 },
+        { id: 'demo-3', user_id: null, name: null, role: 'child', status: 'pending', invited_email: 'filho@demo.com', netWorth: 0 },
+      ],
+    };
+  }
   try {
     return await apiRequest('/family');
   } catch {
@@ -1275,6 +1291,11 @@ export async function fetchFamilyGroup(): Promise<any> {
 }
 
 export async function createFamilyGroup(name: string): Promise<any> {
+  if (_isDemoMode) {
+    return {
+      group: { id: 'demo', name, owner_id: 'demo', created_at: new Date().toISOString() },
+    };
+  }
   return apiRequest('/family/create', {
     method: 'POST',
     body: JSON.stringify({ name }),
@@ -1282,6 +1303,9 @@ export async function createFamilyGroup(name: string): Promise<any> {
 }
 
 export async function inviteFamilyMember(email: string, role: string): Promise<any> {
+  if (_isDemoMode) {
+    return { member: { id: 'demo-new', invited_email: email, role, status: 'pending' } };
+  }
   return apiRequest('/family/invite', {
     method: 'POST',
     body: JSON.stringify({ email, role }),
@@ -1289,15 +1313,25 @@ export async function inviteFamilyMember(email: string, role: string): Promise<a
 }
 
 export async function acceptFamilyInvite(inviteId: string): Promise<any> {
+  if (_isDemoMode) return { success: true };
   return apiRequest(`/family/accept/${inviteId}`, { method: 'POST' });
 }
 
 export async function removeFamilyMember(memberId: string): Promise<void> {
+  if (_isDemoMode) return;
   await apiRequest(`/family/member/${memberId}`, { method: 'DELETE' });
 }
 
 export async function fetchFamilySummary(): Promise<any> {
-  if (_isDemoMode) return { totalNetWorth: 0, members: [] };
+  if (_isDemoMode) {
+    return {
+      totalNetWorth: 487350.00,
+      members: [
+        { userId: 'demo-1', name: 'Você (Demo)', role: 'owner', netWorth: 325000.00 },
+        { userId: 'demo-2', name: 'Maria Demo', role: 'spouse', netWorth: 162350.00 },
+      ],
+    };
+  }
   try {
     return await apiRequest('/family/summary');
   } catch {
