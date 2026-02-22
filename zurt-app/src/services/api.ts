@@ -119,10 +119,13 @@ async function apiRequest<T>(
 
   const token = await getToken();
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     Accept: 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
+  // Only set Content-Type if there's a body — avoids "Body cannot be empty" on DELETE/GET
+  if (options?.body) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   const effectiveTimeout = timeout ?? REQUEST_TIMEOUT;
   const controller = new AbortController();
