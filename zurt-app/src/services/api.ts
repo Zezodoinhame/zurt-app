@@ -1278,49 +1278,23 @@ export async function fetchFamilyGroup(): Promise<any> {
     return {
       group: { id: 'demo', name: 'Família Demo', owner_id: 'demo', created_at: new Date().toISOString() },
       members: [
-        { id: 'demo-1', user_id: 'demo-1', full_name: 'Você (Demo)', role: 'owner', status: 'accepted', invited_email: 'demo@zurt.com.br', netWorth: 325000 },
-        { id: 'demo-2', user_id: 'demo-2', full_name: 'Maria Demo', role: 'spouse', status: 'accepted', invited_email: 'maria@demo.com', netWorth: 162350 },
-        { id: 'demo-3', user_id: null, full_name: null, role: 'child', status: 'pending', invited_email: 'filho@demo.com', netWorth: 0 },
+        { id: 'demo-1', user_id: 'demo-1', full_name: 'Você (Demo)', role: 'owner', status: 'accepted', visibility: 'full', invited_email: 'demo@zurt.com.br' },
+        { id: 'demo-2', user_id: 'demo-2', full_name: 'Maria Demo', role: 'spouse', status: 'accepted', visibility: 'total', invited_email: 'maria@demo.com' },
+        { id: 'demo-3', user_id: null, full_name: null, role: 'child', status: 'pending', visibility: 'total', invited_email: 'filho@demo.com' },
       ],
     };
   }
-  try {
-    return await apiRequest('/family');
-  } catch {
-    return { group: null, members: [] };
-  }
+  return apiRequest('/family');
 }
 
 export async function createFamilyGroup(name: string): Promise<any> {
-  if (_isDemoMode) {
-    return {
-      group: { id: 'demo', name, owner_id: 'demo', created_at: new Date().toISOString() },
-    };
-  }
-  return apiRequest('/family/create', {
-    method: 'POST',
-    body: JSON.stringify({ name }),
-  });
+  if (_isDemoMode) return { group: { id: 'demo', name }, existing: false };
+  return apiRequest('/family/create', { method: 'POST', body: JSON.stringify({ name }) });
 }
 
 export async function inviteFamilyMember(email: string, role: string): Promise<any> {
-  if (_isDemoMode) {
-    return { member: { id: 'demo-new', invited_email: email, role, status: 'pending' } };
-  }
-  return apiRequest('/family/invite', {
-    method: 'POST',
-    body: JSON.stringify({ email, role }),
-  });
-}
-
-export async function acceptFamilyInvite(inviteId: string): Promise<any> {
-  if (_isDemoMode) return { success: true };
-  return apiRequest(`/family/accept/${inviteId}`, { method: 'POST' });
-}
-
-export async function removeFamilyMember(memberId: string): Promise<void> {
-  if (_isDemoMode) return;
-  await apiRequest(`/family/member/${memberId}`, { method: 'DELETE' });
+  if (_isDemoMode) return { member: { id: 'demo-new', invited_email: email, role, status: 'pending' }, emailSent: true, autoAccepted: false, message: 'Convite enviado!' };
+  return apiRequest('/family/invite', { method: 'POST', body: JSON.stringify({ email, role }) });
 }
 
 export async function fetchFamilySummary(): Promise<any> {
@@ -1328,14 +1302,31 @@ export async function fetchFamilySummary(): Promise<any> {
     return {
       totalNetWorth: 487350.00,
       members: [
-        { userId: 'demo-1', full_name: 'Você (Demo)', role: 'owner', netWorth: 325000.00 },
-        { userId: 'demo-2', full_name: 'Maria Demo', role: 'spouse', netWorth: 162350.00 },
+        { userId: 'demo-1', full_name: 'Você (Demo)', role: 'owner', netWorth: 325000.00, visibility: 'full' },
+        { userId: 'demo-2', full_name: 'Maria Demo', role: 'spouse', netWorth: 162350.00, visibility: 'total' },
       ],
     };
   }
-  try {
-    return await apiRequest('/family/summary');
-  } catch {
-    return { totalNetWorth: 0, members: [] };
-  }
+  return apiRequest('/family/summary');
+}
+
+export async function fetchPendingInvites(): Promise<any> {
+  if (_isDemoMode) return { invites: [] };
+  return apiRequest('/family/pending');
+}
+
+export async function acceptFamilyInvite(token: string): Promise<any> {
+  return apiRequest('/family/accept/' + token, { method: 'POST', body: JSON.stringify({}) });
+}
+
+export async function rejectFamilyInvite(token: string): Promise<any> {
+  return apiRequest('/family/reject/' + token, { method: 'POST', body: JSON.stringify({}) });
+}
+
+export async function updateMemberVisibility(memberId: string, visibility: string): Promise<any> {
+  return apiRequest('/family/member/' + memberId + '/visibility', { method: 'PUT', body: JSON.stringify({ visibility }) });
+}
+
+export async function removeFamilyMember(memberId: string): Promise<any> {
+  return apiRequest('/family/member/' + memberId, { method: 'DELETE' });
 }

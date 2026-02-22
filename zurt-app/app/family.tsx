@@ -1,6 +1,6 @@
 // =============================================================================
 // ZURT Wealth Intelligence - Family Group Screen
-// Manage family wealth group, invite members, view consolidated patrimony
+// Complete family management: create, invite, visibility, pending invites, education
 // =============================================================================
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -14,6 +14,9 @@ import {
   Modal,
   TextInput,
   Alert,
+  RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -26,31 +29,41 @@ import {
   createFamilyGroup,
   inviteFamilyMember,
   fetchFamilySummary,
+  fetchPendingInvites,
+  acceptFamilyInvite,
+  rejectFamilyInvite,
+  updateMemberVisibility,
+  removeFamilyMember,
   isDemoMode,
 } from '../src/services/api';
 
 // =============================================================================
-// Helpers
+// Constants
 // =============================================================================
 
-const AVATAR_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'];
+const ROLE_COLORS: Record<string, string> = {
+  owner: '#00D4AA',
+  spouse: '#45B7D1',
+  child: '#FFD93D',
+  member: '#A0AEC0',
+};
 
-function getAvatarColor(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  const index = Math.abs(hash) % AVATAR_COLORS.length;
-  return AVATAR_COLORS[index];
-}
+const VISIBILITY_ICONS: Record<string, string> = {
+  total: '\uD83D\uDC41\uFE0F',
+  detailed: '\uD83D\uDC41\uFE0F\u200D\uD83D\uDDE8\uFE0F',
+  full: '\uD83D\uDD13',
+};
+
+// =============================================================================
+// Helpers
+// =============================================================================
 
 function getInitial(name: string): string {
   if (!name) return '?';
   return name.trim().charAt(0).toUpperCase();
 }
 
-function formatCurrencyBRL(value: number): string {
+function formatCurrency(value: number): string {
   if (value == null || isNaN(value)) return 'R$ 0,00';
   return value.toLocaleString('pt-BR', {
     style: 'currency',
@@ -60,8 +73,12 @@ function formatCurrencyBRL(value: number): string {
   });
 }
 
+function getMemberName(member: any): string {
+  return member.full_name || member.name || member.invited_email || '';
+}
+
 // =============================================================================
-// Main Screen Component
+// Main Screen
 // =============================================================================
 
 export default function FamilyScreen() {
@@ -70,160 +87,252 @@ export default function FamilyScreen() {
   const t = useSettingsStore((s) => s.t);
   const colors = useSettingsStore((s) => s.colors);
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const isDemo = isDemoMode();
 
-  // ---------------------------------------------------------------------------
   // State
-  // ---------------------------------------------------------------------------
   const [group, setGroup] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>(null);
+  const [pendingInvites, setPendingInvites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Create group
+  const [groupName, setGroupName] = useState('');
+  const [creating, setCreating] = useState(false);
+
+  // Invite
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('member');
   const [inviting, setInviting] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [groupName, setGroupName] = useState('Minha Família');
-  const isDemo = isDemoMode();
+  const [inviteFeedback, setInviteFeedback] = useState('');
 
-  // ---------------------------------------------------------------------------
-  // Computed values
-  // ---------------------------------------------------------------------------
-  const totalWealth = useMemo(() => {
-    return members
-      .filter((m) => m.status === 'accepted')
-      .reduce((sum, m) => sum + (parseFloat(m.netWorth ?? m.net_worth ?? '0') || 0), 0);
-  }, [members]);
+  // Visibility modal
+  const [visModalVisible, setVisModalVisible] = useState(false);
+  const [visModalMember, setVisModalMember] = useState<any>(null);
+  const [visModalValue, setVisModalValue] = useState('total');
+  const [savingVisibility, setSavingVisibility] = useState(false);
 
-  const acceptedMembers = useMemo(() => {
-    return members.filter((m) => m.status === 'accepted');
-  }, [members]);
+  // Pending invite actions
+  const [acceptingToken, setAcceptingToken] = useState<string | null>(null);
+  const [rejectingToken, setRejectingToken] = useState<string | null>(null);
 
   // ---------------------------------------------------------------------------
   // Data loading
   // ---------------------------------------------------------------------------
   const loadData = useCallback(async () => {
-    setLoading(true);
     try {
-      const data = await fetchFamilyGroup();
-      setGroup(data?.group ?? null);
-      setMembers(data?.members ?? []);
+      const [familyData, summaryData, pendingData] = await Promise.all([
+        fetchFamilyGroup(),
+        fetchFamilySummary(),
+        fetchPendingInvites(),
+      ]);
+      setGroup(familyData?.group ?? null);
+      setMembers(familyData?.members ?? []);
+      setSummary(summaryData);
+      setPendingInvites(pendingData?.invites ?? []);
     } catch (err: any) {
-      console.log('[Family] Error loading family group:', err?.message ?? err);
+      console.log('[Family] Error loading:', err?.message);
       setGroup(null);
       setMembers([]);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadData();
+    (async () => {
+      setLoading(true);
+      await loadData();
+      setLoading(false);
+    })();
   }, [loadData]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }, [loadData]);
+
+  // ---------------------------------------------------------------------------
+  // Computed
+  // ---------------------------------------------------------------------------
+  const totalWealth = useMemo(() => {
+    return summary?.totalNetWorth ?? members
+      .filter((m) => m.status === 'accepted')
+      .reduce((sum: number, m: any) => sum + (parseFloat(m.netWorth ?? m.net_worth ?? '0') || 0), 0);
+  }, [summary, members]);
+
+  const acceptedMembers = useMemo(() => members.filter((m) => m.status === 'accepted'), [members]);
+
+  const summaryMembers = useMemo(() => {
+    return summary?.members ?? acceptedMembers.map((m: any) => ({
+      full_name: getMemberName(m),
+      role: m.role,
+      netWorth: parseFloat(m.netWorth ?? m.net_worth ?? '0') || 0,
+    }));
+  }, [summary, acceptedMembers]);
 
   // ---------------------------------------------------------------------------
   // Handlers
   // ---------------------------------------------------------------------------
   const handleBack = useCallback(() => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/(tabs)');
-    }
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)');
   }, [router]);
 
   const handleCreateGroup = useCallback(async () => {
-    if (!groupName.trim()) return;
+    const name = groupName.trim();
+    if (!name) return;
     setCreating(true);
     try {
-      await createFamilyGroup(groupName.trim());
+      await createFamilyGroup(name);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setShowCreateModal(false);
-      setGroupName('Minha Família');
+      setGroupName('');
       await loadData();
     } catch (err: any) {
-      console.log('[Family] Error creating group:', err?.message ?? err);
-      // If user already has a group (HTTP 400), just reload data to show it
       const msg = (err?.message ?? '').toLowerCase();
       if (msg.includes('400') || msg.includes('já possui') || msg.includes('ja possui') || msg.includes('already')) {
-        setShowCreateModal(false);
-        setGroupName('Minha Família');
         await loadData();
       } else {
-        Alert.alert(
-          t('family.errorTitle') || 'Erro',
-          t('family.errorCreate') || 'Não foi possível criar o grupo familiar. Tente novamente.',
-          [{ text: 'OK' }],
-        );
+        Alert.alert('Erro', err?.message || 'Não foi possível criar o grupo.');
       }
     } finally {
       setCreating(false);
     }
-  }, [groupName, loadData, t]);
+  }, [groupName, loadData]);
 
-  const handleInviteMember = useCallback(async () => {
-    if (!inviteEmail.trim()) return;
-
-    // Basic email validation
+  const handleInvite = useCallback(async () => {
+    const email = inviteEmail.trim();
+    if (!email) return;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(inviteEmail.trim())) {
-      Alert.alert(
-        t('family.errorTitle') || 'Erro',
-        t('family.invalidEmail') || 'Por favor, insira um email válido.',
-        [{ text: 'OK' }],
-      );
+    if (!emailRegex.test(email)) {
+      Alert.alert('Erro', t('family.alreadyInvited') || 'Email inválido');
       return;
     }
-
     setInviting(true);
+    setInviteFeedback('');
     try {
-      await inviteFamilyMember(inviteEmail.trim(), inviteRole);
+      const result = await inviteFamilyMember(email, inviteRole);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setShowInviteModal(false);
+      if (result.autoAccepted) {
+        setInviteFeedback(t('family.inviteAutoAccepted'));
+      } else if (result.emailSent) {
+        setInviteFeedback(t('family.inviteEmailSent'));
+      } else {
+        setInviteFeedback(t('family.inviteEmailFailed'));
+      }
       setInviteEmail('');
       setInviteRole('member');
-      if (isDemo) {
-        Alert.alert(
-          'Demo',
-          t('family.demoInviteSent') || 'No modo demo, convites são simulados. Crie uma conta real para convidar membros!',
-          [{ text: 'OK' }],
-        );
-      }
       await loadData();
     } catch (err: any) {
-      console.log('[Family] Error inviting member:', err?.message ?? err);
-      Alert.alert(
-        t('family.errorTitle') || 'Erro',
-        t('family.errorInvite') || 'Não foi possível enviar o convite. Tente novamente.',
-        [{ text: 'OK' }],
-      );
+      const msg = (err?.message ?? '').toLowerCase();
+      if (msg.includes('already') || msg.includes('já') || msg.includes('ja ')) {
+        Alert.alert('', t('family.alreadyInvited'));
+      } else {
+        Alert.alert('Erro', err?.message || 'Não foi possível enviar o convite.');
+      }
     } finally {
       setInviting(false);
     }
-  }, [inviteEmail, inviteRole, loadData, t, isDemo]);
+  }, [inviteEmail, inviteRole, loadData, t]);
 
-  const handleOpenCreateModal = useCallback(() => {
-    setGroupName('Minha Família');
-    setShowCreateModal(true);
-  }, []);
+  const handleAcceptInvite = useCallback(async (token: string) => {
+    setAcceptingToken(token);
+    try {
+      await acceptFamilyInvite(token);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await loadData();
+    } catch (err: any) {
+      Alert.alert('Erro', err?.message || 'Erro ao aceitar convite.');
+    } finally {
+      setAcceptingToken(null);
+    }
+  }, [loadData]);
 
-  const handleOpenInviteModal = useCallback(() => {
-    setInviteEmail('');
-    setInviteRole('member');
-    setShowInviteModal(true);
-  }, []);
+  const handleRejectInvite = useCallback(async (token: string) => {
+    setRejectingToken(token);
+    try {
+      await rejectFamilyInvite(token);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await loadData();
+    } catch (err: any) {
+      Alert.alert('Erro', err?.message || 'Erro ao recusar convite.');
+    } finally {
+      setRejectingToken(null);
+    }
+  }, [loadData]);
+
+  const handleMemberLongPress = useCallback((member: any) => {
+    if (member.role === 'owner') return;
+    Alert.alert(
+      getMemberName(member),
+      '',
+      [
+        {
+          text: t('family.changeVisibility'),
+          onPress: () => {
+            setVisModalMember(member);
+            setVisModalValue(member.visibility || 'total');
+            setVisModalVisible(true);
+          },
+        },
+        {
+          text: t('family.removeMember'),
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              t('family.removeMember'),
+              t('family.removeConfirm'),
+              [
+                { text: t('family.cancel'), style: 'cancel' },
+                {
+                  text: t('family.removeMember'),
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await removeFamilyMember(member.id);
+                      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                      await loadData();
+                    } catch (err: any) {
+                      Alert.alert('Erro', err?.message || 'Erro ao remover membro.');
+                    }
+                  },
+                },
+              ],
+            );
+          },
+        },
+        { text: t('family.cancel'), style: 'cancel' },
+      ],
+    );
+  }, [t, loadData]);
+
+  const handleSaveVisibility = useCallback(async () => {
+    if (!visModalMember) return;
+    setSavingVisibility(true);
+    try {
+      await updateMemberVisibility(visModalMember.id, visModalValue);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setVisModalVisible(false);
+      setVisModalMember(null);
+      await loadData();
+    } catch (err: any) {
+      Alert.alert('Erro', err?.message || 'Erro ao alterar visibilidade.');
+    } finally {
+      setSavingVisibility(false);
+    }
+  }, [visModalMember, visModalValue, loadData]);
 
   // ---------------------------------------------------------------------------
-  // Role chips for invite modal
+  // Role options for invite
   // ---------------------------------------------------------------------------
   const roleOptions = useMemo(() => [
-    { key: 'spouse', label: t('family.spouse') || 'Cônjuge' },
-    { key: 'child', label: t('family.child') || 'Filho(a)' },
-    { key: 'member', label: t('family.member') || 'Membro' },
+    { key: 'spouse', label: t('family.spouse'), icon: '\uD83D\uDC91' },
+    { key: 'child', label: t('family.child'), icon: '\uD83D\uDC76' },
+    { key: 'member', label: t('family.member'), icon: '\uD83D\uDC64' },
   ], [t]);
 
   // ---------------------------------------------------------------------------
-  // Loading state
+  // Loading
   // ---------------------------------------------------------------------------
   if (loading) {
     return (
@@ -232,14 +341,11 @@ export default function FamilyScreen() {
           <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
             <Text style={styles.backIcon}>{'\u2190'}</Text>
           </TouchableOpacity>
-          <Text style={styles.headerBarTitle}>
-            {t('family.title') || 'Grupo Familiar'} {'\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67\u200D\uD83D\uDC66'}
-          </Text>
+          <Text style={styles.headerTitle}>{t('family.title')}</Text>
           <View style={styles.backBtn} />
         </View>
-        <View style={styles.loadingContainer}>
+        <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.accent} />
-          <Text style={styles.loadingText}>{t('family.loading') || 'Carregando...'}</Text>
         </View>
       </View>
     );
@@ -250,374 +356,388 @@ export default function FamilyScreen() {
   // ---------------------------------------------------------------------------
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      {/* ================================================================== */}
-      {/* Header                                                              */}
-      {/* ================================================================== */}
+      {/* Header */}
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
           <Text style={styles.backIcon}>{'\u2190'}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerBarTitle}>
-          {t('family.title') || 'Grupo Familiar'} {'\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67\u200D\uD83D\uDC66'}
-        </Text>
+        <Text style={styles.headerTitle}>{t('family.title')}</Text>
         <View style={styles.backBtn} />
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {/* ================================================================ */}
-        {/* No Group — Empty State                                           */}
-        {/* ================================================================ */}
-        {group === null ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyEmoji}>{'\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67\u200D\uD83D\uDC66'}</Text>
-            <Text style={styles.emptyTitle}>
-              {t('family.noGroup') || 'Nenhum grupo familiar'}
-            </Text>
-            <Text style={styles.emptyDescription}>
-              {t('family.createDesc') || 'Crie um grupo familiar para consolidar o patrimônio de toda a família em um só lugar.'}
-            </Text>
-            <TouchableOpacity
-              style={styles.createButton}
-              onPress={handleOpenCreateModal}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.createButtonText}>
-                {t('family.createGroup') || 'Criar Grupo'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <>
-            {/* ============================================================ */}
-            {/* Total Wealth Card (glow variant)                              */}
-            {/* ============================================================ */}
-            <View style={styles.glowCard}>
-              <View style={styles.glowCardInner}>
-                <Text style={styles.glowLabel}>
-                  {t('family.totalWealth') || 'Patrimônio Familiar Total'}
-                </Text>
-                <Text style={styles.glowValue}>
-                  {formatCurrencyBRL(totalWealth)}
-                </Text>
-                <Text style={styles.glowMembersCount}>
-                  {members.length} {t('family.members') || 'membros'}
-                </Text>
-
-                {/* Horizontal stacked bar chart */}
-                {acceptedMembers.length > 0 && totalWealth > 0 && (
-                  <View style={styles.barChart}>
-                    {acceptedMembers.map((member) => {
-                      const netWorth = parseFloat(member.netWorth ?? member.net_worth ?? '0') || 0;
-                      const percent = totalWealth > 0 ? (netWorth / totalWealth) * 100 : 0;
-                      return (
-                        <View
-                          key={member.id}
-                          style={[
-                            styles.barSegment,
-                            {
-                              width: `${Math.max(percent, 2)}%` as any,
-                              backgroundColor: getAvatarColor(member.full_name || member.name || member.invited_email || ''),
-                            },
-                          ]}
-                        />
-                      );
-                    })}
-                  </View>
-                )}
-
-                {/* Bar legend */}
-                {acceptedMembers.length > 0 && totalWealth > 0 && (
-                  <View style={styles.barLegend}>
-                    {acceptedMembers.map((member) => {
-                      const name = member.full_name || member.name || member.invited_email || '';
-                      const netWorth = parseFloat(member.netWorth ?? member.net_worth ?? '0') || 0;
-                      const percent = totalWealth > 0 ? (netWorth / totalWealth) * 100 : 0;
-                      return (
-                        <View key={member.id} style={styles.legendItem}>
-                          <View
-                            style={[
-                              styles.legendDot,
-                              { backgroundColor: getAvatarColor(name) },
-                            ]}
-                          />
-                          <Text style={styles.legendText} numberOfLines={1}>
-                            {name.split(' ')[0]} ({percent.toFixed(0)}%)
-                          </Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {/* ============================================================ */}
-            {/* Demo Banner                                                   */}
-            {/* ============================================================ */}
-            {isDemo && (
-              <View style={styles.demoBanner}>
-                <Text style={styles.demoBannerText}>
-                  {t('family.demoBanner') || 'Modo demonstração — dados fictícios. Crie uma conta para usar o grupo familiar real.'}
-                </Text>
-              </View>
-            )}
-
-            {/* ============================================================ */}
-            {/* Members List                                                  */}
-            {/* ============================================================ */}
-            <Text style={styles.sectionTitle}>
-              {t('family.membersList') || 'Membros'}
-            </Text>
-
-            {members.map((member) => {
-              const name = member.full_name || member.name || member.invited_email || '';
-              const role = member.role || 'member';
-              const status = member.status || 'pending';
-              const netWorth = parseFloat(member.netWorth ?? member.net_worth ?? '0') || 0;
-              const avatarColor = getAvatarColor(name);
-              const initial = getInitial(name);
-              const isOwner = role === 'owner';
-              const isPending = status === 'pending';
-              const isAccepted = status === 'accepted';
-
-              return (
-                <View key={member.id} style={styles.memberCard}>
-                  <View style={styles.memberRow}>
-                    {/* Avatar */}
-                    <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
-                      <Text style={styles.avatarText}>{initial}</Text>
-                    </View>
-
-                    {/* Info */}
-                    <View style={styles.memberInfo}>
-                      <View style={styles.memberNameRow}>
-                        <Text style={styles.memberName} numberOfLines={1}>
-                          {name}
-                        </Text>
-                        {/* Role badge */}
-                        <View
-                          style={[
-                            styles.roleBadge,
-                            isOwner && { backgroundColor: colors.accent + '20' },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.roleBadgeText,
-                              isOwner && { color: colors.accent },
-                            ]}
-                          >
-                            {isOwner
-                              ? (t('family.owner') || 'Dono')
-                              : (t('family.' + role) || role)}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {/* Net worth */}
-                      <Text style={styles.memberNetWorth}>
-                        {formatCurrencyBRL(netWorth)}
-                      </Text>
-                    </View>
-
-                    {/* Status badge */}
-                    <View style={styles.statusContainer}>
-                      {isPending && (
-                        <View style={styles.statusBadgePending}>
-                          <Text style={styles.statusBadgePendingText}>
-                            {t('family.pending') || 'Pendente'}
-                          </Text>
-                        </View>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />
+          }
+        >
+          {/* ============================================================== */}
+          {/* Pending Invites for current user                                */}
+          {/* ============================================================== */}
+          {pendingInvites.length > 0 && (
+            <View style={styles.pendingSection}>
+              <Text style={styles.sectionTitle}>{t('family.pendingInvites')}</Text>
+              {pendingInvites.map((invite: any, idx: number) => (
+                <View key={`pending-${idx}-${invite.token}`} style={styles.pendingCard}>
+                  <Text style={styles.pendingText}>
+                    {(t('family.youAreInvited') || '')
+                      .replace('{group}', invite.group_name || '?')
+                      .replace('{inviter}', invite.inviter_name || invite.inviter_email || '?')}
+                  </Text>
+                  <View style={styles.pendingActions}>
+                    <TouchableOpacity
+                      style={styles.acceptBtn}
+                      onPress={() => handleAcceptInvite(invite.token)}
+                      disabled={acceptingToken === invite.token}
+                      activeOpacity={0.7}
+                    >
+                      {acceptingToken === invite.token ? (
+                        <ActivityIndicator size="small" color="#FFF" />
+                      ) : (
+                        <Text style={styles.acceptBtnText}>{t('family.accept')}</Text>
                       )}
-                      {isAccepted && (
-                        <View style={styles.statusBadgeAccepted}>
-                          <Text style={styles.statusBadgeAcceptedText}>
-                            {t('family.accepted') || 'Aceito'}
-                          </Text>
-                        </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.rejectBtn}
+                      onPress={() => handleRejectInvite(invite.token)}
+                      disabled={rejectingToken === invite.token}
+                      activeOpacity={0.7}
+                    >
+                      {rejectingToken === invite.token ? (
+                        <ActivityIndicator size="small" color="#FF6B6B" />
+                      ) : (
+                        <Text style={styles.rejectBtnText}>{t('family.reject')}</Text>
                       )}
-                    </View>
+                    </TouchableOpacity>
                   </View>
                 </View>
-              );
-            })}
+              ))}
+            </View>
+          )}
 
-            {/* ============================================================ */}
-            {/* Invite Button                                                 */}
-            {/* ============================================================ */}
-            <TouchableOpacity
-              style={styles.inviteButton}
-              onPress={handleOpenInviteModal}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.inviteButtonText}>
-                {t('family.inviteMember') || 'Convidar Membro'}
-              </Text>
-            </TouchableOpacity>
-          </>
-        )}
-
-        {/* Bottom spacing */}
-        <View style={{ height: insets.bottom + 40 }} />
-      </ScrollView>
-
-      {/* ==================================================================== */}
-      {/* Create Group Modal                                                    */}
-      {/* ==================================================================== */}
-      <Modal
-        visible={showCreateModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => !creating && setShowCreateModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
-              {t('family.create') || 'Criar Grupo Familiar'}
-            </Text>
-
-            <Text style={styles.modalLabel}>
-              {t('family.groupNameLabel') || 'Nome do grupo'}
-            </Text>
-            <TextInput
-              style={styles.modalInput}
-              value={groupName}
-              onChangeText={setGroupName}
-              placeholder={t('family.groupNamePlaceholder') || 'Minha Família'}
-              placeholderTextColor={colors.text.muted}
-              autoFocus
-              editable={!creating}
-            />
-
-            <View style={styles.modalActions}>
+          {/* ============================================================== */}
+          {/* No Group — Empty State                                          */}
+          {/* ============================================================== */}
+          {group === null ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyEmoji}>{'\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67\u200D\uD83D\uDC66'}</Text>
+              <Text style={styles.emptyTitle}>{t('family.noGroupTitle')}</Text>
+              <Text style={styles.emptyDesc}>{t('family.noGroupDesc')}</Text>
+              <TextInput
+                style={styles.createInput}
+                value={groupName}
+                onChangeText={setGroupName}
+                placeholder={t('family.groupNamePlaceholder')}
+                placeholderTextColor={colors.text.muted}
+                editable={!creating}
+              />
               <TouchableOpacity
-                style={styles.modalCancelButton}
-                onPress={() => setShowCreateModal(false)}
-                disabled={creating}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.modalCancelText}>
-                  {t('family.cancel') || 'Cancelar'}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.modalConfirmButton,
-                  creating && styles.modalButtonDisabled,
-                ]}
+                style={[styles.createBtn, (!groupName.trim() || creating) && { opacity: 0.5 }]}
                 onPress={handleCreateGroup}
-                disabled={creating || !groupName.trim()}
+                disabled={!groupName.trim() || creating}
                 activeOpacity={0.8}
               >
                 {creating ? (
-                  <ActivityIndicator size="small" color={colors.background} />
+                  <ActivityIndicator size="small" color="#FFF" />
                 ) : (
-                  <Text style={styles.modalConfirmText}>
-                    {t('family.createGroup') || 'Criar Grupo'}
-                  </Text>
+                  <Text style={styles.createBtnText}>{t('family.createGroup')}</Text>
                 )}
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
-      </Modal>
+          ) : (
+            <>
+              {/* ========================================================== */}
+              {/* Demo Banner                                                  */}
+              {/* ========================================================== */}
+              {isDemo && (
+                <View style={styles.demoBanner}>
+                  <Text style={styles.demoBannerText}>
+                    Modo demonstração — dados fictícios
+                  </Text>
+                </View>
+              )}
 
-      {/* ==================================================================== */}
-      {/* Invite Member Modal                                                   */}
-      {/* ==================================================================== */}
-      <Modal
-        visible={showInviteModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => !inviting && setShowInviteModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
-              {t('family.invite') || 'Convidar Membro'}
-            </Text>
+              {/* ========================================================== */}
+              {/* C1. Total Wealth Card                                        */}
+              {/* ========================================================== */}
+              <View style={styles.wealthCard}>
+                <Text style={styles.wealthLabel}>{t('family.totalWealth')}</Text>
+                <Text style={styles.wealthValue}>{formatCurrency(totalWealth)}</Text>
+                <Text style={styles.wealthSub}>
+                  {(t('family.activeMembers') || '{n} membros ativos').replace('{n}', String(acceptedMembers.length))}
+                </Text>
 
-            {/* Email input */}
-            <Text style={styles.modalLabel}>
-              {t('family.emailLabel') || 'Email'}
-            </Text>
-            <TextInput
-              style={styles.modalInput}
-              value={inviteEmail}
-              onChangeText={setInviteEmail}
-              placeholder={t('family.emailPlaceholder') || 'nome@email.com'}
-              placeholderTextColor={colors.text.muted}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoFocus
-              editable={!inviting}
-            />
+                {/* Bar chart */}
+                {summaryMembers.length > 0 && totalWealth > 0 && (
+                  <>
+                    <View style={styles.barChart}>
+                      {summaryMembers.map((m: any, i: number) => {
+                        const nw = parseFloat(m.netWorth ?? m.net_worth ?? '0') || 0;
+                        const pct = totalWealth > 0 ? (nw / totalWealth) * 100 : 0;
+                        return (
+                          <View
+                            key={`bar-${i}`}
+                            style={[
+                              styles.barSeg,
+                              {
+                                width: `${Math.max(pct, 2)}%` as any,
+                                backgroundColor: ROLE_COLORS[m.role] || '#A0AEC0',
+                              },
+                            ]}
+                          />
+                        );
+                      })}
+                    </View>
+                    <View style={styles.barLegend}>
+                      {summaryMembers.map((m: any, i: number) => {
+                        const name = m.full_name || m.name || '';
+                        const nw = parseFloat(m.netWorth ?? m.net_worth ?? '0') || 0;
+                        const pct = totalWealth > 0 ? (nw / totalWealth) * 100 : 0;
+                        return (
+                          <View key={`leg-${i}`} style={styles.legendItem}>
+                            <View style={[styles.legendDot, { backgroundColor: ROLE_COLORS[m.role] || '#A0AEC0' }]} />
+                            <Text style={styles.legendText} numberOfLines={1}>
+                              {(name.split(' ')[0] || '?')} ({pct.toFixed(0)}%)
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </>
+                )}
+              </View>
 
-            {/* Role selector */}
-            <Text style={styles.modalLabel}>
-              {t('family.roleLabel') || 'Função'}
-            </Text>
-            <View style={styles.roleChipsRow}>
-              {roleOptions.map((option) => {
-                const isSelected = inviteRole === option.key;
+              {/* ========================================================== */}
+              {/* C2. Members List                                             */}
+              {/* ========================================================== */}
+              <View style={styles.sectionRow}>
+                <Text style={styles.sectionTitle}>{t('family.members')}</Text>
+                <View style={styles.countBadge}>
+                  <Text style={styles.countBadgeText}>{members.length}</Text>
+                </View>
+              </View>
+
+              {members.map((member: any, idx: number) => {
+                const name = getMemberName(member);
+                const role = member.role || 'member';
+                const isPending = member.status === 'pending';
+                const isAccepted = member.status === 'accepted';
+                const roleColor = ROLE_COLORS[role] || '#A0AEC0';
+                const nw = parseFloat(member.netWorth ?? member.net_worth ?? '0') || 0;
+                const visIcon = VISIBILITY_ICONS[member.visibility] || VISIBILITY_ICONS.total;
+
                 return (
                   <TouchableOpacity
-                    key={option.key}
-                    style={[
-                      styles.roleChip,
-                      isSelected && styles.roleChipActive,
-                    ]}
-                    onPress={() => setInviteRole(option.key)}
-                    disabled={inviting}
-                    activeOpacity={0.7}
+                    key={`member-${idx}-${member.id}`}
+                    style={styles.memberCard}
+                    onLongPress={() => handleMemberLongPress(member)}
+                    activeOpacity={0.8}
+                    delayLongPress={400}
                   >
-                    <Text
-                      style={[
-                        styles.roleChipText,
-                        isSelected && styles.roleChipTextActive,
-                      ]}
-                    >
-                      {option.label}
-                    </Text>
+                    <View style={styles.memberRow}>
+                      {/* Avatar */}
+                      <View style={[styles.avatar, { backgroundColor: roleColor }]}>
+                        <Text style={styles.avatarText}>{getInitial(name)}</Text>
+                      </View>
+
+                      {/* Info */}
+                      <View style={styles.memberInfo}>
+                        <View style={styles.nameRow}>
+                          <Text style={styles.memberName} numberOfLines={1}>{name}</Text>
+                          <View style={[styles.roleBadge, { backgroundColor: roleColor + '20' }]}>
+                            <Text style={[styles.roleBadgeText, { color: roleColor }]}>
+                              {t('family.' + role) || role}
+                            </Text>
+                          </View>
+                        </View>
+                        {isPending ? (
+                          <Text style={styles.pendingLabel}>{t('family.inviteSent') || 'Convite enviado'}</Text>
+                        ) : isAccepted && nw > 0 ? (
+                          <Text style={styles.memberWealth}>{formatCurrency(nw)}</Text>
+                        ) : null}
+                      </View>
+
+                      {/* Right: status + visibility */}
+                      <View style={styles.memberRight}>
+                        <View style={[styles.statusBadge, isPending ? styles.statusPending : styles.statusActive]}>
+                          <Text style={[styles.statusText, isPending ? styles.statusTextPending : styles.statusTextActive]}>
+                            {isPending ? t('family.pending') : t('family.active')}
+                          </Text>
+                        </View>
+                        {isAccepted && (
+                          <Text style={styles.visIcon}>{visIcon}</Text>
+                        )}
+                      </View>
+                    </View>
                   </TouchableOpacity>
                 );
               })}
-            </View>
 
-            {/* Actions */}
+              {/* ========================================================== */}
+              {/* C3. Invite Section                                           */}
+              {/* ========================================================== */}
+              <View style={styles.inviteCard}>
+                <Text style={styles.inviteTitle}>
+                  {'\u2709\uFE0F'} {t('family.inviteSection')}
+                </Text>
+
+                <TextInput
+                  style={styles.inviteInput}
+                  value={inviteEmail}
+                  onChangeText={(v) => { setInviteEmail(v); setInviteFeedback(''); }}
+                  placeholder={t('family.emailPlaceholder')}
+                  placeholderTextColor={colors.text.muted}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!inviting}
+                />
+
+                <Text style={styles.roleSelectLabel}>{t('family.selectRole')}</Text>
+                <View style={styles.roleRow}>
+                  {roleOptions.map((opt) => {
+                    const selected = inviteRole === opt.key;
+                    const roleCol = ROLE_COLORS[opt.key] || '#A0AEC0';
+                    return (
+                      <TouchableOpacity
+                        key={opt.key}
+                        style={[
+                          styles.roleChip,
+                          selected && { backgroundColor: roleCol, borderColor: roleCol },
+                        ]}
+                        onPress={() => setInviteRole(opt.key)}
+                        disabled={inviting}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.roleChipText, selected && { color: '#FFF' }]}>
+                          {opt.icon} {opt.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.inviteBtn, (inviting || !inviteEmail.trim()) && { opacity: 0.5 }]}
+                  onPress={handleInvite}
+                  disabled={inviting || !inviteEmail.trim()}
+                  activeOpacity={0.8}
+                >
+                  {inviting ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Text style={styles.inviteBtnText}>{t('family.sendInvite')}</Text>
+                  )}
+                </TouchableOpacity>
+
+                {inviteFeedback !== '' && (
+                  <Text style={styles.inviteFeedback}>{inviteFeedback}</Text>
+                )}
+              </View>
+
+              {/* ========================================================== */}
+              {/* C5. Education Section                                        */}
+              {/* ========================================================== */}
+              <View style={styles.eduCard}>
+                <Text style={styles.eduTitle}>
+                  {'\uD83C\uDF93'} {t('family.educationTitle')}
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.eduScroll}
+                >
+                  {[
+                    { icon: '\uD83D\uDCCA', title: t('family.edu1'), desc: t('family.edu1Desc') },
+                    { icon: '\uD83C\uDFAF', title: t('family.edu2'), desc: t('family.edu2Desc') },
+                    { icon: '\uD83D\uDCA1', title: t('family.edu3'), desc: t('family.edu3Desc') },
+                  ].map((item, i) => (
+                    <View key={`edu-${i}`} style={styles.eduMini}>
+                      <Text style={styles.eduMiniIcon}>{item.icon}</Text>
+                      <Text style={styles.eduMiniTitle}>{item.title}</Text>
+                      <Text style={styles.eduMiniDesc}>{item.desc}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+                <TouchableOpacity
+                  style={styles.askAgentBtn}
+                  onPress={() => router.push('/(tabs)/agent')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.askAgentText}>{t('family.askAgent')}</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+
+          <View style={{ height: insets.bottom + 40 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      {/* ================================================================== */}
+      {/* Visibility Modal                                                     */}
+      {/* ================================================================== */}
+      <Modal
+        visible={visModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !savingVisibility && setVisModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{t('family.changeVisibility')}</Text>
+
+            {[
+              { key: 'total', label: t('family.visibilityTotal'), desc: t('family.visDescTotal'), icon: '\uD83D\uDC41\uFE0F' },
+              { key: 'detailed', label: t('family.visibilityDetailed'), desc: t('family.visDescDetailed'), icon: '\uD83D\uDC41\uFE0F\u200D\uD83D\uDDE8\uFE0F' },
+              { key: 'full', label: t('family.visibilityFull'), desc: t('family.visDescFull'), icon: '\uD83D\uDD13' },
+            ].map((opt) => {
+              const selected = visModalValue === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[styles.visOption, selected && styles.visOptionSelected]}
+                  onPress={() => setVisModalValue(opt.key)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.visOptionIcon}>{opt.icon}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.visOptionLabel, selected && { color: colors.accent }]}>
+                      {opt.label}
+                    </Text>
+                    <Text style={styles.visOptionDesc}>{opt.desc}</Text>
+                  </View>
+                  <View style={[styles.radio, selected && styles.radioSelected]}>
+                    {selected && <View style={styles.radioDot} />}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={styles.modalCancelButton}
-                onPress={() => setShowInviteModal(false)}
-                disabled={inviting}
-                activeOpacity={0.7}
+                style={styles.modalCancelBtn}
+                onPress={() => setVisModalVisible(false)}
+                disabled={savingVisibility}
               >
-                <Text style={styles.modalCancelText}>
-                  {t('family.cancel') || 'Cancelar'}
-                </Text>
+                <Text style={styles.modalCancelText}>{t('family.cancel')}</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
-                style={[
-                  styles.modalConfirmButton,
-                  inviting && styles.modalButtonDisabled,
-                ]}
-                onPress={handleInviteMember}
-                disabled={inviting || !inviteEmail.trim()}
-                activeOpacity={0.8}
+                style={[styles.modalSaveBtn, savingVisibility && { opacity: 0.5 }]}
+                onPress={handleSaveVisibility}
+                disabled={savingVisibility}
               >
-                {inviting ? (
-                  <ActivityIndicator size="small" color={colors.background} />
+                {savingVisibility ? (
+                  <ActivityIndicator size="small" color="#FFF" />
                 ) : (
-                  <Text style={styles.modalConfirmText}>
-                    {t('family.send') || 'Enviar'}
-                  </Text>
+                  <Text style={styles.modalSaveText}>{t('family.save')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -634,17 +754,11 @@ export default function FamilyScreen() {
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    // -------------------------------------------------------------------------
-    // Screen
-    // -------------------------------------------------------------------------
-    screen: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
+    screen: { flex: 1, backgroundColor: colors.background },
+    center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    scrollContent: { padding: spacing.xl },
 
-    // -------------------------------------------------------------------------
     // Header
-    // -------------------------------------------------------------------------
     headerBar: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -654,50 +768,23 @@ const createStyles = (colors: ThemeColors) =>
       borderBottomWidth: 0.5,
       borderBottomColor: colors.border,
     },
-    backBtn: {
-      width: 40,
-      height: 40,
+    backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+    backIcon: { fontSize: 22, color: colors.text.primary },
+    headerTitle: { fontSize: 18, fontWeight: '700', color: colors.text.primary },
+
+    // Demo banner
+    demoBanner: {
+      backgroundColor: '#FFD93D20',
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: '#E6A817',
+      padding: spacing.sm,
+      marginBottom: spacing.lg,
       alignItems: 'center',
-      justifyContent: 'center',
     },
-    backIcon: {
-      fontSize: 22,
-      color: colors.text.primary,
-    },
-    headerBarTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: colors.text.primary,
-    },
+    demoBannerText: { fontSize: 12, color: '#E6A817' },
 
-    // -------------------------------------------------------------------------
-    // Scroll
-    // -------------------------------------------------------------------------
-    scroll: {
-      flex: 1,
-    },
-    scrollContent: {
-      padding: spacing.xl,
-    },
-
-    // -------------------------------------------------------------------------
-    // Loading
-    // -------------------------------------------------------------------------
-    loadingContainer: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: spacing.md,
-    },
-    loadingText: {
-      fontSize: 15,
-      color: colors.text.secondary,
-      marginTop: spacing.sm,
-    },
-
-    // -------------------------------------------------------------------------
-    // Empty State
-    // -------------------------------------------------------------------------
+    // Empty state
     emptyCard: {
       backgroundColor: colors.card,
       borderRadius: radius.lg,
@@ -707,289 +794,11 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       marginTop: spacing.xl,
     },
-    emptyEmoji: {
-      fontSize: 56,
-      marginBottom: spacing.xl,
-    },
-    emptyTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: colors.text.primary,
-      textAlign: 'center',
-      marginBottom: spacing.md,
-    },
-    emptyDescription: {
-      fontSize: 14,
-      color: colors.text.secondary,
-      textAlign: 'center',
-      lineHeight: 20,
-      marginBottom: spacing.xxl,
-      paddingHorizontal: spacing.lg,
-    },
-    createButton: {
-      backgroundColor: colors.accent,
-      borderRadius: radius.lg,
-      paddingVertical: spacing.lg,
-      paddingHorizontal: spacing.xxxl,
-      alignItems: 'center',
-      justifyContent: 'center',
+    emptyEmoji: { fontSize: 64, marginBottom: spacing.xl },
+    emptyTitle: { fontSize: 22, fontWeight: '700', color: colors.text.primary, textAlign: 'center', marginBottom: spacing.md },
+    emptyDesc: { fontSize: 14, color: colors.text.secondary, textAlign: 'center', lineHeight: 22, marginBottom: spacing.xxl, paddingHorizontal: spacing.md },
+    createInput: {
       width: '100%',
-    },
-    createButtonText: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: colors.background,
-    },
-
-    // -------------------------------------------------------------------------
-    // Glow Card (Total Wealth)
-    // -------------------------------------------------------------------------
-    glowCard: {
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.accent + '40',
-      overflow: 'hidden',
-      marginBottom: spacing.xl,
-    },
-    glowCardInner: {
-      backgroundColor: colors.card,
-      padding: spacing.xl,
-      borderLeftWidth: 3,
-      borderLeftColor: colors.accent,
-    },
-    glowLabel: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.text.secondary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-      marginBottom: spacing.sm,
-    },
-    glowValue: {
-      fontSize: 28,
-      fontWeight: '800',
-      color: colors.text.primary,
-      marginBottom: spacing.xs,
-    },
-    glowMembersCount: {
-      fontSize: 13,
-      color: colors.text.muted,
-      marginBottom: spacing.lg,
-    },
-
-    // -------------------------------------------------------------------------
-    // Bar Chart
-    // -------------------------------------------------------------------------
-    barChart: {
-      flexDirection: 'row',
-      height: 12,
-      borderRadius: 6,
-      overflow: 'hidden',
-      backgroundColor: colors.border,
-      marginBottom: spacing.md,
-    },
-    barSegment: {
-      height: '100%',
-    },
-
-    // -------------------------------------------------------------------------
-    // Bar Legend
-    // -------------------------------------------------------------------------
-    barLegend: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: spacing.md,
-    },
-    legendItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-    },
-    legendDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-    },
-    legendText: {
-      fontSize: 11,
-      color: colors.text.muted,
-      maxWidth: 100,
-    },
-
-    // -------------------------------------------------------------------------
-    // Demo Banner
-    // -------------------------------------------------------------------------
-    demoBanner: {
-      backgroundColor: '#FFD93D20',
-      borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: '#E6A817',
-      padding: spacing.md,
-      marginBottom: spacing.lg,
-    },
-    demoBannerText: {
-      fontSize: 13,
-      color: '#E6A817',
-      textAlign: 'center',
-      lineHeight: 18,
-    },
-
-    // -------------------------------------------------------------------------
-    // Section Title
-    // -------------------------------------------------------------------------
-    sectionTitle: {
-      fontSize: 17,
-      fontWeight: '700',
-      color: colors.text.primary,
-      marginBottom: spacing.md,
-    },
-
-    // -------------------------------------------------------------------------
-    // Member Card
-    // -------------------------------------------------------------------------
-    memberCard: {
-      backgroundColor: colors.card,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
-      padding: spacing.lg,
-      marginBottom: spacing.md,
-    },
-    memberRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-
-    // Avatar
-    avatar: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginRight: spacing.md,
-    },
-    avatarText: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: '#FFFFFF',
-    },
-
-    // Member info
-    memberInfo: {
-      flex: 1,
-      marginRight: spacing.sm,
-    },
-    memberNameRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      marginBottom: spacing.xs,
-    },
-    memberName: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.text.primary,
-      flexShrink: 1,
-    },
-    roleBadge: {
-      backgroundColor: colors.border,
-      borderRadius: radius.sm,
-      paddingHorizontal: spacing.sm,
-      paddingVertical: 2,
-    },
-    roleBadgeText: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: colors.text.muted,
-      textTransform: 'capitalize',
-    },
-    memberNetWorth: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.text.secondary,
-    },
-
-    // Status badges
-    statusContainer: {
-      alignItems: 'flex-end',
-    },
-    statusBadgePending: {
-      backgroundColor: '#FFD93D20',
-      borderRadius: radius.sm,
-      paddingHorizontal: spacing.sm,
-      paddingVertical: spacing.xs,
-    },
-    statusBadgePendingText: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: '#E6A817',
-    },
-    statusBadgeAccepted: {
-      backgroundColor: colors.positive + '20',
-      borderRadius: radius.sm,
-      paddingHorizontal: spacing.sm,
-      paddingVertical: spacing.xs,
-    },
-    statusBadgeAcceptedText: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: colors.positive,
-    },
-
-    // -------------------------------------------------------------------------
-    // Invite Button
-    // -------------------------------------------------------------------------
-    inviteButton: {
-      backgroundColor: colors.accent,
-      borderRadius: radius.lg,
-      paddingVertical: spacing.lg + 2,
-      paddingHorizontal: spacing.xxl,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginTop: spacing.lg,
-    },
-    inviteButtonText: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: colors.background,
-    },
-
-    // -------------------------------------------------------------------------
-    // Modal
-    // -------------------------------------------------------------------------
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.6)',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: spacing.xl,
-    },
-    modalCard: {
-      backgroundColor: colors.card,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
-      padding: spacing.xxl,
-      width: '100%',
-      maxWidth: 400,
-    },
-    modalTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: colors.text.primary,
-      marginBottom: spacing.xl,
-      textAlign: 'center',
-    },
-    modalLabel: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.text.secondary,
-      marginBottom: spacing.sm,
-      textTransform: 'uppercase',
-      letterSpacing: 0.3,
-    },
-    modalInput: {
       backgroundColor: colors.input,
       borderRadius: radius.md,
       borderWidth: 1,
@@ -1000,72 +809,206 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.text.primary,
       marginBottom: spacing.lg,
     },
+    createBtn: {
+      width: '100%',
+      backgroundColor: '#00D4AA',
+      borderRadius: radius.lg,
+      paddingVertical: spacing.lg,
+      alignItems: 'center',
+    },
+    createBtnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
 
-    // Role chips
-    roleChipsRow: {
-      flexDirection: 'row',
-      gap: spacing.sm,
+    // Wealth card
+    wealthCard: {
+      backgroundColor: colors.card,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderLeftWidth: 4,
+      borderLeftColor: '#00D4AA',
+      padding: spacing.xl,
       marginBottom: spacing.xl,
     },
+    wealthLabel: { fontSize: 13, fontWeight: '600', color: colors.text.secondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.xs },
+    wealthValue: { fontSize: 28, fontWeight: '800', color: '#00D4AA', marginBottom: spacing.xs },
+    wealthSub: { fontSize: 13, color: colors.text.muted, marginBottom: spacing.lg },
+
+    // Bar
+    barChart: { flexDirection: 'row', height: 10, borderRadius: 5, overflow: 'hidden', backgroundColor: colors.border, marginBottom: spacing.sm },
+    barSeg: { height: '100%' },
+    barLegend: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    legendDot: { width: 8, height: 8, borderRadius: 4 },
+    legendText: { fontSize: 11, color: colors.text.muted, maxWidth: 120 },
+
+    // Section
+    sectionRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+    sectionTitle: { fontSize: 17, fontWeight: '700', color: colors.text.primary },
+    countBadge: { backgroundColor: colors.accent + '20', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2 },
+    countBadgeText: { fontSize: 12, fontWeight: '600', color: colors.accent },
+
+    // Member card
+    memberCard: {
+      backgroundColor: colors.card,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.lg,
+      marginBottom: spacing.sm,
+    },
+    memberRow: { flexDirection: 'row', alignItems: 'center' },
+    avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md },
+    avatarText: { fontSize: 18, fontWeight: '700', color: '#FFF' },
+    memberInfo: { flex: 1, marginRight: spacing.sm },
+    nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: 2 },
+    memberName: { fontSize: 15, fontWeight: '600', color: colors.text.primary, flexShrink: 1 },
+    roleBadge: { borderRadius: radius.sm, paddingHorizontal: 6, paddingVertical: 1 },
+    roleBadgeText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
+    pendingLabel: { fontSize: 12, color: '#E6A817', fontStyle: 'italic' },
+    memberWealth: { fontSize: 14, fontWeight: '600', color: '#00D4AA' },
+    memberRight: { alignItems: 'flex-end', gap: 4 },
+    statusBadge: { borderRadius: radius.sm, paddingHorizontal: 8, paddingVertical: 3 },
+    statusActive: { backgroundColor: '#00D4AA20' },
+    statusPending: { backgroundColor: '#FFD93D20' },
+    statusText: { fontSize: 10, fontWeight: '600' },
+    statusTextActive: { color: '#00D4AA' },
+    statusTextPending: { color: '#E6A817' },
+    visIcon: { fontSize: 14 },
+
+    // Invite card
+    inviteCard: {
+      backgroundColor: colors.card,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.xl,
+      marginTop: spacing.lg,
+      marginBottom: spacing.lg,
+    },
+    inviteTitle: { fontSize: 17, fontWeight: '700', color: colors.text.primary, marginBottom: spacing.lg },
+    inviteInput: {
+      backgroundColor: colors.input,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      fontSize: 15,
+      color: colors.text.primary,
+      marginBottom: spacing.md,
+    },
+    roleSelectLabel: { fontSize: 12, fontWeight: '600', color: colors.text.secondary, textTransform: 'uppercase', marginBottom: spacing.sm },
+    roleRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
     roleChip: {
       flex: 1,
       paddingVertical: spacing.md,
-      paddingHorizontal: spacing.sm,
       borderRadius: radius.md,
       borderWidth: 1.5,
       borderColor: colors.border,
       alignItems: 'center',
-      justifyContent: 'center',
       backgroundColor: colors.card,
     },
-    roleChipActive: {
-      borderColor: colors.accent,
-      backgroundColor: colors.accent + '15',
+    roleChipText: { fontSize: 12, fontWeight: '600', color: colors.text.secondary },
+    inviteBtn: {
+      backgroundColor: '#00D4AA',
+      borderRadius: radius.lg,
+      paddingVertical: spacing.lg - 2,
+      alignItems: 'center',
     },
-    roleChipText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.text.secondary,
-    },
-    roleChipTextActive: {
-      color: colors.accent,
-    },
+    inviteBtnText: { fontSize: 15, fontWeight: '700', color: '#FFF' },
+    inviteFeedback: { fontSize: 13, color: '#00D4AA', textAlign: 'center', marginTop: spacing.md, lineHeight: 20 },
 
-    // Modal actions
-    modalActions: {
-      flexDirection: 'row',
-      gap: spacing.md,
-      marginTop: spacing.md,
+    // Pending invites
+    pendingSection: { marginBottom: spacing.lg },
+    pendingCard: {
+      backgroundColor: colors.card,
+      borderRadius: radius.lg,
+      borderWidth: 1.5,
+      borderColor: '#FFD93D',
+      padding: spacing.xl,
+      marginTop: spacing.sm,
     },
-    modalCancelButton: {
+    pendingText: { fontSize: 14, color: colors.text.primary, lineHeight: 22, marginBottom: spacing.md },
+    pendingActions: { flexDirection: 'row', gap: spacing.md },
+    acceptBtn: { flex: 1, backgroundColor: '#00D4AA', borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },
+    acceptBtnText: { fontSize: 14, fontWeight: '700', color: '#FFF' },
+    rejectBtn: { flex: 1, borderWidth: 1, borderColor: '#FF6B6B', borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },
+    rejectBtnText: { fontSize: 14, fontWeight: '600', color: '#FF6B6B' },
+
+    // Education
+    eduCard: {
+      backgroundColor: colors.card,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.xl,
+      marginBottom: spacing.lg,
+    },
+    eduTitle: { fontSize: 17, fontWeight: '700', color: colors.text.primary, marginBottom: spacing.lg },
+    eduScroll: { gap: spacing.md, paddingRight: spacing.md },
+    eduMini: {
+      width: 160,
+      backgroundColor: colors.cardAlt,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+    },
+    eduMiniIcon: { fontSize: 28, marginBottom: spacing.sm },
+    eduMiniTitle: { fontSize: 14, fontWeight: '700', color: colors.text.primary, marginBottom: 4 },
+    eduMiniDesc: { fontSize: 12, color: colors.text.secondary, lineHeight: 16 },
+    askAgentBtn: {
+      backgroundColor: colors.accent + '15',
+      borderRadius: radius.md,
+      paddingVertical: spacing.md,
+      alignItems: 'center',
+      marginTop: spacing.lg,
+    },
+    askAgentText: { fontSize: 14, fontWeight: '600', color: colors.accent },
+
+    // Modal
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
+    modalCard: {
+      backgroundColor: colors.card,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.xxl,
+      width: '100%',
+      maxWidth: 400,
+    },
+    modalTitle: { fontSize: 20, fontWeight: '700', color: colors.text.primary, marginBottom: spacing.xl, textAlign: 'center' },
+    visOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      padding: spacing.lg,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: spacing.sm,
+    },
+    visOptionSelected: { borderColor: colors.accent, backgroundColor: colors.accent + '08' },
+    visOptionIcon: { fontSize: 24 },
+    visOptionLabel: { fontSize: 15, fontWeight: '600', color: colors.text.primary },
+    visOptionDesc: { fontSize: 12, color: colors.text.secondary, marginTop: 2 },
+    radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+    radioSelected: { borderColor: colors.accent },
+    radioDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.accent },
+    modalActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg },
+    modalCancelBtn: {
       flex: 1,
       paddingVertical: spacing.lg,
       borderRadius: radius.md,
       borderWidth: 1,
       borderColor: colors.border,
       alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.card,
     },
-    modalCancelText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.text.secondary,
-    },
-    modalConfirmButton: {
+    modalCancelText: { fontSize: 15, fontWeight: '600', color: colors.text.secondary },
+    modalSaveBtn: {
       flex: 1,
       paddingVertical: spacing.lg,
       borderRadius: radius.md,
-      alignItems: 'center',
-      justifyContent: 'center',
       backgroundColor: colors.accent,
+      alignItems: 'center',
     },
-    modalConfirmText: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: colors.background,
-    },
-    modalButtonDisabled: {
-      opacity: 0.6,
-    },
+    modalSaveText: { fontSize: 15, fontWeight: '700', color: '#FFF' },
   });
