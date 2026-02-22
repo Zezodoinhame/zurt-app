@@ -221,10 +221,10 @@ export default function AlertsScreen() {
 
           {aiAlerts.length > 0 && (
             <View style={styles.aiAlertsList}>
-              {aiAlerts.map((alert) => {
+              {aiAlerts.map((alert, index) => {
                 const config = aiAlertConfig[alert.type] ?? aiAlertConfig.info;
                 return (
-                  <View key={alert.id} style={[styles.aiAlertCard, { borderLeftColor: config.color }]}>
+                  <View key={`ai-alert-${index}-${alert.title}`} style={[styles.aiAlertCard, { borderLeftColor: config.color }]}>
                     <View style={styles.aiAlertRow}>
                       <Text style={styles.aiAlertIcon}>{config.icon}</Text>
                       <View style={styles.aiAlertContent}>
@@ -252,11 +252,11 @@ export default function AlertsScreen() {
             <Text style={styles.emptyText}>{t('alerts.noNotifications')}</Text>
           </View>
         ) : (
-          notifications.map((notification) => {
+          notifications.map((notification, index) => {
             const config = typeConfig[notification.type];
 
             return (
-              <View key={notification.id}>
+              <View key={`notif-${index}-${notification.id}`}>
                 <TouchableOpacity
                   style={[
                     styles.notificationCard,
