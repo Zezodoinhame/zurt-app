@@ -23,6 +23,7 @@ import { SkeletonList } from '../../src/components/skeletons/Skeleton';
 import { ErrorState } from '../../src/components/shared/ErrorState';
 import { formatPct, maskValue, formatCurrency } from '../../src/utils/formatters';
 import type { Asset, AssetClass, InstitutionId } from '../../src/types';
+import { AppIcon } from '../../src/hooks/useIcon';
 
 // ---------------------------------------------------------------------------
 // Label Maps
@@ -485,7 +486,7 @@ export default function WalletScreen() {
         <ErrorState message={error} onRetry={loadPortfolio} />
       ) : assets.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>💼</Text>
+          <AppIcon name="briefcase" size={48} color={colors.text.secondary} />
           <Text style={styles.emptyTitle}>{t('wallet.emptyTitle')}</Text>
           <Text style={styles.emptyDescription}>{t('wallet.emptyDescription')}</Text>
           <TouchableOpacity

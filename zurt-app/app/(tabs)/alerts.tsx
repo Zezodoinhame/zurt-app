@@ -21,13 +21,13 @@ import { fetchAIAlerts, type AIAlert } from '../../src/services/api';
 import type { NotificationType } from '../../src/types';
 import { AppIcon, type AppIconName } from '../../src/hooks/useIcon';
 
-const filterOptions: Array<{ key: NotificationType | 'all'; label: string }> = [
+const filterOptions: Array<{ key: NotificationType | 'all'; label: string; iconName?: AppIconName }> = [
   { key: 'all', label: 'Todos' },
-  { key: 'distribution', label: '💎 Dist.' },
-  { key: 'maturity', label: '⚠️ Venc.' },
-  { key: 'invoice', label: '💳 Fatura' },
-  { key: 'insight', label: '💡 Insight' },
-  { key: 'system', label: '🔔 Sistema' },
+  { key: 'distribution', label: 'Dist.', iconName: 'diamond' },
+  { key: 'maturity', label: 'Venc.', iconName: 'warning' },
+  { key: 'invoice', label: 'Fatura', iconName: 'card' },
+  { key: 'insight', label: 'Insight', iconName: 'idea' },
+  { key: 'system', label: 'Sistema', iconName: 'notification' },
 ];
 
 export default function AlertsScreen() {
@@ -176,14 +176,17 @@ export default function AlertsScreen() {
               setFilter(opt.key);
             }}
           >
-            <Text
-              style={[
-                styles.filterChipText,
-                filter === opt.key && styles.filterChipTextActive,
-              ]}
-            >
-              {opt.label}
-            </Text>
+            <View style={styles.filterChipRow}>
+              {opt.iconName && <AppIcon name={opt.iconName} size={14} color={filter === opt.key ? colors.accent : colors.text.secondary} />}
+              <Text
+                style={[
+                  styles.filterChipText,
+                  filter === opt.key && styles.filterChipTextActive,
+                ]}
+              >
+                {opt.label}
+              </Text>
+            </View>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -306,7 +309,7 @@ export default function AlertsScreen() {
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     accessibilityLabel={t('alerts.dismiss')}
                   >
-                    <Text style={styles.dismissText}>✕</Text>
+                    <AppIcon name="close" size={14} color={colors.text.muted} />
                   </TouchableOpacity>
                 </TouchableOpacity>
               </View>
@@ -361,6 +364,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     marginRight: spacing.sm,
+  },
+  filterChipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   filterChipActive: {
     backgroundColor: colors.accent + '20',

@@ -118,12 +118,13 @@ function SettingRow({ iconName, label, value, onPress, rightElement, danger }: S
   );
 }
 
-function SectionTitle({ title }: { title: string }) {
+function SectionTitle({ title, iconName }: { title: string; iconName?: AppIconName }) {
   const colors = useSettingsStore((s) => s.colors);
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   return (
-    <View>
+    <View style={styles.sectionTitleRow}>
+      {iconName && <AppIcon name={iconName} size={18} color={colors.text.secondary} />}
       <Text style={styles.sectionTitle}>{title}</Text>
     </View>
   );
@@ -700,7 +701,7 @@ export default function ProfileScreen() {
       </Card>
 
       {/* Security */}
-      <SectionTitle title={`\uD83D\uDD10 ${t('profile.security')}`} />
+      <SectionTitle title={t('profile.security')} iconName="biometric" />
       <View>
         <View style={styles.section}>
           <SettingRow
@@ -719,7 +720,7 @@ export default function ProfileScreen() {
       </View>
 
       {/* Preferences */}
-      <SectionTitle title={`\u2699\uFE0F ${t('profile.preferences')}`} />
+      <SectionTitle title={t('profile.preferences')} iconName="settings" />
       <View>
         <View style={styles.section}>
           <SettingRow
@@ -760,7 +761,7 @@ export default function ProfileScreen() {
       </View>
 
       {/* Appearance (Theme Selector) */}
-      <SectionTitle title={`\uD83C\uDFA8 ${t('profile.appearance')}`} />
+      <SectionTitle title={t('profile.appearance')} iconName="theme" />
       <View>
         <View style={styles.section}>
           <View style={styles.themeRow}>
@@ -822,7 +823,7 @@ export default function ProfileScreen() {
       </View>
 
       {/* Connected accounts */}
-      <SectionTitle title={`\uD83C\uDFE6 ${t('profile.connectedAccounts')}`} />
+      <SectionTitle title={t('profile.connectedAccounts')} iconName="bank" />
       <View>
         <View style={styles.section}>
           {institutions.map((inst) => {
@@ -867,7 +868,7 @@ export default function ProfileScreen() {
       </View>
 
       {/* ZURT Token */}
-      <SectionTitle title={`\uD83D\uDCCA ${t('profile.zurtToken')}`} />
+      <SectionTitle title={t('profile.zurtToken')} iconName="token" />
       <Card variant="elevated" delay={450}>
         <View style={styles.tokenRow}>
           <View style={styles.tokenItem}>
@@ -893,7 +894,7 @@ export default function ProfileScreen() {
       </Card>
 
       {/* Family & Taxes */}
-      <SectionTitle title={`\uD83D\uDCCA ${t('profile.tools')}`} />
+      <SectionTitle title={t('profile.tools')} iconName="tools" />
       <View>
         <View style={styles.section}>
           <SettingRow
@@ -916,7 +917,7 @@ export default function ProfileScreen() {
       </View>
 
       {/* About */}
-      <SectionTitle title={`\u2139\uFE0F ${t('profile.about')}`} />
+      <SectionTitle title={t('profile.about')} iconName="info" />
       <View>
         <View style={styles.section}>
           <SettingRow iconName="report" label={t('profile.terms')} onPress={handleTerms} />
@@ -1040,12 +1041,17 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   editIcon: {
     fontSize: 14,
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xl,
+    marginBottom: spacing.md,
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: colors.text.primary,
-    marginTop: spacing.xl,
-    marginBottom: spacing.md,
   },
   section: {
     backgroundColor: colors.card,

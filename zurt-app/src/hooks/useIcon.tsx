@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text } from 'react-native';
+import { View, Text } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSettingsStore } from '../stores/settingsStore';
 
@@ -57,6 +57,8 @@ const ICON_MAP: Record<string, { lib: 'ion' | 'mci'; name: string; emoji: string
   chevron:      { lib: 'ion', name: 'chevron-forward-outline', emoji: '\u203A' },
   taxes:        { lib: 'ion', name: 'calculator-outline', emoji: '\uD83E\uDDEE' },
   search:       { lib: 'ion', name: 'search-outline', emoji: '\uD83D\uDD0D' },
+  diamond:      { lib: 'ion', name: 'diamond-outline', emoji: '\uD83D\uDC8E' },
+  briefcase:    { lib: 'ion', name: 'briefcase-outline', emoji: '\uD83D\uDCBC' },
 };
 
 export type AppIconName = keyof typeof ICON_MAP;
@@ -70,16 +72,19 @@ interface AppIconProps {
 export function AppIcon({ name, size = 24, color = '#A0AEC0' }: AppIconProps) {
   const iconStyle = useSettingsStore((s) => s.iconStyle);
   const entry = ICON_MAP[name];
-  if (!entry) return <Text style={{ fontSize: size }}>{String(name)}</Text>;
+
+  const box = { width: size, height: size, alignItems: 'center' as const, justifyContent: 'center' as const };
+
+  if (!entry) return <View style={box}><Text style={{ fontSize: size * 0.8 }}>{String(name)}</Text></View>;
 
   if (iconStyle === 'emoji') {
-    return <Text style={{ fontSize: size * 0.9 }}>{entry.emoji}</Text>;
+    return <View style={box}><Text style={{ fontSize: size * 0.85 }}>{entry.emoji}</Text></View>;
   }
 
   if (entry.lib === 'mci') {
-    return <MaterialCommunityIcons name={entry.name as any} size={size} color={color} />;
+    return <View style={box}><MaterialCommunityIcons name={entry.name as any} size={size} color={color} /></View>;
   }
-  return <Ionicons name={entry.name as any} size={size} color={color} />;
+  return <View style={box}><Ionicons name={entry.name as any} size={size} color={color} /></View>;
 }
 
 /** Returns emoji string if iconStyle is 'emoji', empty string otherwise. For use in text templates. */
