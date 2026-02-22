@@ -436,6 +436,15 @@ export const translations: Record<Language, Record<string, string>> = {
 
     // Profile tools
     'profile.tools': 'Ferramentas',
+
+    // Push notification preferences
+    'push.notificationPreferences': 'Preferências de notificação',
+    'push.distribution': 'Distribuições',
+    'push.maturity': 'Vencimentos',
+    'push.invoice': 'Faturas',
+    'push.insight': 'Insights',
+    'push.system': 'Sistema',
+    'push.permissionDenied': 'Notificações bloqueadas nas configurações do dispositivo. Ative nas Configurações > ZURT.',
   },
   en: {
     // Tabs
@@ -874,6 +883,15 @@ export const translations: Record<Language, Record<string, string>> = {
 
     // Profile tools
     'profile.tools': 'Tools',
+
+    // Push notification preferences
+    'push.notificationPreferences': 'Notification preferences',
+    'push.distribution': 'Distributions',
+    'push.maturity': 'Maturities',
+    'push.invoice': 'Invoices',
+    'push.insight': 'Insights',
+    'push.system': 'System',
+    'push.permissionDenied': 'Notifications are blocked in device settings. Enable them in Settings > ZURT.',
   },
   zh: {
     // Tabs
@@ -1312,6 +1330,15 @@ export const translations: Record<Language, Record<string, string>> = {
 
     // Profile tools
     'profile.tools': '工具',
+
+    // Push notification preferences
+    'push.notificationPreferences': '通知偏好',
+    'push.distribution': '分红',
+    'push.maturity': '到期',
+    'push.invoice': '账单',
+    'push.insight': '洞察',
+    'push.system': '系统',
+    'push.permissionDenied': '通知已在设备设置中被阻止。请在设置 > ZURT中启用。',
   },
   ar: {
     // Tabs
@@ -1750,5 +1777,14 @@ export const translations: Record<Language, Record<string, string>> = {
 
     // Profile tools
     'profile.tools': 'أدوات',
+
+    // Push notification preferences
+    'push.notificationPreferences': 'تفضيلات الإشعارات',
+    'push.distribution': 'التوزيعات',
+    'push.maturity': 'الاستحقاقات',
+    'push.invoice': 'الفواتير',
+    'push.insight': 'الرؤى',
+    'push.system': 'النظام',
+    'push.permissionDenied': 'الإشعارات محظورة في إعدادات الجهاز. قم بتفعيلها في الإعدادات > ZURT.',
   },
 };

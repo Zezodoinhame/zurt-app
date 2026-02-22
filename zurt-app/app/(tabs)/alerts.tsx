@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import * as Notifications from 'expo-notifications';
 import { type ThemeColors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useNotificationStore } from '../../src/stores/notificationStore';
@@ -75,6 +76,14 @@ export default function AlertsScreen() {
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
+
+  // Auto-refresh when a push notification arrives while on this screen
+  useEffect(() => {
+    const subscription = Notifications.addNotificationReceivedListener(() => {
+      refresh();
+    });
+    return () => subscription.remove();
+  }, [refresh]);
 
   // Auto-check AI alerts once per session
   useEffect(() => {

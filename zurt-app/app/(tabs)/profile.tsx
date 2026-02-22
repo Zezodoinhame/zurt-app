@@ -21,6 +21,7 @@ import { spacing, radius } from '../../src/theme/spacing';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePortfolioStore } from '../../src/stores/portfolioStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import { usePushStore, type PushPreferences } from '../../src/stores/pushStore';
 import type { Language } from '../../src/i18n/translations';
 import type { Currency, ThemeMode, IconStyle } from '../../src/stores/settingsStore';
 import { Toggle } from '../../src/components/ui/Toggle';
@@ -518,6 +519,13 @@ export default function ProfileScreen() {
   const setTheme = useSettingsStore((s) => s.setTheme);
   const iconStyle = useSettingsStore((s) => s.iconStyle);
   const setIconStyle = useSettingsStore((s) => s.setIconStyle);
+  const {
+    permissionStatus,
+    preferences: pushPreferences,
+    registerForPushNotifications,
+    unregisterPushToken,
+    setTypePreference,
+  } = usePushStore();
 
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
@@ -602,8 +610,21 @@ export default function ProfileScreen() {
     (value: boolean) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       updateUser({ pushEnabled: value });
+      if (value) {
+        registerForPushNotifications();
+      } else {
+        unregisterPushToken();
+      }
     },
-    [updateUser]
+    [updateUser, registerForPushNotifications, unregisterPushToken]
+  );
+
+  const togglePushType = useCallback(
+    (type: keyof PushPreferences, value: boolean) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setTypePreference(type, value);
+    },
+    [setTypePreference]
   );
 
   const toggleHideValues = useCallback(
@@ -736,6 +757,71 @@ export default function ProfileScreen() {
               />
             }
           />
+          {user.pushEnabled && permissionStatus === 'denied' && (
+            <View style={styles.permissionWarning}>
+              <AppIcon name="warning" size={14} color={colors.warning} />
+              <Text style={styles.permissionWarningText}>{t('push.permissionDenied')}</Text>
+            </View>
+          )}
+          {user.pushEnabled && (
+            <>
+              <SettingRow
+                iconName="token"
+                label={t('push.distribution')}
+                rightElement={
+                  <Toggle
+                    value={pushPreferences.distribution}
+                    onValueChange={(v) => togglePushType('distribution', v)}
+                    accessibilityLabel={t('push.distribution')}
+                  />
+                }
+              />
+              <SettingRow
+                iconName="warning"
+                label={t('push.maturity')}
+                rightElement={
+                  <Toggle
+                    value={pushPreferences.maturity}
+                    onValueChange={(v) => togglePushType('maturity', v)}
+                    accessibilityLabel={t('push.maturity')}
+                  />
+                }
+              />
+              <SettingRow
+                iconName="card"
+                label={t('push.invoice')}
+                rightElement={
+                  <Toggle
+                    value={pushPreferences.invoice}
+                    onValueChange={(v) => togglePushType('invoice', v)}
+                    accessibilityLabel={t('push.invoice')}
+                  />
+                }
+              />
+              <SettingRow
+                iconName="idea"
+                label={t('push.insight')}
+                rightElement={
+                  <Toggle
+                    value={pushPreferences.insight}
+                    onValueChange={(v) => togglePushType('insight', v)}
+                    accessibilityLabel={t('push.insight')}
+                  />
+                }
+              />
+              <SettingRow
+                iconName="notification"
+                label={t('push.system')}
+                rightElement={
+                  <Toggle
+                    value={pushPreferences.system}
+                    onValueChange={(v) => togglePushType('system', v)}
+                    accessibilityLabel={t('push.system')}
+                  />
+                }
+              />
+            </>
+          )}
           <SettingRow
             iconName="eye"
             label={t('profile.hideValuesOnOpen')}
@@ -1089,6 +1175,20 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   dangerText: {
     color: colors.negative,
+  },
+  permissionWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.warning + '10',
+    gap: spacing.sm,
+  },
+  permissionWarningText: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.warning,
+    lineHeight: 16,
   },
   instIcon: {
     width: 28,

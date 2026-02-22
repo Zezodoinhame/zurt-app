@@ -13,7 +13,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.zurt.wealth"
+      "bundleIdentifier": "com.zurt.wealth",
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -43,6 +46,14 @@
         "expo-local-authentication",
         {
           "faceIDPermission": "Permitir ZURT usar Face ID para login seguro."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#060A0F",
+          "defaultChannel": "default"
         }
       ]
     ]

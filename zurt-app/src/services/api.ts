@@ -1275,6 +1275,46 @@ export async function sendAIChat(
 }
 
 // =============================================================================
+// Push Notifications
+// =============================================================================
+
+export async function registerPushTokenApi(token: string, platform: string): Promise<void> {
+  if (_isDemoMode) return;
+  try {
+    await apiRequest('/users/push-token', {
+      method: 'POST',
+      body: JSON.stringify({ token, platform }),
+    });
+  } catch {
+    // Silently fail
+  }
+}
+
+export async function unregisterPushTokenApi(token: string): Promise<void> {
+  if (_isDemoMode) return;
+  try {
+    await apiRequest('/users/push-token', {
+      method: 'DELETE',
+      body: JSON.stringify({ token }),
+    });
+  } catch {
+    // Silently fail
+  }
+}
+
+export async function updatePushPreferencesApi(prefs: Record<string, boolean>): Promise<void> {
+  if (_isDemoMode) return;
+  try {
+    await apiRequest('/users/push-preferences', {
+      method: 'PATCH',
+      body: JSON.stringify(prefs),
+    });
+  } catch {
+    // Silently fail
+  }
+}
+
+// =============================================================================
 // Family Group
 // =============================================================================
 

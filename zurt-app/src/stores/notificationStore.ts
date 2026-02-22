@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import * as Notifications from 'expo-notifications';
 import type { Notification, NotificationType } from '../types';
 import {
   fetchNotificationsApi,
@@ -74,6 +75,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     }));
     // Fire-and-forget API call
     markAllNotificationsReadApi();
+    // Clear OS badge
+    Notifications.setBadgeCountAsync(0).catch(() => {});
   },
 
   dismiss: (id: string) => {

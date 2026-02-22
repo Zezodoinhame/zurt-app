@@ -12,6 +12,7 @@ import {
 } from '../services/api';
 import { clearSession } from '../services/auth';
 import { logger } from '../utils/logger';
+import { usePushStore } from './pushStore';
 
 interface AuthState {
   user: User | null;
@@ -164,6 +165,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
     },
 
     logout: async () => {
+      try {
+        await usePushStore.getState().unregisterPushToken();
+      } catch {
+        // Silently fail
+      }
       await clearToken();
       await clearSession().catch(() => {});
       setDemoMode(false);
