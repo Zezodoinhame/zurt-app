@@ -6,6 +6,7 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -162,8 +163,13 @@ export default function WalletScreen() {
   );
 
   const handleAssetPress = useCallback((asset: Asset) => {
-    logger.log('ASSET PRESS:', asset.name, 'ticker:', asset.ticker);
+    logger.log('ASSET PRESS:', asset.name, 'ticker:', asset.ticker, 'class:', asset.class);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Block detail navigation for Renda Fixa and Previdência
+    if (asset.class === 'fixedIncome' || asset.class === 'pension') {
+      Alert.alert('', t('wallet.comingSoonDetail'));
+      return;
+    }
     // Navigate to full asset detail if ticker exists
     if (asset.ticker) {
       router.push({ pathname: '/asset-detail', params: { ticker: asset.ticker } });
@@ -172,7 +178,7 @@ export default function WalletScreen() {
     // Fallback to bottom sheet for assets without ticker
     setSelectedAsset(asset);
     setSheetVisible(true);
-  }, [router]);
+  }, [router, t]);
 
   const handleCloseSheet = useCallback(() => {
     setSheetVisible(false);

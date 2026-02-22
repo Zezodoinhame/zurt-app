@@ -24,6 +24,7 @@ import * as Haptics from 'expo-haptics';
 import { type ThemeColors } from '../src/theme/colors';
 import { spacing, radius } from '../src/theme/spacing';
 import { useSettingsStore } from '../src/stores/settingsStore';
+import { useAuthStore } from '../src/stores/authStore';
 import { AppIcon } from '../src/hooks/useIcon';
 import {
   fetchFamilyGroup,
@@ -35,6 +36,8 @@ import {
   rejectFamilyInvite,
   updateMemberVisibility,
   removeFamilyMember,
+  fetchMemberProfile,
+  updateMemberDelegation,
   isDemoMode,
 } from '../src/services/api';
 import { logger } from '../src/utils/logger';
@@ -81,6 +84,7 @@ export default function FamilyScreen() {
   const colors = useSettingsStore((s) => s.colors);
   const currency = useSettingsStore((s) => s.currency);
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const currentUser = useAuthStore((s) => s.user);
   const isDemo = isDemoMode();
 
   // State
@@ -106,6 +110,18 @@ export default function FamilyScreen() {
   const [visModalMember, setVisModalMember] = useState<any>(null);
   const [visModalValue, setVisModalValue] = useState('total');
   const [savingVisibility, setSavingVisibility] = useState(false);
+
+  // Member profile modal
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [profileMember, setProfileMember] = useState<any>(null);
+  const [profileData, setProfileData] = useState<any>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  // Delegation modal
+  const [delegationModalVisible, setDelegationModalVisible] = useState(false);
+  const [delegationMember, setDelegationMember] = useState<any>(null);
+  const [delegationSelection, setDelegationSelection] = useState<string[]>([]);
+  const [savingDelegation, setSavingDelegation] = useState(false);
 
   // Pending invite actions
   const [acceptingToken, setAcceptingToken] = useState<string | null>(null);
@@ -156,6 +172,10 @@ export default function FamilyScreen() {
   }, [summary, members]);
 
   const acceptedMembers = useMemo(() => members.filter((m) => m.status === 'accepted'), [members]);
+  const isOwner = useMemo(() => {
+    if (!currentUser || !group) return false;
+    return group.owner_id === currentUser.id || members.some((m) => m.user_id === currentUser.id && m.role === 'owner');
+  }, [currentUser, group, members]);
 
   const summaryMembers = useMemo(() => {
     return summary?.members ?? acceptedMembers.map((m: any) => ({
@@ -205,15 +225,9 @@ export default function FamilyScreen() {
     setInviting(true);
     setInviteFeedback('');
     try {
-      const result = await inviteFamilyMember(email, inviteRole);
+      await inviteFamilyMember(email, inviteRole);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (result.autoAccepted) {
-        setInviteFeedback(t('family.inviteAutoAccepted'));
-      } else if (result.emailSent) {
-        setInviteFeedback(t('family.inviteEmailSent'));
-      } else {
-        setInviteFeedback(t('family.inviteEmailFailed'));
-      }
+      setInviteFeedback(t('family.inviteEmailSent'));
       setInviteEmail('');
       setInviteRole('member');
       await loadData();
@@ -255,50 +269,107 @@ export default function FamilyScreen() {
     }
   }, [loadData]);
 
-  const handleMemberLongPress = useCallback((member: any) => {
-    if (member.role === 'owner') return;
-    Alert.alert(
-      getMemberName(member),
-      '',
-      [
-        {
-          text: t('family.changeVisibility'),
-          onPress: () => {
-            setVisModalMember(member);
-            setVisModalValue(member.visibility || 'total');
-            setVisModalVisible(true);
+  const handleViewMemberProfile = useCallback(async (member: any) => {
+    setProfileMember(member);
+    setProfileData(null);
+    setProfileModalVisible(true);
+    setProfileLoading(true);
+    try {
+      const data = await fetchMemberProfile(member.id);
+      setProfileData(data);
+    } catch {
+      setProfileData(null);
+    } finally {
+      setProfileLoading(false);
+    }
+  }, []);
+
+  const handleOpenDelegation = useCallback((member: any) => {
+    setDelegationMember(member);
+    setDelegationSelection(member.canViewMembers ?? []);
+    setDelegationModalVisible(true);
+  }, []);
+
+  const handleSaveDelegation = useCallback(async () => {
+    if (!delegationMember) return;
+    setSavingDelegation(true);
+    try {
+      await updateMemberDelegation(delegationMember.id, delegationSelection);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setDelegationModalVisible(false);
+      setDelegationMember(null);
+      await loadData();
+    } catch (err: any) {
+      Alert.alert('Erro', err?.message || 'Erro ao salvar delegação.');
+    } finally {
+      setSavingDelegation(false);
+    }
+  }, [delegationMember, delegationSelection, loadData]);
+
+  const handleMemberPress = useCallback((member: any) => {
+    if (member.status !== 'accepted') return;
+
+    if (isOwner && member.role !== 'owner') {
+      // Owner sees full action menu for non-owner members
+      Alert.alert(
+        getMemberName(member),
+        '',
+        [
+          {
+            text: t('family.viewProfile'),
+            onPress: () => handleViewMemberProfile(member),
           },
-        },
-        {
-          text: t('family.removeMember'),
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert(
-              t('family.removeMember'),
-              t('family.removeConfirm'),
-              [
-                { text: t('family.cancel'), style: 'cancel' },
-                {
-                  text: t('family.removeMember'),
-                  style: 'destructive',
-                  onPress: async () => {
-                    try {
-                      await removeFamilyMember(member.id);
-                      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-                      await loadData();
-                    } catch (err: any) {
-                      Alert.alert('Erro', err?.message || 'Erro ao remover membro.');
-                    }
+          {
+            text: t('family.changeVisibility'),
+            onPress: () => {
+              setVisModalMember(member);
+              setVisModalValue(member.visibility || 'total');
+              setVisModalVisible(true);
+            },
+          },
+          {
+            text: t('family.delegateAccess'),
+            onPress: () => handleOpenDelegation(member),
+          },
+          {
+            text: t('family.removeMember'),
+            style: 'destructive',
+            onPress: () => {
+              Alert.alert(
+                t('family.removeMember'),
+                t('family.removeConfirm'),
+                [
+                  { text: t('family.cancel'), style: 'cancel' },
+                  {
+                    text: t('family.removeMember'),
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        await removeFamilyMember(member.id);
+                        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                        await loadData();
+                      } catch (err: any) {
+                        Alert.alert('Erro', err?.message || 'Erro ao remover membro.');
+                      }
+                    },
                   },
-                },
-              ],
-            );
+                ],
+              );
+            },
           },
-        },
-        { text: t('family.cancel'), style: 'cancel' },
-      ],
-    );
-  }, [t, loadData]);
+          { text: t('family.cancel'), style: 'cancel' },
+        ],
+      );
+    } else if (!isOwner) {
+      // Non-owner: can only view profile of delegated members
+      const canView = member.canViewMembers ?? [];
+      const currentMember = members.find((m) => m.user_id === currentUser?.id);
+      const delegated = currentMember?.canViewMembers ?? [];
+      if (delegated.includes(member.user_id) || delegated.includes(member.id)) {
+        handleViewMemberProfile(member);
+      }
+    }
+  }, [isOwner, t, loadData, handleViewMemberProfile, handleOpenDelegation, members, currentUser]);
 
   const handleSaveVisibility = useCallback(async () => {
     if (!visModalMember) return;
@@ -531,7 +602,8 @@ export default function FamilyScreen() {
                   <TouchableOpacity
                     key={`member-${idx}-${member.id}`}
                     style={styles.memberCard}
-                    onLongPress={() => handleMemberLongPress(member)}
+                    onPress={() => handleMemberPress(member)}
+                    onLongPress={() => handleMemberPress(member)}
                     activeOpacity={0.8}
                     delayLongPress={400}
                   >
@@ -734,6 +806,163 @@ export default function FamilyScreen() {
                 disabled={savingVisibility}
               >
                 {savingVisibility ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.modalSaveText}>{t('family.save')}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ================================================================== */}
+      {/* Member Profile Modal                                                */}
+      {/* ================================================================== */}
+      <Modal
+        visible={profileModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setProfileModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{t('family.viewProfile')}</Text>
+
+            {profileLoading ? (
+              <ActivityIndicator size="large" color={colors.accent} style={{ marginVertical: spacing.xl }} />
+            ) : profileData ? (
+              <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+                <View style={styles.profileHeader}>
+                  <View style={[styles.avatar, { backgroundColor: ROLE_COLORS[profileMember?.role] || '#A0AEC0' }]}>
+                    <Text style={styles.avatarText}>{getInitial(profileData.full_name ?? getMemberName(profileMember))}</Text>
+                  </View>
+                  <View style={{ flex: 1, marginLeft: spacing.md }}>
+                    <Text style={styles.memberName}>{profileData.full_name ?? getMemberName(profileMember)}</Text>
+                    <Text style={styles.pendingLabel}>{t('family.' + (profileMember?.role || 'member'))}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.profileStat}>
+                  <Text style={styles.profileStatLabel}>{t('family.totalWealth')}</Text>
+                  <Text style={styles.profileStatValue}>{formatCurrency(profileData.netWorth ?? 0, currency)}</Text>
+                </View>
+
+                {profileData.accounts?.length > 0 && (
+                  <View style={styles.profileSection}>
+                    <Text style={styles.profileSectionTitle}>{t('family.accounts')}</Text>
+                    {profileData.accounts.map((acc: any, i: number) => (
+                      <View key={`acc-${i}`} style={styles.profileRow}>
+                        <Text style={styles.profileRowLabel}>{acc.name}</Text>
+                        <Text style={styles.profileRowValue}>{formatCurrency(acc.balance ?? 0, currency)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {profileData.investments?.length > 0 && (
+                  <View style={styles.profileSection}>
+                    <Text style={styles.profileSectionTitle}>{t('family.investments')}</Text>
+                    {profileData.investments.map((inv: any, i: number) => (
+                      <View key={`inv-${i}`} style={styles.profileRow}>
+                        <Text style={styles.profileRowLabel}>{inv.name}</Text>
+                        <Text style={styles.profileRowValue}>{formatCurrency(inv.value ?? 0, currency)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {profileData.cards?.length > 0 && profileMember?.visibility === 'full' && (
+                  <View style={styles.profileSection}>
+                    <Text style={styles.profileSectionTitle}>{t('family.cards')}</Text>
+                    {profileData.cards.map((card: any, i: number) => (
+                      <View key={`card-${i}`} style={styles.profileRow}>
+                        <Text style={styles.profileRowLabel}>{card.name} ****{card.lastFour}</Text>
+                        <Text style={styles.profileRowValue}>
+                          {formatCurrency(card.used ?? 0, currency)} / {formatCurrency(card.limit ?? 0, currency)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </ScrollView>
+            ) : (
+              <Text style={styles.pendingLabel}>{t('common.error')}</Text>
+            )}
+
+            <TouchableOpacity
+              style={styles.modalCancelBtn}
+              onPress={() => setProfileModalVisible(false)}
+            >
+              <Text style={styles.modalCancelText}>{t('common.close')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ================================================================== */}
+      {/* Delegation Modal                                                     */}
+      {/* ================================================================== */}
+      <Modal
+        visible={delegationModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !savingDelegation && setDelegationModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{t('family.delegateAccess')}</Text>
+            <Text style={styles.visOptionDesc}>
+              {(t('family.delegateDesc') || 'Selecione quais membros {name} pode visualizar')
+                .replace('{name}', getMemberName(delegationMember))}
+            </Text>
+
+            {acceptedMembers
+              .filter((m) => m.id !== delegationMember?.id && m.role !== 'owner')
+              .map((m) => {
+                const memberId = m.user_id || m.id;
+                const isSelected = delegationSelection.includes(memberId);
+                return (
+                  <TouchableOpacity
+                    key={`deleg-${m.id}`}
+                    style={[styles.visOption, isSelected && styles.visOptionSelected]}
+                    onPress={() => {
+                      setDelegationSelection((prev) =>
+                        isSelected ? prev.filter((id) => id !== memberId) : [...prev, memberId],
+                      );
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.avatar, { width: 32, height: 32, borderRadius: 16, backgroundColor: ROLE_COLORS[m.role] || '#A0AEC0' }]}>
+                      <Text style={[styles.avatarText, { fontSize: 14 }]}>{getInitial(getMemberName(m))}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.visOptionLabel, isSelected && { color: colors.accent }]}>
+                        {getMemberName(m)}
+                      </Text>
+                      <Text style={styles.visOptionDesc}>{t('family.' + (m.role || 'member'))}</Text>
+                    </View>
+                    <View style={[styles.radio, isSelected && styles.radioSelected]}>
+                      {isSelected && <View style={styles.radioDot} />}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setDelegationModalVisible(false)}
+                disabled={savingDelegation}
+              >
+                <Text style={styles.modalCancelText}>{t('family.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalSaveBtn, savingDelegation && { opacity: 0.5 }]}
+                onPress={handleSaveDelegation}
+                disabled={savingDelegation}
+              >
+                {savingDelegation ? (
                   <ActivityIndicator size="small" color="#FFF" />
                 ) : (
                   <Text style={styles.modalSaveText}>{t('family.save')}</Text>
@@ -1010,4 +1239,56 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
     },
     modalSaveText: { fontSize: 15, fontWeight: '700', color: '#FFF' },
+
+    // Profile modal
+    profileHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+    profileStat: {
+      backgroundColor: colors.cardAlt,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      marginBottom: spacing.lg,
+    },
+    profileStatLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.text.secondary,
+      textTransform: 'uppercase',
+      marginBottom: spacing.xs,
+    },
+    profileStatValue: {
+      fontSize: 22,
+      fontWeight: '800',
+      color: '#00D4AA',
+    },
+    profileSection: {
+      marginBottom: spacing.lg,
+    },
+    profileSectionTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.text.primary,
+      marginBottom: spacing.sm,
+    },
+    profileRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+      borderBottomWidth: 0.5,
+      borderBottomColor: colors.border + '50',
+    },
+    profileRowLabel: {
+      fontSize: 13,
+      color: colors.text.secondary,
+      flex: 1,
+    },
+    profileRowValue: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.text.primary,
+    },
   });

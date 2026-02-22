@@ -110,6 +110,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
       set({ isLoading: true, error: null });
 
       try {
+        // Clear any previous session before registering
+        await clearToken();
         const { user } = await registerApi(fullName, email, password, invitationToken);
         setDemoMode(false);
         set({

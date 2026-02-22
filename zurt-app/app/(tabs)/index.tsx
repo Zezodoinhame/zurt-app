@@ -217,12 +217,12 @@ export default function HomeScreen() {
 
                 <View style={styles.badgeRow}>
                   <Badge
-                    value={displayPct(summary.variation1m)}
+                    value={`${t('home.month')}: ${displayPct(summary.variation1m)}`}
                     variant={variation1mVariant}
                     size="sm"
                   />
                   <Badge
-                    value={displayPct(summary.variation12m)}
+                    value={`${t('home.12m')}: ${displayPct(summary.variation12m)}`}
                     variant={variation12mVariant}
                     size="sm"
                     style={styles.badgeSpacing}

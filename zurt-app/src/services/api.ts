@@ -1375,3 +1375,33 @@ export async function updateMemberVisibility(memberId: string, visibility: strin
 export async function removeFamilyMember(memberId: string): Promise<any> {
   return apiRequest('/family/member/' + memberId, { method: 'DELETE' });
 }
+
+export async function fetchMemberProfile(memberId: string): Promise<any> {
+  if (_isDemoMode) {
+    return {
+      full_name: 'Maria Demo',
+      role: 'spouse',
+      netWorth: 162350,
+      accounts: [
+        { name: 'Nubank', balance: 45000 },
+        { name: 'XP Investimentos', balance: 117350 },
+      ],
+      investments: [
+        { name: 'Tesouro Selic 2029', value: 80000, type: 'fixedIncome' },
+        { name: 'IVVB11', value: 37350, type: 'international' },
+      ],
+      cards: [
+        { name: 'Nubank', lastFour: '4532', limit: 15000, used: 3200 },
+      ],
+    };
+  }
+  return apiRequest('/family/member/' + memberId + '/profile');
+}
+
+export async function updateMemberDelegation(memberId: string, canViewMembers: string[]): Promise<any> {
+  if (_isDemoMode) return { success: true };
+  return apiRequest('/family/member/' + memberId + '/delegation', {
+    method: 'PUT',
+    body: JSON.stringify({ canViewMembers }),
+  });
+}

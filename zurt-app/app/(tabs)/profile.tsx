@@ -26,9 +26,11 @@ import type { Language } from '../../src/i18n/translations';
 import type { Currency, ThemeMode, IconStyle } from '../../src/stores/settingsStore';
 import { Toggle } from '../../src/components/ui/Toggle';
 import { Card } from '../../src/components/ui/Card';
+import { UserAvatar, AVATAR_PRESETS, useAvatarState, type AvatarPresetId } from '../../src/components/ui/UserAvatar';
 import { formatDate, formatCurrency } from '../../src/utils/formatters';
 import { changePassword, updateUserProfile } from '../../src/services/api';
 import { AppIcon, type AppIconName } from '../../src/hooks/useIcon';
+import * as ImagePicker from 'expo-image-picker';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -332,6 +334,7 @@ function EditProfileModal({
   isDemoMode,
   t,
   onSuccess,
+  avatarState,
 }: {
   visible: boolean;
   onClose: () => void;
@@ -340,12 +343,12 @@ function EditProfileModal({
   isDemoMode: boolean;
   t: (key: string) => string;
   onSuccess: (updates: { name: string; email: string; initials: string }) => void;
+  avatarState: ReturnType<typeof useAvatarState>;
 }) {
   const colors = useSettingsStore((s) => s.colors);
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   const [fullName, setFullName] = useState(currentName);
-  const [email, setEmail] = useState(currentEmail);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -363,7 +366,6 @@ function EditProfileModal({
     try {
       const updatedUser = await updateUserProfile({
         full_name: fullName.trim(),
-        email: email.trim(),
       });
       onSuccess({
         name: updatedUser.name,
@@ -379,9 +381,36 @@ function EditProfileModal({
     }
   };
 
+  const handlePickPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(t('common.error'), t('profile.photoPermission'));
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+      base64: true,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      const uri = asset.base64
+        ? `data:image/jpeg;base64,${asset.base64}`
+        : asset.uri;
+      avatarState.saveCustomUri(uri);
+      avatarState.savePresetId(null);
+    }
+  };
+
+  const handleSelectPreset = (id: AvatarPresetId) => {
+    avatarState.savePresetId(id);
+    avatarState.saveCustomUri(null);
+  };
+
   const handleClose = () => {
     setFullName(currentName);
-    setEmail(currentEmail);
     setError('');
     onClose();
   };
@@ -393,48 +422,80 @@ function EditProfileModal({
         activeOpacity={1}
         onPress={handleClose}
       >
-        <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
-          <Text style={styles.modalTitle}>{t('profile.editProfile')}</Text>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={[styles.modalContent, { width: '90%' }]} onStartShouldSetResponder={() => true}>
+            <Text style={styles.modalTitle}>{t('profile.editProfile')}</Text>
 
-          <Text style={styles.inputLabel}>{t('profile.fullName')}</Text>
-          <TextInput
-            style={styles.passwordInput}
-            placeholder={t('login.yourName')}
-            placeholderTextColor={colors.text.muted}
-            value={fullName}
-            onChangeText={setFullName}
-            autoCapitalize="words"
-          />
+            <Text style={styles.inputLabel}>{t('profile.fullName')}</Text>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder={t('login.yourName')}
+              placeholderTextColor={colors.text.muted}
+              value={fullName}
+              onChangeText={setFullName}
+              autoCapitalize="words"
+            />
 
-          <Text style={styles.inputLabel}>{t('login.email')}</Text>
-          <TextInput
-            style={styles.passwordInput}
-            placeholder="email@exemplo.com"
-            placeholderTextColor={colors.text.muted}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+            <Text style={styles.inputLabel}>{t('login.email')}</Text>
+            <View style={[styles.passwordInput, { backgroundColor: colors.border + '30' }]}>
+              <Text style={{ color: colors.text.muted, fontSize: 14 }}>{currentEmail}</Text>
+            </View>
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {/* Avatar selection */}
+            <Text style={[styles.inputLabel, { marginTop: spacing.md }]}>{t('profile.profilePhoto')}</Text>
 
-          <TouchableOpacity
-            style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
-            onPress={handleSave}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color={colors.background} size="small" />
-            ) : (
-              <Text style={styles.saveButtonText}>{t('profile.saveProfile')}</Text>
-            )}
-          </TouchableOpacity>
+            {/* Photo upload */}
+            <TouchableOpacity style={styles.uploadPhotoBtn} onPress={handlePickPhoto} activeOpacity={0.7}>
+              <AppIcon name="person" size={16} color={colors.accent} />
+              <Text style={styles.uploadPhotoText}>{t('profile.uploadPhoto')}</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.modalClose} onPress={handleClose}>
-            <Text style={styles.modalCloseText}>{t('common.cancel')}</Text>
-          </TouchableOpacity>
-        </View>
+            {/* Preset grid */}
+            <View style={styles.avatarGrid}>
+              {AVATAR_PRESETS.map((preset) => {
+                const isSelected = avatarState.presetId === preset.id && !avatarState.customUri;
+                return (
+                  <TouchableOpacity
+                    key={preset.id}
+                    style={[
+                      styles.avatarPresetItem,
+                      isSelected && { borderColor: colors.accent, borderWidth: 2 },
+                    ]}
+                    onPress={() => handleSelectPreset(preset.id)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.avatarPresetCircle, { backgroundColor: preset.color }]}>
+                      <Text style={styles.avatarPresetInitials}>
+                        {currentName.split(' ').filter(Boolean).map((w) => w[0]).join('').toUpperCase().slice(0, 2)}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+            <TouchableOpacity
+              style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
+              onPress={handleSave}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color={colors.background} size="small" />
+              ) : (
+                <Text style={styles.saveButtonText}>{t('profile.saveProfile')}</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.modalClose} onPress={handleClose}>
+              <Text style={styles.modalCloseText}>{t('common.cancel')}</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </TouchableOpacity>
     </Modal>
   );
@@ -519,6 +580,7 @@ export default function ProfileScreen() {
   const setTheme = useSettingsStore((s) => s.setTheme);
   const iconStyle = useSettingsStore((s) => s.iconStyle);
   const setIconStyle = useSettingsStore((s) => s.setIconStyle);
+  const avatarState = useAvatarState();
   const {
     permissionStatus,
     preferences: pushPreferences,
@@ -703,9 +765,13 @@ export default function ProfileScreen() {
       {/* User card */}
       <Card variant="glow" delay={0}>
         <View style={styles.userCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user.initials}</Text>
-          </View>
+          <UserAvatar
+            size={56}
+            initials={user.initials}
+            customUri={avatarState.customUri}
+            presetId={avatarState.presetId}
+            accentColor={colors.accent}
+          />
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{user.name}</Text>
             <Text style={styles.userEmail}>{user.email}</Text>
@@ -995,12 +1061,18 @@ export default function ProfileScreen() {
             label={t('taxes.title')}
             onPress={() => router.push('/taxes')}
           />
-          <SettingRow
-            iconName="report"
-            label={t('report.title')}
-            value={t('report.subtitle')}
+          <TouchableOpacity
+            style={styles.settingRow}
             onPress={() => router.push('/report')}
-          />
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingIcon}><AppIcon name="report" size={16} color={colors.text.secondary} /></View>
+            <View style={{ flex: 1, flexShrink: 1 }}>
+              <Text style={styles.settingLabel} numberOfLines={1}>{t('report.title')}</Text>
+              <Text style={[styles.settingValue, { marginRight: 0, marginTop: 2 }]} numberOfLines={1}>{t('report.subtitle')}</Text>
+            </View>
+            <AppIcon name="chevron" size={20} color={colors.text.muted} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -1057,6 +1129,7 @@ export default function ProfileScreen() {
         isDemoMode={isDemoMode}
         t={t}
         onSuccess={handleEditProfileSuccess}
+        avatarState={avatarState}
       />
       <HelpModal
         visible={showHelpModal}
@@ -1432,6 +1505,52 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: colors.background,
+  },
+
+  // -- Avatar styles -------------------------------------------------------
+  uploadPhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.md,
+  },
+  uploadPhotoText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.accent,
+  },
+  avatarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+  },
+  avatarPresetItem: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarPresetCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarPresetInitials: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
 
   // -- FAQ styles ----------------------------------------------------------
