@@ -1141,3 +1141,47 @@ export async function sendAIChat(
     suggestions: data.suggestions,
   };
 }
+
+// =============================================================================
+// Family Group
+// =============================================================================
+
+export async function fetchFamilyGroup(): Promise<any> {
+  if (_isDemoMode) return { group: null, members: [] };
+  try {
+    return await apiRequest('/family');
+  } catch {
+    return { group: null, members: [] };
+  }
+}
+
+export async function createFamilyGroup(name: string): Promise<any> {
+  return apiRequest('/family/create', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function inviteFamilyMember(email: string, role: string): Promise<any> {
+  return apiRequest('/family/invite', {
+    method: 'POST',
+    body: JSON.stringify({ email, role }),
+  });
+}
+
+export async function acceptFamilyInvite(inviteId: string): Promise<any> {
+  return apiRequest(`/family/accept/${inviteId}`, { method: 'POST' });
+}
+
+export async function removeFamilyMember(memberId: string): Promise<void> {
+  await apiRequest(`/family/member/${memberId}`, { method: 'DELETE' });
+}
+
+export async function fetchFamilySummary(): Promise<any> {
+  if (_isDemoMode) return { totalNetWorth: 0, members: [] };
+  try {
+    return await apiRequest('/family/summary');
+  } catch {
+    return { totalNetWorth: 0, members: [] };
+  }
+}

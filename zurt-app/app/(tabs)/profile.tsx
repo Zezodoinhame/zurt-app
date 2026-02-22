@@ -846,10 +846,20 @@ export default function ProfileScreen() {
         </View>
       </Card>
 
-      {/* Report */}
-      <SectionTitle title={`\uD83D\uDCCA ${t('report.title')}`} />
+      {/* Family & Taxes */}
+      <SectionTitle title={`\uD83D\uDCCA ${t('profile.tools')}`} />
       <View>
         <View style={styles.section}>
+          <SettingRow
+            icon={'\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67\u200D\uD83D\uDC66'}
+            label={t('family.title')}
+            onPress={() => router.push('/family')}
+          />
+          <SettingRow
+            icon={'\uD83C\uDFDB\uFE0F'}
+            label={t('taxes.title')}
+            onPress={() => router.push('/taxes')}
+          />
           <SettingRow
             icon={'\uD83D\uDCC4'}
             label={t('report.title')}
