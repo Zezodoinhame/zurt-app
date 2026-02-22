@@ -1277,9 +1277,9 @@ export async function fetchFamilyGroup(): Promise<any> {
     return {
       group: { id: 'demo', name: 'Família Demo', owner_id: 'demo', created_at: new Date().toISOString() },
       members: [
-        { id: 'demo-1', user_id: 'demo-1', name: 'Você (Demo)', role: 'owner', status: 'accepted', invited_email: 'demo@zurt.com.br', netWorth: 325000 },
-        { id: 'demo-2', user_id: 'demo-2', name: 'Maria Demo', role: 'spouse', status: 'accepted', invited_email: 'maria@demo.com', netWorth: 162350 },
-        { id: 'demo-3', user_id: null, name: null, role: 'child', status: 'pending', invited_email: 'filho@demo.com', netWorth: 0 },
+        { id: 'demo-1', user_id: 'demo-1', full_name: 'Você (Demo)', role: 'owner', status: 'accepted', invited_email: 'demo@zurt.com.br', netWorth: 325000 },
+        { id: 'demo-2', user_id: 'demo-2', full_name: 'Maria Demo', role: 'spouse', status: 'accepted', invited_email: 'maria@demo.com', netWorth: 162350 },
+        { id: 'demo-3', user_id: null, full_name: null, role: 'child', status: 'pending', invited_email: 'filho@demo.com', netWorth: 0 },
       ],
     };
   }
@@ -1327,8 +1327,8 @@ export async function fetchFamilySummary(): Promise<any> {
     return {
       totalNetWorth: 487350.00,
       members: [
-        { userId: 'demo-1', name: 'Você (Demo)', role: 'owner', netWorth: 325000.00 },
-        { userId: 'demo-2', name: 'Maria Demo', role: 'spouse', netWorth: 162350.00 },
+        { userId: 'demo-1', full_name: 'Você (Demo)', role: 'owner', netWorth: 325000.00 },
+        { userId: 'demo-2', full_name: 'Maria Demo', role: 'spouse', netWorth: 162350.00 },
       ],
     };
   }

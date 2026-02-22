@@ -143,11 +143,19 @@ export default function FamilyScreen() {
       await loadData();
     } catch (err: any) {
       console.log('[Family] Error creating group:', err?.message ?? err);
-      Alert.alert(
-        t('family.errorTitle') || 'Erro',
-        t('family.errorCreate') || 'Não foi possível criar o grupo familiar. Tente novamente.',
-        [{ text: 'OK' }],
-      );
+      // If user already has a group (HTTP 400), just reload data to show it
+      const msg = (err?.message ?? '').toLowerCase();
+      if (msg.includes('400') || msg.includes('já possui') || msg.includes('ja possui') || msg.includes('already')) {
+        setShowCreateModal(false);
+        setGroupName('Minha Família');
+        await loadData();
+      } else {
+        Alert.alert(
+          t('family.errorTitle') || 'Erro',
+          t('family.errorCreate') || 'Não foi possível criar o grupo familiar. Tente novamente.',
+          [{ text: 'OK' }],
+        );
+      }
     } finally {
       setCreating(false);
     }
@@ -312,7 +320,7 @@ export default function FamilyScreen() {
                             styles.barSegment,
                             {
                               width: `${Math.max(percent, 2)}%` as any,
-                              backgroundColor: getAvatarColor(member.name || member.invited_email || ''),
+                              backgroundColor: getAvatarColor(member.full_name || member.name || member.invited_email || ''),
                             },
                           ]}
                         />
@@ -325,7 +333,7 @@ export default function FamilyScreen() {
                 {acceptedMembers.length > 0 && totalWealth > 0 && (
                   <View style={styles.barLegend}>
                     {acceptedMembers.map((member) => {
-                      const name = member.name || member.invited_email || '';
+                      const name = member.full_name || member.name || member.invited_email || '';
                       const netWorth = parseFloat(member.netWorth ?? member.net_worth ?? '0') || 0;
                       const percent = totalWealth > 0 ? (netWorth / totalWealth) * 100 : 0;
                       return (
@@ -366,7 +374,7 @@ export default function FamilyScreen() {
             </Text>
 
             {members.map((member) => {
-              const name = member.name || member.invited_email || '';
+              const name = member.full_name || member.name || member.invited_email || '';
               const role = member.role || 'member';
               const status = member.status || 'pending';
               const netWorth = parseFloat(member.netWorth ?? member.net_worth ?? '0') || 0;
