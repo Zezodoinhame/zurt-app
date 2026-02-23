@@ -58,7 +58,7 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
   const isExpoGo = Constants.appOwnership === 'expo';
-  const [googleAvailable, setGoogleAvailable] = useState(!isExpoGo);
+  const [googleAvailable, setGoogleAvailable] = useState(true);
 
   const displayError = error || storeError || '';
 
@@ -333,11 +333,7 @@ export default function LoginScreen() {
                 <Text style={[styles.googleIcon, !googleAvailable && { color: '#999' }]}>G</Text>
               )}
               <Text style={[styles.googleButtonText, !googleAvailable && { color: '#999' }]}>
-                {isExpoGo
-                  ? t('login.googleExpoGo')
-                  : googleAvailable
-                    ? t('login.googleLogin')
-                    : t('login.googleFinalVersion')}
+                {googleAvailable ? t('login.googleLogin') : t('login.googleFinalVersion')}
               </Text>
             </TouchableOpacity>
 

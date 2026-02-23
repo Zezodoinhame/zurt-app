@@ -1357,6 +1357,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   settingIcon: {
     marginRight: spacing.md,
     width: 24,
+    height: 24,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },

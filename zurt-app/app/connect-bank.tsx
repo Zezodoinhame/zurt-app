@@ -8,7 +8,7 @@ import {
   FlatList, ActivityIndicator, Alert, Platform, Image, Keyboard,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import type { WebViewNavigation } from 'react-native-webview';
 import {
@@ -35,6 +35,7 @@ interface InstitutionResult {
 type ScreenState = 'search' | 'connecting' | 'webview' | 'syncing' | 'success' | 'error';
 
 export default function ConnectBankScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
@@ -386,7 +387,7 @@ export default function ConnectBankScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       {renderHeader()}
       {screenState === 'search' && (
         <>
@@ -402,7 +403,7 @@ export default function ConnectBankScreen() {
       {screenState === 'syncing' && renderSyncing()}
       {screenState === 'success' && renderSuccess()}
       {screenState === 'error' && renderError()}
-    </SafeAreaView>
+    </View>
   );
 }
 
