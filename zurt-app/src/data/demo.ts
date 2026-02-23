@@ -41,6 +41,12 @@ import type {
   SpendingInsightsData,
   CategoryTrend,
   Bill,
+  CorrelationMatrix,
+  BacktestResult,
+  BacktestPeriodReturn,
+  ScenarioPreset,
+  PriceAlert,
+  RecurringInvestment,
 } from '../types';
 
 // =============================================================================
@@ -1840,4 +1846,138 @@ export const demoBills: Bill[] = [
   { id: 'b6', name: 'Internet Vivo', amount: 149.90, dueDate: '2026-03-12', frequency: 'monthly', category: 'tech', status: 'paid', icon: '\uD83C\uDF10', color: '#A855F7', reminder: true, createdAt: '2025-01-01' },
   { id: 'b7', name: 'Energia Enel', amount: 320, dueDate: '2026-03-22', frequency: 'monthly', category: 'shopping', status: 'pending', icon: '\u26A1', color: '#F97316', reminder: true, createdAt: '2025-01-01' },
   { id: 'b8', name: 'Gympass', amount: 149.90, dueDate: '2026-03-13', frequency: 'monthly', category: 'health', status: 'paid', icon: '\uD83C\uDFCB\uFE0F', color: '#06B6D4', reminder: false, createdAt: '2025-09-01' },
+];
+
+// =============================================================================
+// Wave 5 - Correlation Matrix
+// =============================================================================
+
+const CORR_TICKERS = ['PETR4', 'VALE3', 'ITUB4', 'BBAS3', 'HGLG11', 'XPML11', 'BTC', 'SELIC'];
+
+// Symmetric 8x8 matrix with realistic correlations
+const CORR_VALUES: number[][] = [
+  [ 1.00,  0.72,  0.45,  0.42,  0.15,  0.12, -0.08, -0.25],
+  [ 0.72,  1.00,  0.38,  0.35,  0.10,  0.08, -0.12, -0.30],
+  [ 0.45,  0.38,  1.00,  0.85,  0.22,  0.20,  0.05, -0.15],
+  [ 0.42,  0.35,  0.85,  1.00,  0.20,  0.18,  0.03, -0.18],
+  [ 0.15,  0.10,  0.22,  0.20,  1.00,  0.78, -0.05,  0.30],
+  [ 0.12,  0.08,  0.20,  0.18,  0.78,  1.00, -0.03,  0.28],
+  [-0.08, -0.12,  0.05,  0.03, -0.05, -0.03,  1.00, -0.40],
+  [-0.25, -0.30, -0.15, -0.18,  0.30,  0.28, -0.40,  1.00],
+];
+
+export const demoCorrelationMatrix: CorrelationMatrix = {
+  tickers: CORR_TICKERS,
+  values: CORR_VALUES,
+  diversificationScore: 68,
+};
+
+// =============================================================================
+// Wave 5 - Backtest Result
+// =============================================================================
+
+function generateBacktestReturns(): BacktestPeriodReturn[] {
+  const returns: BacktestPeriodReturn[] = [];
+  let value = 100000;
+  const start = new Date(2021, 0, 1);
+  for (let i = 0; i < 60; i++) {
+    const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dateStr = `${d.getFullYear()}-${mm}`;
+    // Realistic monthly returns with noise
+    const monthReturn = 0.8 + Math.sin(i * 0.5) * 1.5 + Math.cos(i * 1.3) * 0.8;
+    value = Math.round(value * (1 + monthReturn / 100));
+    returns.push({ date: dateStr, value, returnPct: parseFloat(monthReturn.toFixed(2)) });
+  }
+  return returns;
+}
+
+const backtestReturns = generateBacktestReturns();
+const bestMonth = backtestReturns.reduce((a, b) => (b.returnPct > a.returnPct ? b : a));
+const worstMonth = backtestReturns.reduce((a, b) => (b.returnPct < a.returnPct ? b : a));
+
+export const demoBacktestResult: BacktestResult = {
+  allocations: [
+    { ticker: 'PETR4', name: 'Petrobras PN', percentage: 25, color: '#00D4AA' },
+    { ticker: 'VALE3', name: 'Vale ON', percentage: 20, color: '#3A86FF' },
+    { ticker: 'ITUB4', name: 'Itau PN', percentage: 20, color: '#FFBE0B' },
+    { ticker: 'HGLG11', name: 'CSHG Log', percentage: 15, color: '#A855F7' },
+    { ticker: 'BTC', name: 'Bitcoin', percentage: 10, color: '#F3BA2F' },
+    { ticker: 'SELIC', name: 'Tesouro Selic', percentage: 10, color: '#F472B6' },
+  ],
+  periodReturns: backtestReturns,
+  totalReturn: parseFloat(((backtestReturns[backtestReturns.length - 1].value / 100000 - 1) * 100).toFixed(2)),
+  cagr: 12.8,
+  maxDrawdown: -14.2,
+  sharpe: 1.35,
+  bestMonth,
+  worstMonth,
+  initialValue: 100000,
+  finalValue: backtestReturns[backtestReturns.length - 1].value,
+};
+
+// =============================================================================
+// Wave 5 - Scenario Presets
+// =============================================================================
+
+export const demoScenarioPresets: ScenarioPreset[] = [
+  {
+    type: 'bull',
+    label: 'Bull Market',
+    emoji: '\uD83D\uDCC8',
+    description: '+20% stocks, +15% FIIs, +5% bonds, +30% crypto',
+    changes: { stocks: 20, fiis: 15, fixedIncome: 5, crypto: 30, international: 18, pension: 8 },
+  },
+  {
+    type: 'bear',
+    label: 'Bear Market',
+    emoji: '\uD83D\uDCC9',
+    description: '-30% stocks, -20% FIIs, +2% bonds, -40% crypto',
+    changes: { stocks: -30, fiis: -20, fixedIncome: 2, crypto: -40, international: -25, pension: -5 },
+  },
+  {
+    type: 'rateHike',
+    label: 'Rate Hike',
+    emoji: '\uD83D\uDCB0',
+    description: '-10% stocks, -15% FIIs, +8% bonds, -5% crypto',
+    changes: { stocks: -10, fiis: -15, fixedIncome: 8, crypto: -5, international: -8, pension: 6 },
+  },
+  {
+    type: 'crash',
+    label: 'Market Crash',
+    emoji: '\uD83D\uDCA5',
+    description: '-50% stocks, -40% FIIs, +3% bonds, -60% crypto',
+    changes: { stocks: -50, fiis: -40, fixedIncome: 3, crypto: -60, international: -45, pension: -10 },
+  },
+  {
+    type: 'custom',
+    label: 'Custom',
+    emoji: '\u2699\uFE0F',
+    description: 'Define your own scenario',
+    changes: { stocks: 0, fiis: 0, fixedIncome: 0, crypto: 0, international: 0, pension: 0 },
+  },
+];
+
+// =============================================================================
+// Wave 5 - Price Alerts
+// =============================================================================
+
+export const demoPriceAlerts: PriceAlert[] = [
+  { id: 'pa1', ticker: 'PETR4', name: 'Petrobras PN', condition: 'above', targetPrice: 42.00, currentPrice: 38.50, status: 'active', createdAt: '2026-02-15T10:00:00' },
+  { id: 'pa2', ticker: 'VALE3', name: 'Vale ON', condition: 'below', targetPrice: 58.00, currentPrice: 62.30, status: 'active', createdAt: '2026-02-16T14:00:00' },
+  { id: 'pa3', ticker: 'BTC', name: 'Bitcoin', condition: 'above', targetPrice: 100000, currentPrice: 105200, status: 'triggered', createdAt: '2026-02-10T09:00:00', triggeredAt: '2026-02-22T12:00:00' },
+  { id: 'pa4', ticker: 'ITUB4', name: 'Itau PN', condition: 'above', targetPrice: 35.00, currentPrice: 33.80, status: 'active', createdAt: '2026-02-18T08:30:00' },
+  { id: 'pa5', ticker: 'MGLU3', name: 'Magazine Luiza ON', condition: 'below', targetPrice: 8.00, currentPrice: 8.45, status: 'active', createdAt: '2026-02-20T16:00:00' },
+  { id: 'pa6', ticker: 'WEGE3', name: 'WEG ON', condition: 'above', targetPrice: 45.00, currentPrice: 42.30, status: 'expired', createdAt: '2026-01-05T11:00:00' },
+];
+
+// =============================================================================
+// Wave 5 - Recurring Investments
+// =============================================================================
+
+export const demoRecurringInvestments: RecurringInvestment[] = [
+  { id: 'ri1', ticker: 'PETR4', name: 'Petrobras PN', amount: 500, frequency: 'monthly', executionDay: 5, status: 'active', nextExecution: '2026-03-05', createdAt: '2025-06-01' },
+  { id: 'ri2', ticker: 'ITUB4', name: 'Itau PN', amount: 300, frequency: 'monthly', executionDay: 10, status: 'active', nextExecution: '2026-03-10', createdAt: '2025-08-15' },
+  { id: 'ri3', ticker: 'BTC', name: 'Bitcoin', amount: 200, frequency: 'biweekly', executionDay: 1, status: 'active', nextExecution: '2026-03-01', createdAt: '2025-10-01' },
+  { id: 'ri4', ticker: 'HGLG11', name: 'CSHG Logistica', amount: 400, frequency: 'monthly', executionDay: 15, status: 'paused', nextExecution: '2026-03-15', createdAt: '2025-04-20' },
 ];

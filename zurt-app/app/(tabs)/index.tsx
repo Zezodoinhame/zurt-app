@@ -521,10 +521,15 @@ export default function HomeScreen() {
                       { emoji: '\u{1F4C8}', title: t('tools.cashFlow'), desc: t('tools.cashFlowDesc'), onPress: () => router.push('/cash-flow') },
                       { emoji: '\u{1F4C9}', title: t('tools.insights'), desc: t('tools.insightsDesc'), onPress: () => router.push('/spending-insights') },
                       { emoji: '\u{1F9FE}', title: t('tools.bills'), desc: t('tools.billsDesc'), onPress: () => router.push('/bills') },
+                      { emoji: '\u{1F536}', title: t('tools.correlation'), desc: t('tools.correlationDesc'), onPress: () => router.push('/correlation-matrix') },
+                      { emoji: '\u{23F0}', title: t('tools.backtest'), desc: t('tools.backtestDesc'), onPress: () => router.push('/backtest') },
+                      { emoji: '\u{1F3B2}', title: t('tools.scenario'), desc: t('tools.scenarioDesc'), onPress: () => router.push('/scenario-planner') },
+                      { emoji: '\u{1F514}', title: t('tools.priceAlerts'), desc: t('tools.priceAlertsDesc'), onPress: () => router.push('/price-alerts') },
+                      { emoji: '\u{1F501}', title: t('tools.recurring'), desc: t('tools.recurringDesc'), onPress: () => router.push('/recurring-investments') },
                     ];
-                    // Arrange as 2 rows x 9 columns
+                    // Arrange as 2 rows x 12 columns (24 slots, some may be empty)
                     const columns: Array<[typeof allTools[0], typeof allTools[0] | undefined]> = [];
-                    for (let c = 0; c < 9; c++) {
+                    for (let c = 0; c < 12; c++) {
                       columns.push([allTools[c * 2], allTools[c * 2 + 1]]);
                     }
                     return columns.map((col, ci) => (

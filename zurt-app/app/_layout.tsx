@@ -217,6 +217,26 @@ export default function RootLayout() {
             name="bills"
             options={{ animation: 'slide_from_right' }}
           />
+          <Stack.Screen
+            name="correlation-matrix"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="backtest"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="scenario-planner"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="price-alerts"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="recurring-investments"
+            options={{ animation: 'slide_from_right' }}
+          />
         </Stack>
         <RateLimitToast />
         {isLocked && isAuthenticated && <LockOverlay onUnlock={unlock} />}

@@ -516,3 +516,116 @@ export interface Bill {
   reminder: boolean;
   createdAt: string;
 }
+
+// -----------------------------------------------------------------------------
+// Correlation Matrix
+// -----------------------------------------------------------------------------
+
+export interface CorrelationPair {
+  assetA: string; // ticker
+  assetB: string; // ticker
+  value: number; // -1 to +1
+}
+
+export interface CorrelationMatrix {
+  tickers: string[];
+  values: number[][]; // NxN matrix
+  diversificationScore: number; // 0-100
+}
+
+// -----------------------------------------------------------------------------
+// Backtesting
+// -----------------------------------------------------------------------------
+
+export interface BacktestAllocation {
+  ticker: string;
+  name: string;
+  percentage: number; // 0-100
+  color: string;
+}
+
+export interface BacktestPeriodReturn {
+  date: string; // '2021-01'
+  value: number; // portfolio value
+  returnPct: number; // monthly return %
+}
+
+export interface BacktestResult {
+  allocations: BacktestAllocation[];
+  periodReturns: BacktestPeriodReturn[];
+  totalReturn: number;
+  cagr: number;
+  maxDrawdown: number;
+  sharpe: number;
+  bestMonth: BacktestPeriodReturn;
+  worstMonth: BacktestPeriodReturn;
+  initialValue: number;
+  finalValue: number;
+}
+
+// -----------------------------------------------------------------------------
+// Scenario Planner
+// -----------------------------------------------------------------------------
+
+export type ScenarioType = 'bull' | 'bear' | 'rateHike' | 'crash' | 'custom';
+
+export interface ScenarioPreset {
+  type: ScenarioType;
+  label: string;
+  emoji: string;
+  description: string;
+  changes: Record<AssetClass, number>; // % change per asset class
+}
+
+export interface ScenarioResult {
+  currentValue: number;
+  projectedValue: number;
+  totalChange: number;
+  totalChangePct: number;
+  perClass: {
+    class: AssetClass;
+    label: string;
+    currentValue: number;
+    projectedValue: number;
+    changePct: number;
+    color: string;
+  }[];
+}
+
+// -----------------------------------------------------------------------------
+// Price Alerts
+// -----------------------------------------------------------------------------
+
+export type PriceAlertCondition = 'above' | 'below';
+export type PriceAlertStatus = 'active' | 'triggered' | 'expired';
+
+export interface PriceAlert {
+  id: string;
+  ticker: string;
+  name: string;
+  condition: PriceAlertCondition;
+  targetPrice: number;
+  currentPrice: number;
+  status: PriceAlertStatus;
+  createdAt: string;
+  triggeredAt?: string;
+}
+
+// -----------------------------------------------------------------------------
+// Recurring Investments
+// -----------------------------------------------------------------------------
+
+export type RecurringFrequency = 'weekly' | 'biweekly' | 'monthly';
+export type RecurringStatus = 'active' | 'paused';
+
+export interface RecurringInvestment {
+  id: string;
+  ticker: string;
+  name: string;
+  amount: number;
+  frequency: RecurringFrequency;
+  executionDay: number; // 1-28
+  status: RecurringStatus;
+  nextExecution: string;
+  createdAt: string;
+}
