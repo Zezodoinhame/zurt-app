@@ -89,6 +89,11 @@ const ICON_MAP: Record<string, { lib: 'ion' | 'mci'; name: string; emoji: string
   scenario:     { lib: 'mci', name: 'chart-line-variant', emoji: '\uD83C\uDFB2' },
   priceAlert:   { lib: 'ion', name: 'notifications-outline', emoji: '\uD83D\uDD14' },
   recurring:    { lib: 'mci', name: 'repeat', emoji: '\uD83D\uDD01' },
+  netWorth:     { lib: 'ion', name: 'trending-up-outline', emoji: '\uD83D\uDCCA' },
+  debt:         { lib: 'mci', name: 'credit-card-minus-outline', emoji: '\uD83D\uDCB3' },
+  retirement:   { lib: 'ion', name: 'umbrella-outline', emoji: '\u2602\uFE0F' },
+  monteCarlo:   { lib: 'mci', name: 'chart-bell-curve', emoji: '\uD83C\uDFB2' },
+  learnHub:     { lib: 'ion', name: 'book-outline', emoji: '\uD83D\uDCDA' },
 };
 
 export type AppIconName = keyof typeof ICON_MAP;

@@ -526,10 +526,15 @@ export default function HomeScreen() {
                       { emoji: '\u{1F3B2}', title: t('tools.scenario'), desc: t('tools.scenarioDesc'), onPress: () => router.push('/scenario-planner') },
                       { emoji: '\u{1F514}', title: t('tools.priceAlerts'), desc: t('tools.priceAlertsDesc'), onPress: () => router.push('/price-alerts') },
                       { emoji: '\u{1F501}', title: t('tools.recurring'), desc: t('tools.recurringDesc'), onPress: () => router.push('/recurring-investments') },
+                      { emoji: '\u{1F4CA}', title: t('tools.netWorth'), desc: t('tools.netWorthDesc'), onPress: () => router.push('/net-worth') },
+                      { emoji: '\u{1F4B3}', title: t('tools.debt'), desc: t('tools.debtDesc'), onPress: () => router.push('/debt-manager') },
+                      { emoji: '\u{2602}\u{FE0F}', title: t('tools.retirement'), desc: t('tools.retirementDesc'), onPress: () => router.push('/retirement') },
+                      { emoji: '\u{1F3B2}', title: t('tools.monteCarlo'), desc: t('tools.monteCarloDesc'), onPress: () => router.push('/monte-carlo') },
+                      { emoji: '\u{1F4DA}', title: t('tools.learnHub'), desc: t('tools.learnHubDesc'), onPress: () => router.push('/learn') },
                     ];
-                    // Arrange as 2 rows x 12 columns (24 slots, some may be empty)
+                    // Arrange as 2 rows x 14 columns (28 slots, some may be empty)
                     const columns: Array<[typeof allTools[0], typeof allTools[0] | undefined]> = [];
-                    for (let c = 0; c < 12; c++) {
+                    for (let c = 0; c < 14; c++) {
                       columns.push([allTools[c * 2], allTools[c * 2 + 1]]);
                     }
                     return columns.map((col, ci) => (

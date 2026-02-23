@@ -47,6 +47,18 @@ import type {
   ScenarioPreset,
   PriceAlert,
   RecurringInvestment,
+  NetWorthSummary,
+  NetWorthDataPoint,
+  NetWorthMilestone,
+  Debt,
+  PayoffComparison,
+  RetirementParams,
+  RetirementResult,
+  MonteCarloResult,
+  MonteCarloPercentile,
+  Lesson,
+  GlossaryTerm,
+  LearnProgress,
 } from '../types';
 
 // =============================================================================
@@ -1981,3 +1993,146 @@ export const demoRecurringInvestments: RecurringInvestment[] = [
   { id: 'ri3', ticker: 'BTC', name: 'Bitcoin', amount: 200, frequency: 'biweekly', executionDay: 1, status: 'active', nextExecution: '2026-03-01', createdAt: '2025-10-01' },
   { id: 'ri4', ticker: 'HGLG11', name: 'CSHG Logistica', amount: 400, frequency: 'monthly', executionDay: 15, status: 'paused', nextExecution: '2026-03-15', createdAt: '2025-04-20' },
 ];
+
+// =============================================================================
+// Wave 6 - Net Worth Timeline
+// =============================================================================
+
+function generateNetWorthTimeline(): NetWorthDataPoint[] {
+  const points: NetWorthDataPoint[] = [];
+  const now = new Date();
+  for (let i = 23; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const progress = (24 - i) / 24;
+    const assets = Math.round(600000 + 400000 * progress + Math.sin(i * 0.8) * 15000);
+    const liabilities = Math.round(180000 - 60000 * progress + Math.cos(i * 1.2) * 5000);
+    points.push({ date: `${d.getFullYear()}-${mm}`, assets, liabilities, netWorth: assets - liabilities });
+  }
+  return points;
+}
+
+const nwTimeline = generateNetWorthTimeline();
+
+export const demoNetWorthSummary: NetWorthSummary = {
+  currentNetWorth: nwTimeline[nwTimeline.length - 1].netWorth,
+  totalAssets: nwTimeline[nwTimeline.length - 1].assets,
+  totalLiabilities: nwTimeline[nwTimeline.length - 1].liabilities,
+  momGrowth: 3.2,
+  yoyGrowth: 28.5,
+  allTimeGrowth: 85.4,
+  timeline: nwTimeline,
+  milestones: [
+    { id: 'nwm1', label: 'Primeiro R$ 500k', emoji: '\uD83C\uDF89', date: '2025-04', value: 500000 },
+    { id: 'nwm2', label: 'Quitei o carro', emoji: '\uD83D\uDE97', date: '2025-08', value: 620000 },
+    { id: 'nwm3', label: 'R$ 750k', emoji: '\uD83D\uDCA0', date: '2025-12', value: 750000 },
+    { id: 'nwm4', label: 'Patrimônio recorde', emoji: '\uD83D\uDE80', date: '2026-02', value: nwTimeline[nwTimeline.length - 1].netWorth },
+  ],
+};
+
+// =============================================================================
+// Wave 6 - Debts
+// =============================================================================
+
+export const demoDebts: Debt[] = [
+  { id: 'd1', name: 'Financiamento Apto', type: 'mortgage', totalAmount: 450000, remainingAmount: 320000, interestRate: 9.5, minimumPayment: 3200, dueDate: '2026-03-10', createdAt: '2020-06-01' },
+  { id: 'd2', name: 'Empréstimo Pessoal', type: 'loan', totalAmount: 50000, remainingAmount: 18500, interestRate: 15.2, minimumPayment: 1850, dueDate: '2026-03-05', createdAt: '2024-01-15' },
+  { id: 'd3', name: 'Cartão Nubank', type: 'credit_card', totalAmount: 12450, remainingAmount: 12450, interestRate: 14.0, minimumPayment: 620, dueDate: '2026-03-10', createdAt: '2026-02-01' },
+  { id: 'd4', name: 'Financiamento Estudantil', type: 'student_loan', totalAmount: 80000, remainingAmount: 42000, interestRate: 6.5, minimumPayment: 950, dueDate: '2026-03-15', createdAt: '2019-03-01' },
+];
+
+export const demoPayoffComparison: PayoffComparison = {
+  snowball: { totalInterest: 145200, months: 84 },
+  avalanche: { totalInterest: 128400, months: 78 },
+  interestSaved: 16800,
+  monthsSaved: 6,
+};
+
+// =============================================================================
+// Wave 6 - Retirement
+// =============================================================================
+
+export const demoRetirementParams: RetirementParams = {
+  currentAge: 32,
+  retirementAge: 55,
+  monthlyContribution: 5000,
+  expectedReturn: 10,
+  currentSavings: 847350,
+  monthlyExpenses: 12000,
+  inflation: 5,
+};
+
+export const demoRetirementResult: RetirementResult = {
+  projectedFund: 8540000,
+  monthlyRetirementIncome: 42700,
+  fireNumber: 3600000,
+  surplus: 4940000,
+  timelineByAge: Array.from({ length: 34 }, (_, i) => {
+    const age = 32 + i;
+    const years = i;
+    const balance = Math.round(847350 * Math.pow(1.08, years) + 5000 * 12 * ((Math.pow(1.08, years) - 1) / 0.08));
+    return { age, balance };
+  }),
+};
+
+// =============================================================================
+// Wave 6 - Monte Carlo
+// =============================================================================
+
+function generateMonteCarloPercentiles(horizon: number, initial: number): MonteCarloPercentile[] {
+  const labels = ['10th', '25th', '50th', '75th', '90th'];
+  const growthRates = [0.02, 0.05, 0.08, 0.11, 0.15];
+  const mcColors = ['rgba(58,134,255,0.15)', 'rgba(58,134,255,0.30)', '#3A86FF', 'rgba(58,134,255,0.30)', 'rgba(58,134,255,0.15)'];
+  return labels.map((label, idx) => ({
+    label,
+    values: Array.from({ length: horizon + 1 }, (_, y) => Math.round(initial * Math.pow(1 + growthRates[idx], y))),
+    color: mcColors[idx],
+  }));
+}
+
+export const demoMonteCarloResult: MonteCarloResult = {
+  horizon: 20,
+  initialValue: 847350,
+  targetValue: 3000000,
+  successProbability: 78,
+  medianOutcome: 3948000,
+  bestCase: 9850000,
+  worstCase: 1240000,
+  percentiles: generateMonteCarloPercentiles(20, 847350),
+  years: Array.from({ length: 21 }, (_, i) => i),
+};
+
+// =============================================================================
+// Wave 6 - Learn Hub
+// =============================================================================
+
+export const demoLessons: Lesson[] = [
+  { id: 'l1', emoji: '\uD83D\uDCB0', title: 'O que é Renda Fixa?', description: 'Entenda os principais títulos de renda fixa do Brasil.', category: 'beginner', readingTimeMin: 5, content: 'Renda fixa é uma classe de investimentos onde as condições de rentabilidade são definidas no momento da aplicação. Os principais títulos incluem Tesouro Direto (Selic, IPCA+, Prefixado), CDBs, LCIs, LCAs e debêntures. São considerados investimentos mais seguros, ideais para reserva de emergência e objetivos de curto prazo.' },
+  { id: 'l2', emoji: '\uD83D\uDCC8', title: 'Introdução à Bolsa', description: 'Como funciona o mercado de ações brasileiro.', category: 'beginner', readingTimeMin: 7, content: 'A B3 (Brasil, Bolsa, Balcão) é a bolsa de valores brasileira. Ao comprar ações, você se torna sócio de empresas. Os ganhos vêm da valorização dos papéis e de dividendos. É importante diversificar e investir com visão de longo prazo. Utilize análise fundamentalista para escolher boas empresas.' },
+  { id: 'l3', emoji: '\uD83C\uDFE2', title: 'FIIs - Fundos Imobiliários', description: 'Renda passiva com imóveis sem comprar imóveis.', category: 'beginner', readingTimeMin: 6, content: 'Fundos de Investimento Imobiliário (FIIs) permitem investir em imóveis com pouco dinheiro. Os rendimentos mensais são isentos de IR para pessoa física. Existem FIIs de tijolo (galpões, shoppings, escritórios) e de papel (CRIs, LCIs). São negociados na bolsa como ações.' },
+  { id: 'l4', emoji: '\u2696\uFE0F', title: 'Diversificação de Carteira', description: 'Por que não colocar todos os ovos na mesma cesta.', category: 'intermediate', readingTimeMin: 8, content: 'Diversificação reduz o risco da carteira distribuindo investimentos entre diferentes classes de ativos, setores e geografias. A correlação entre ativos é fundamental — ativos com correlação negativa protegem a carteira em momentos de estresse. Uma carteira diversificada pode ter renda fixa, ações, FIIs, cripto e ativos internacionais.' },
+  { id: 'l5', emoji: '\uD83E\uDDEE', title: 'Imposto de Renda em Investimentos', description: 'Entenda a tributação de cada tipo de ativo.', category: 'intermediate', readingTimeMin: 10, content: 'Cada classe de ativo tem regras diferentes de IR. Ações: isenção até R$ 20k/mês em vendas, alíquota de 15% sobre ganho (20% para day trade). FIIs: rendimentos isentos, ganho de capital 20%. Renda fixa: tabela regressiva de 22,5% a 15%. Cripto: 15% sobre ganhos acima de R$ 35k/mês. Compense prejuízos para pagar menos imposto.' },
+  { id: 'l6', emoji: '\uD83D\uDD25', title: 'FIRE - Independência Financeira', description: 'O movimento para aposentar cedo.', category: 'advanced', readingTimeMin: 9, content: 'FIRE (Financial Independence, Retire Early) é o movimento de acumular patrimônio suficiente para viver de renda passiva. A regra dos 4% sugere que você precisa de 25x suas despesas anuais. Para despesas de R$ 12.000/mês, o número FIRE é R$ 3.600.000. Estratégias incluem aumentar renda, reduzir gastos e investir a diferença.' },
+  { id: 'l7', emoji: '\uD83C\uDF0D', title: 'Investimentos Internacionais', description: 'Como e por que investir fora do Brasil.', category: 'advanced', readingTimeMin: 8, content: 'Investir internacionalmente protege contra risco-país e dá acesso a empresas globais. Opções incluem BDRs na B3, ETFs internacionais (IVVB11, NASD11), ou conta em corretora no exterior. Considere a exposição cambial e tributação específica. Recomenda-se 10-30% do portfólio em ativos internacionais.' },
+];
+
+export const demoGlossary: GlossaryTerm[] = [
+  { term: 'CDI', definition: 'Certificado de Depósito Interbancário. Taxa de referência para investimentos de renda fixa no Brasil.' },
+  { term: 'Selic', definition: 'Taxa básica de juros da economia brasileira, definida pelo COPOM a cada 45 dias.' },
+  { term: 'IPCA', definition: 'Índice de Preços ao Consumidor Amplo. Principal indicador de inflação do Brasil.' },
+  { term: 'Dividend Yield', definition: 'Percentual de dividendos pagos em relação ao preço da ação nos últimos 12 meses.' },
+  { term: 'P/L', definition: 'Preço/Lucro. Indica quantos anos de lucro atual seriam necessários para pagar o preço da ação.' },
+  { term: 'Sharpe', definition: 'Índice que mede o retorno ajustado ao risco. Quanto maior, melhor a relação risco-retorno.' },
+  { term: 'Drawdown', definition: 'Queda percentual máxima do valor de um investimento desde seu pico até o vale.' },
+  { term: 'FIRE', definition: 'Financial Independence, Retire Early. Movimento de independência financeira e aposentadoria antecipada.' },
+  { term: 'Volatilidade', definition: 'Medida estatística da dispersão dos retornos. Alta volatilidade = maior risco e potencial de ganho.' },
+  { term: 'Beta', definition: 'Medida de sensibilidade de um ativo em relação ao mercado. Beta > 1 indica mais volátil que o mercado.' },
+  { term: 'Alocação de Ativos', definition: 'Distribuição do patrimônio entre diferentes classes de investimento para otimizar risco-retorno.' },
+  { term: 'Rebalanceamento', definition: 'Processo de ajustar a carteira de volta às proporções-alvo quando a alocação se desvia.' },
+];
+
+export const demoLearnProgress: LearnProgress = {
+  completedIds: ['l1', 'l2', 'l3'],
+  streak: 5,
+  lastCompletedDate: '2026-02-22',
+};

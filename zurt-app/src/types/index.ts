@@ -629,3 +629,140 @@ export interface RecurringInvestment {
   nextExecution: string;
   createdAt: string;
 }
+
+// -----------------------------------------------------------------------------
+// Net Worth Timeline
+// -----------------------------------------------------------------------------
+
+export interface NetWorthMilestone {
+  id: string;
+  label: string;
+  emoji: string;
+  date: string;
+  value: number;
+}
+
+export interface NetWorthDataPoint {
+  date: string; // '2024-03'
+  assets: number;
+  liabilities: number;
+  netWorth: number;
+}
+
+export interface NetWorthSummary {
+  currentNetWorth: number;
+  totalAssets: number;
+  totalLiabilities: number;
+  momGrowth: number;
+  yoyGrowth: number;
+  allTimeGrowth: number;
+  timeline: NetWorthDataPoint[];
+  milestones: NetWorthMilestone[];
+}
+
+// -----------------------------------------------------------------------------
+// Debt Manager
+// -----------------------------------------------------------------------------
+
+export type DebtType = 'loan' | 'mortgage' | 'credit_card' | 'student_loan' | 'other';
+
+export type PayoffStrategy = 'snowball' | 'avalanche';
+
+export interface Debt {
+  id: string;
+  name: string;
+  type: DebtType;
+  totalAmount: number;
+  remainingAmount: number;
+  interestRate: number; // annual %
+  minimumPayment: number;
+  dueDate: string;
+  createdAt: string;
+}
+
+export interface DebtSummary {
+  totalDebt: number;
+  monthlyPayments: number;
+  totalInterestCost: number;
+  debtFreeDate: string;
+}
+
+export interface PayoffComparison {
+  snowball: { totalInterest: number; months: number };
+  avalanche: { totalInterest: number; months: number };
+  interestSaved: number;
+  monthsSaved: number;
+}
+
+// -----------------------------------------------------------------------------
+// Retirement Calculator
+// -----------------------------------------------------------------------------
+
+export interface RetirementParams {
+  currentAge: number;
+  retirementAge: number;
+  monthlyContribution: number;
+  expectedReturn: number; // annual %
+  currentSavings: number;
+  monthlyExpenses: number;
+  inflation: number; // annual %
+}
+
+export interface RetirementResult {
+  projectedFund: number;
+  monthlyRetirementIncome: number;
+  fireNumber: number;
+  surplus: number; // positive = surplus, negative = deficit
+  timelineByAge: { age: number; balance: number }[];
+}
+
+// -----------------------------------------------------------------------------
+// Monte Carlo Simulation
+// -----------------------------------------------------------------------------
+
+export type MonteCarloHorizon = 5 | 10 | 20 | 30;
+
+export interface MonteCarloPercentile {
+  label: string; // e.g. '10th', '25th', '50th', '75th', '90th'
+  values: number[]; // one value per year
+  color: string;
+}
+
+export interface MonteCarloResult {
+  horizon: MonteCarloHorizon;
+  initialValue: number;
+  targetValue: number;
+  successProbability: number; // 0-100
+  medianOutcome: number;
+  bestCase: number;
+  worstCase: number;
+  percentiles: MonteCarloPercentile[];
+  years: number[]; // [0, 1, 2, ..., horizon]
+}
+
+// -----------------------------------------------------------------------------
+// Learn Hub
+// -----------------------------------------------------------------------------
+
+export type LessonCategory = 'beginner' | 'intermediate' | 'advanced';
+
+export interface Lesson {
+  id: string;
+  emoji: string;
+  title: string;
+  description: string;
+  category: LessonCategory;
+  readingTimeMin: number;
+  content: string;
+}
+
+export interface GlossaryTerm {
+  term: string;
+  definition: string;
+}
+
+export interface LearnProgress {
+  completedIds: string[];
+  streak: number;
+  lastCompletedDate: string;
+}

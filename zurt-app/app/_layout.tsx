@@ -237,6 +237,26 @@ export default function RootLayout() {
             name="recurring-investments"
             options={{ animation: 'slide_from_right' }}
           />
+          <Stack.Screen
+            name="net-worth"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="debt-manager"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="retirement"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="monte-carlo"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="learn"
+            options={{ animation: 'slide_from_right' }}
+          />
         </Stack>
         <RateLimitToast />
         {isLocked && isAuthenticated && <LockOverlay onUnlock={unlock} />}
