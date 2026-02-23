@@ -70,7 +70,8 @@ function getInitial(name: string): string {
 }
 
 function getMemberName(member: any): string {
-  return member.full_name || member.name || member.invited_email || '';
+  if (!member) return 'Desconhecido';
+  return member.full_name || member.name || member.email || member.invited_email || 'Membro';
 }
 
 // =============================================================================
@@ -167,21 +168,21 @@ export default function FamilyScreen() {
   // ---------------------------------------------------------------------------
   const totalWealth = useMemo(() => {
     return summary?.totalNetWorth ?? members
-      .filter((m) => m.status === 'accepted')
-      .reduce((sum: number, m: any) => sum + (parseFloat(m.netWorth ?? m.net_worth ?? '0') || 0), 0);
+      .filter((m) => m?.status === 'accepted')
+      .reduce((sum: number, m: any) => sum + (parseFloat(m?.netWorth ?? m?.net_worth ?? '0') || 0), 0);
   }, [summary, members]);
 
-  const acceptedMembers = useMemo(() => members.filter((m) => m.status === 'accepted'), [members]);
+  const acceptedMembers = useMemo(() => members.filter((m) => m?.status === 'accepted'), [members]);
   const isOwner = useMemo(() => {
     if (!currentUser || !group) return false;
-    return group.owner_id === currentUser.id || members.some((m) => m.user_id === currentUser.id && m.role === 'owner');
+    return group.owner_id === currentUser.id || members.some((m) => m?.user_id === currentUser.id && m?.role === 'owner');
   }, [currentUser, group, members]);
 
   const summaryMembers = useMemo(() => {
     return summary?.members ?? acceptedMembers.map((m: any) => ({
       full_name: getMemberName(m),
-      role: m.role,
-      netWorth: parseFloat(m.netWorth ?? m.net_worth ?? '0') || 0,
+      role: m?.role,
+      netWorth: parseFloat(m?.netWorth ?? m?.net_worth ?? '0') || 0,
     }));
   }, [summary, acceptedMembers]);
 
@@ -285,8 +286,9 @@ export default function FamilyScreen() {
   }, []);
 
   const handleOpenDelegation = useCallback((member: any) => {
+    if (!member) return;
     setDelegationMember(member);
-    setDelegationSelection(member.canViewMembers ?? []);
+    setDelegationSelection(member?.canViewMembers ?? []);
     setDelegationModalVisible(true);
   }, []);
 
@@ -307,9 +309,9 @@ export default function FamilyScreen() {
   }, [delegationMember, delegationSelection, loadData]);
 
   const handleMemberPress = useCallback((member: any) => {
-    if (member.status !== 'accepted') return;
+    if (!member || member?.status !== 'accepted') return;
 
-    if (isOwner && member.role !== 'owner') {
+    if (isOwner && member?.role !== 'owner') {
       // Owner sees full action menu for non-owner members
       Alert.alert(
         getMemberName(member),
@@ -323,7 +325,7 @@ export default function FamilyScreen() {
             text: t('family.changeVisibility'),
             onPress: () => {
               setVisModalMember(member);
-              setVisModalValue(member.visibility || 'total');
+              setVisModalValue(member?.visibility || 'total');
               setVisModalVisible(true);
             },
           },
@@ -362,10 +364,10 @@ export default function FamilyScreen() {
       );
     } else if (!isOwner) {
       // Non-owner: can only view profile of delegated members
-      const canView = member.canViewMembers ?? [];
-      const currentMember = members.find((m) => m.user_id === currentUser?.id);
+      const canView = member?.canViewMembers ?? [];
+      const currentMember = members.find((m) => m?.user_id === currentUser?.id);
       const delegated = currentMember?.canViewMembers ?? [];
-      if (delegated.includes(member.user_id) || delegated.includes(member.id)) {
+      if (delegated.includes(member?.user_id) || delegated.includes(member?.id)) {
         handleViewMemberProfile(member);
       }
     }
@@ -543,8 +545,8 @@ export default function FamilyScreen() {
                 {summaryMembers.length > 0 && totalWealth > 0 && (
                   <>
                     <View style={styles.barChart}>
-                      {summaryMembers.map((m: any, i: number) => {
-                        const nw = parseFloat(m.netWorth ?? m.net_worth ?? '0') || 0;
+                      {summaryMembers.filter(Boolean).map((m: any, i: number) => {
+                        const nw = parseFloat(m?.netWorth ?? m?.net_worth ?? '0') || 0;
                         const pct = totalWealth > 0 ? (nw / totalWealth) * 100 : 0;
                         return (
                           <View
@@ -553,7 +555,7 @@ export default function FamilyScreen() {
                               styles.barSeg,
                               {
                                 width: `${Math.max(pct, 2)}%` as any,
-                                backgroundColor: ROLE_COLORS[m.role] || '#A0AEC0',
+                                backgroundColor: ROLE_COLORS[m?.role] || '#A0AEC0',
                               },
                             ]}
                           />
@@ -561,13 +563,13 @@ export default function FamilyScreen() {
                       })}
                     </View>
                     <View style={styles.barLegend}>
-                      {summaryMembers.map((m: any, i: number) => {
-                        const name = m.full_name || m.name || '';
-                        const nw = parseFloat(m.netWorth ?? m.net_worth ?? '0') || 0;
+                      {summaryMembers.filter(Boolean).map((m: any, i: number) => {
+                        const name = m?.full_name || m?.name || '';
+                        const nw = parseFloat(m?.netWorth ?? m?.net_worth ?? '0') || 0;
                         const pct = totalWealth > 0 ? (nw / totalWealth) * 100 : 0;
                         return (
                           <View key={`leg-${i}`} style={styles.legendItem}>
-                            <View style={[styles.legendDot, { backgroundColor: ROLE_COLORS[m.role] || '#A0AEC0' }]} />
+                            <View style={[styles.legendDot, { backgroundColor: ROLE_COLORS[m?.role] || '#A0AEC0' }]} />
                             <Text style={styles.legendText} numberOfLines={1}>
                               {(name.split(' ')[0] || '?')} ({pct.toFixed(0)}%)
                             </Text>
@@ -589,14 +591,14 @@ export default function FamilyScreen() {
                 </View>
               </View>
 
-              {members.map((member: any, idx: number) => {
+              {members.filter(Boolean).map((member: any, idx: number) => {
                 const name = getMemberName(member);
-                const role = member.role || 'member';
-                const isPending = member.status === 'pending';
-                const isAccepted = member.status === 'accepted';
+                const role = member?.role || 'member';
+                const isPending = member?.status === 'pending';
+                const isAccepted = member?.status === 'accepted';
                 const roleColor = ROLE_COLORS[role] || '#A0AEC0';
-                const nw = parseFloat(member.netWorth ?? member.net_worth ?? '0') || 0;
-                const visIconName = VISIBILITY_ICON_NAMES[member.visibility] || VISIBILITY_ICON_NAMES.total;
+                const nw = parseFloat(member?.netWorth ?? member?.net_worth ?? '0') || 0;
+                const visIconName = VISIBILITY_ICON_NAMES[member?.visibility] || VISIBILITY_ICON_NAMES.total;
 
                 return (
                   <TouchableOpacity
@@ -918,9 +920,9 @@ export default function FamilyScreen() {
             </Text>
 
             {acceptedMembers
-              .filter((m) => m.id !== delegationMember?.id && m.role !== 'owner')
+              .filter((m) => m?.id !== delegationMember?.id && m?.role !== 'owner')
               .map((m) => {
-                const memberId = m.user_id || m.id;
+                const memberId = m?.user_id || m?.id;
                 const isSelected = delegationSelection.includes(memberId);
                 return (
                   <TouchableOpacity
@@ -933,14 +935,14 @@ export default function FamilyScreen() {
                     }}
                     activeOpacity={0.7}
                   >
-                    <View style={[styles.avatar, { width: 32, height: 32, borderRadius: 16, backgroundColor: ROLE_COLORS[m.role] || '#A0AEC0' }]}>
+                    <View style={[styles.avatar, { width: 32, height: 32, borderRadius: 16, backgroundColor: ROLE_COLORS[m?.role] || '#A0AEC0' }]}>
                       <Text style={[styles.avatarText, { fontSize: 14 }]}>{getInitial(getMemberName(m))}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.visOptionLabel, isSelected && { color: colors.accent }]}>
                         {getMemberName(m)}
                       </Text>
-                      <Text style={styles.visOptionDesc}>{t('family.' + (m.role || 'member'))}</Text>
+                      <Text style={styles.visOptionDesc}>{t('family.' + (m?.role || 'member'))}</Text>
                     </View>
                     <View style={[styles.radio, isSelected && styles.radioSelected]}>
                       {isSelected && <View style={styles.radioDot} />}
