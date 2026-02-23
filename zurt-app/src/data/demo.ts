@@ -29,6 +29,18 @@ import type {
   SmartAlert,
   ConsultantClient,
   ClientPortfolio,
+  WatchlistItem,
+  NewsArticle,
+  NewsCategory,
+  DividendMonth,
+  DividendEvent,
+  AssetComparisonData,
+  MonthlyBudget,
+  BudgetCategory,
+  CashFlowMonth,
+  SpendingInsightsData,
+  CategoryTrend,
+  Bill,
 } from '../types';
 
 // =============================================================================
@@ -1588,3 +1600,244 @@ export const demoClientPortfolios: Record<string, ClientPortfolio> = {
     riskScore: 58,
   },
 };
+
+// =============================================================================
+// Wave 4 - Watchlist
+// =============================================================================
+
+export const demoWatchlist: WatchlistItem[] = [
+  { id: 'w1', ticker: 'MGLU3', name: 'Magazine Luiza ON', class: 'stocks', currentPrice: 8.45, dailyChange: -2.3, priceHistory: [9.10, 8.95, 8.80, 8.70, 8.60, 8.50, 8.45], addedAt: '2026-02-10' },
+  { id: 'w2', ticker: 'WEGE3', name: 'WEG ON', class: 'stocks', currentPrice: 42.30, dailyChange: 1.8, priceHistory: [40.50, 40.80, 41.20, 41.60, 41.90, 42.10, 42.30], addedAt: '2026-02-12' },
+  { id: 'w3', ticker: 'BBDC4', name: 'Bradesco PN', class: 'stocks', currentPrice: 15.20, dailyChange: 0.5, priceHistory: [14.90, 14.95, 15.00, 15.05, 15.10, 15.15, 15.20], addedAt: '2026-02-14' },
+  { id: 'w4', ticker: 'AAPL', name: 'Apple Inc', class: 'international', currentPrice: 185.50, dailyChange: -0.8, priceHistory: [188.20, 187.50, 186.90, 186.30, 185.80, 185.60, 185.50], addedAt: '2026-02-08' },
+  { id: 'w5', ticker: 'TSLA', name: 'Tesla Inc', class: 'international', currentPrice: 245.80, dailyChange: 3.2, priceHistory: [235.00, 237.50, 240.10, 241.60, 243.20, 244.50, 245.80], addedAt: '2026-02-15' },
+  { id: 'w6', ticker: 'SOL', name: 'Solana', class: 'crypto', currentPrice: 142.60, dailyChange: -1.5, priceHistory: [148.20, 146.80, 145.30, 144.50, 143.80, 143.10, 142.60], addedAt: '2026-02-18' },
+];
+
+// =============================================================================
+// Wave 4 - Watchlist Search Results
+// =============================================================================
+
+export const demoWatchlistSearchResults: WatchlistItem[] = [
+  { id: 'ws1', ticker: 'RENT3', name: 'Localiza ON', class: 'stocks', currentPrice: 58.90, dailyChange: 1.2, priceHistory: [57.50, 57.80, 58.10, 58.30, 58.50, 58.70, 58.90], addedAt: '' },
+  { id: 'ws2', ticker: 'TOTS3', name: 'Totvs ON', class: 'stocks', currentPrice: 32.40, dailyChange: -0.6, priceHistory: [33.10, 32.90, 32.80, 32.70, 32.60, 32.50, 32.40], addedAt: '' },
+  { id: 'ws3', ticker: 'RADL3', name: 'RD Saude ON', class: 'stocks', currentPrice: 27.80, dailyChange: 0.3, priceHistory: [27.50, 27.55, 27.60, 27.65, 27.70, 27.75, 27.80], addedAt: '' },
+  { id: 'ws4', ticker: 'RAIL3', name: 'Rumo ON', class: 'stocks', currentPrice: 22.10, dailyChange: -1.1, priceHistory: [22.80, 22.60, 22.50, 22.40, 22.30, 22.20, 22.10], addedAt: '' },
+  { id: 'ws5', ticker: 'SUZB3', name: 'Suzano ON', class: 'stocks', currentPrice: 55.60, dailyChange: 2.1, priceHistory: [53.80, 54.20, 54.60, 55.00, 55.20, 55.40, 55.60], addedAt: '' },
+  { id: 'ws6', ticker: 'NVDA', name: 'Nvidia Corp', class: 'international', currentPrice: 875.20, dailyChange: 4.5, priceHistory: [840.00, 850.30, 855.80, 860.50, 865.10, 870.30, 875.20], addedAt: '' },
+  { id: 'ws7', ticker: 'GOOGL', name: 'Alphabet Inc', class: 'international', currentPrice: 155.30, dailyChange: 0.9, priceHistory: [153.50, 153.80, 154.20, 154.50, 154.80, 155.10, 155.30], addedAt: '' },
+  { id: 'ws8', ticker: 'AMZN', name: 'Amazon Inc', class: 'international', currentPrice: 192.40, dailyChange: -0.4, priceHistory: [193.80, 193.50, 193.10, 192.90, 192.70, 192.50, 192.40], addedAt: '' },
+  { id: 'ws9', ticker: 'ADA', name: 'Cardano', class: 'crypto', currentPrice: 0.62, dailyChange: -2.8, priceHistory: [0.66, 0.65, 0.64, 0.63, 0.63, 0.62, 0.62], addedAt: '' },
+  { id: 'ws10', ticker: 'DOT', name: 'Polkadot', class: 'crypto', currentPrice: 7.85, dailyChange: 1.4, priceHistory: [7.50, 7.55, 7.60, 7.70, 7.75, 7.80, 7.85], addedAt: '' },
+];
+
+// =============================================================================
+// Wave 4 - News Articles
+// =============================================================================
+
+export const demoNewsArticles: NewsArticle[] = [
+  { id: 'na1', title: 'Ibovespa fecha em alta de 1,2% com commodities em destaque', source: 'InfoMoney', date: '2026-02-23T16:30:00', summary: 'Bolsa brasileira encerrou o pregão em alta impulsionada pelo avanço das commodities metálicas e do petróleo no mercado internacional.', category: 'market', relatedTickers: ['PETR4', 'VALE3'] },
+  { id: 'na2', title: 'Copom mantém Selic em 13,25% e sinaliza cautela', source: 'Valor Econômico', date: '2026-02-23T14:00:00', summary: 'Comitê de Política Monetária manteve a taxa básica inalterada, citando persistência inflacionária e cenário externo desafiador.', category: 'economy' },
+  { id: 'na3', title: 'PETR4 dispara 4% após resultado acima do esperado', source: 'Bloomberg Línea', date: '2026-02-22T18:00:00', summary: 'Ações da Petrobras avançaram forte após a estatal reportar lucro líquido de R$ 38 bilhões no trimestre, superando consenso do mercado.', category: 'stocks', relatedTickers: ['PETR4'] },
+  { id: 'na4', title: 'Bitcoin ultrapassa US$ 105 mil e renova máxima histórica', source: 'CoinDesk', date: '2026-02-22T12:00:00', summary: 'Principal criptomoeda do mundo atingiu novo recorde após anúncio de aprovação de ETF de Bitcoin spot em mais cinco países.', category: 'crypto', relatedTickers: ['BTC'] },
+  { id: 'na5', title: 'FIIs de logística lideram captação em fevereiro', source: 'FIIs.com.br', date: '2026-02-21T15:30:00', summary: 'Fundos imobiliários de galpões logísticos captaram R$ 2,3 bilhões no mês, refletindo demanda aquecida do e-commerce.', category: 'funds', relatedTickers: ['HGLG11'] },
+  { id: 'na6', title: 'PIB do Brasil cresce 0,8% no 4T25, acima do esperado', source: 'Reuters', date: '2026-02-21T10:00:00', summary: 'Economia brasileira surpreendeu com crescimento robusto no último trimestre, puxada pelo setor de serviços e consumo das famílias.', category: 'economy' },
+  { id: 'na7', title: 'VALE3 recua com queda do minério de ferro na China', source: 'Exame', date: '2026-02-20T17:00:00', summary: 'Ações da Vale caíram 2,5% acompanhando a desvalorização do minério de ferro no mercado chinês após dados fracos de construção.', category: 'stocks', relatedTickers: ['VALE3'] },
+  { id: 'na8', title: 'Ethereum 2.0 completa upgrade com sucesso', source: 'CoinTelegraph', date: '2026-02-20T09:00:00', summary: 'Rede Ethereum concluiu atualização que reduziu taxas de gás em 40% e aumentou velocidade de transações para 100 mil por segundo.', category: 'crypto', relatedTickers: ['ETH'] },
+  { id: 'na9', title: 'Dólar fecha a R$ 5,72 com fluxo estrangeiro positivo', source: 'InfoMoney', date: '2026-02-19T18:30:00', summary: 'Moeda americana recuou frente ao real com entrada de capital estrangeiro na B3 e expectativa de manutenção da Selic.', category: 'market' },
+  { id: 'na10', title: 'ITUB4 anuncia programa de recompra de R$ 3 bilhões', source: 'Valor Investe', date: '2026-02-19T14:00:00', summary: 'Itaú Unibanco aprovou novo programa de recompra de ações próprias, sinalizando confiança da gestão no valor da companhia.', category: 'stocks', relatedTickers: ['ITUB4'] },
+  { id: 'na11', title: 'CDBs de bancos médios oferecem até 130% do CDI', source: 'Seu Dinheiro', date: '2026-02-18T16:00:00', summary: 'Com taxa Selic elevada, CDBs de bancos menores oferecem retornos atrativos para investidores de renda fixa com perfil moderado.', category: 'market' },
+  { id: 'na12', title: 'Reforma tributária: novas regras para dividendos', source: 'Folha de S.Paulo', date: '2026-02-18T08:00:00', summary: 'Governo federal detalhou proposta que tributará dividendos acima de R$ 20 mil mensais em 15%, gerando debate no mercado.', category: 'economy' },
+  { id: 'na13', title: 'BBAS3 pagará dividendos recordes de R$ 2,40 por ação', source: 'Status Invest', date: '2026-02-17T14:30:00', summary: 'Banco do Brasil anunciou distribuição recorde de proventos referente ao exercício de 2025, com yield projetado de 12%.', category: 'stocks', relatedTickers: ['BBAS3'] },
+  { id: 'na14', title: 'Fundos multimercado perdem para o CDI pelo 3o ano', source: 'Exame', date: '2026-02-17T11:00:00', summary: 'Levantamento mostra que 78% dos fundos multimercado ficaram abaixo do CDI em 2025, gerando migração para renda fixa.', category: 'funds' },
+  { id: 'na15', title: 'S&P 500 atinge novo recorde com resultados de tech', source: 'CNBC', date: '2026-02-16T21:00:00', summary: 'Índice americano renovou máxima impulsionado por resultados trimestrais acima do esperado das big techs.', category: 'market' },
+  { id: 'na16', title: 'XPML11 anuncia rendimento de R$ 0,92 por cota', source: 'FIIs.com.br', date: '2026-02-16T15:00:00', summary: 'Fundo de shoppings XP Malls distribuirá rendimento mensal acima da média, refletindo forte ocupação dos empreendimentos.', category: 'funds', relatedTickers: ['XPML11'] },
+  { id: 'na17', title: 'Inflação de fevereiro surpreende para baixo: IPCA de 0,35%', source: 'IBGE', date: '2026-02-16T09:00:00', summary: 'Índice oficial de inflação veio abaixo das expectativas do mercado, reforçando tese de início do ciclo de corte da Selic.', category: 'economy' },
+  { id: 'na18', title: 'Solana ultrapassa Ethereum em volume de transações diárias', source: 'The Block', date: '2026-02-16T07:00:00', summary: 'Blockchain Solana processou 85 milhões de transações em 24h, superando Ethereum pela primeira vez desde o upgrade.', category: 'crypto', relatedTickers: ['SOL'] },
+];
+
+// =============================================================================
+// Wave 4 - Dividend Calendar
+// =============================================================================
+
+export const demoDividendMonths: DividendMonth[] = [
+  { month: 'Jan', date: '2026-01', totalIncome: 1850, events: [
+    { id: 'de1', ticker: 'HGLG11', assetName: 'CSHG Logística', type: 'rendimento', amountPerShare: 0.78, totalAmount: 390, exDate: '2025-12-30', paymentDate: '2026-01-15', quantity: 500 },
+    { id: 'de2', ticker: 'XPML11', assetName: 'XP Malls', type: 'rendimento', amountPerShare: 0.92, totalAmount: 276, exDate: '2025-12-30', paymentDate: '2026-01-15', quantity: 300 },
+    { id: 'de3', ticker: 'KNRI11', assetName: 'Kinea Renda', type: 'rendimento', amountPerShare: 0.72, totalAmount: 144, exDate: '2025-12-30', paymentDate: '2026-01-15', quantity: 200 },
+    { id: 'de4', ticker: 'MXRF11', assetName: 'Maxi Renda', type: 'rendimento', amountPerShare: 0.10, totalAmount: 100, exDate: '2025-12-30', paymentDate: '2026-01-15', quantity: 1000 },
+    { id: 'de5', ticker: 'ITUB4', assetName: 'Itau Unibanco PN', type: 'jcp', amountPerShare: 1.12, totalAmount: 940, exDate: '2025-12-20', paymentDate: '2026-01-10', quantity: 839 },
+  ]},
+  { month: 'Fev', date: '2026-02', totalIncome: 1210, events: [
+    { id: 'de6', ticker: 'HGLG11', assetName: 'CSHG Logística', type: 'rendimento', amountPerShare: 0.80, totalAmount: 400, exDate: '2026-01-30', paymentDate: '2026-02-14', quantity: 500 },
+    { id: 'de7', ticker: 'XPML11', assetName: 'XP Malls', type: 'rendimento', amountPerShare: 0.92, totalAmount: 276, exDate: '2026-01-30', paymentDate: '2026-02-14', quantity: 300 },
+    { id: 'de8', ticker: 'KNRI11', assetName: 'Kinea Renda', type: 'rendimento', amountPerShare: 0.74, totalAmount: 148, exDate: '2026-01-30', paymentDate: '2026-02-14', quantity: 200 },
+    { id: 'de9', ticker: 'MXRF11', assetName: 'Maxi Renda', type: 'rendimento', amountPerShare: 0.10, totalAmount: 100, exDate: '2026-01-30', paymentDate: '2026-02-14', quantity: 1000 },
+    { id: 'de10', ticker: 'BBAS3', assetName: 'Banco do Brasil ON', type: 'dividend', amountPerShare: 0.82, totalAmount: 286, exDate: '2026-02-05', paymentDate: '2026-02-20', quantity: 349 },
+  ]},
+  { month: 'Mar', date: '2026-03', totalIncome: 2450, events: [
+    { id: 'de11', ticker: 'HGLG11', assetName: 'CSHG Logística', type: 'rendimento', amountPerShare: 0.79, totalAmount: 395, exDate: '2026-02-27', paymentDate: '2026-03-14', quantity: 500 },
+    { id: 'de12', ticker: 'XPML11', assetName: 'XP Malls', type: 'rendimento', amountPerShare: 0.95, totalAmount: 285, exDate: '2026-02-27', paymentDate: '2026-03-14', quantity: 300 },
+    { id: 'de13', ticker: 'KNRI11', assetName: 'Kinea Renda', type: 'rendimento', amountPerShare: 0.75, totalAmount: 150, exDate: '2026-02-27', paymentDate: '2026-03-14', quantity: 200 },
+    { id: 'de14', ticker: 'MXRF11', assetName: 'Maxi Renda', type: 'rendimento', amountPerShare: 0.10, totalAmount: 100, exDate: '2026-02-27', paymentDate: '2026-03-14', quantity: 1000 },
+    { id: 'de15', ticker: 'PETR4', assetName: 'Petrobras PN', type: 'dividend', amountPerShare: 2.85, totalAmount: 1140, exDate: '2026-03-10', paymentDate: '2026-03-25', quantity: 400 },
+    { id: 'de16', ticker: 'ABEV3', assetName: 'Ambev ON', type: 'dividend', amountPerShare: 0.38, totalAmount: 380, exDate: '2026-03-12', paymentDate: '2026-03-28', quantity: 1000 },
+  ]},
+  { month: 'Abr', date: '2026-04', totalIncome: 1010, events: [
+    { id: 'de17', ticker: 'HGLG11', assetName: 'CSHG Logística', type: 'rendimento', amountPerShare: 0.80, totalAmount: 400, exDate: '2026-03-30', paymentDate: '2026-04-14', quantity: 500 },
+    { id: 'de18', ticker: 'XPML11', assetName: 'XP Malls', type: 'rendimento', amountPerShare: 0.90, totalAmount: 270, exDate: '2026-03-30', paymentDate: '2026-04-14', quantity: 300 },
+    { id: 'de19', ticker: 'KNRI11', assetName: 'Kinea Renda', type: 'rendimento', amountPerShare: 0.72, totalAmount: 144, exDate: '2026-03-30', paymentDate: '2026-04-14', quantity: 200 },
+    { id: 'de20', ticker: 'MXRF11', assetName: 'Maxi Renda', type: 'rendimento', amountPerShare: 0.10, totalAmount: 100, exDate: '2026-03-30', paymentDate: '2026-04-14', quantity: 1000 },
+    { id: 'de21', ticker: 'ITUB4', assetName: 'Itau Unibanco PN', type: 'jcp', amountPerShare: 0.12, totalAmount: 96, exDate: '2026-04-01', paymentDate: '2026-04-15', quantity: 839 },
+  ]},
+  { month: 'Mai', date: '2026-05', totalIncome: 1520, events: [
+    { id: 'de22', ticker: 'HGLG11', assetName: 'CSHG Logística', type: 'rendimento', amountPerShare: 0.81, totalAmount: 405, exDate: '2026-04-29', paymentDate: '2026-05-14', quantity: 500 },
+    { id: 'de23', ticker: 'XPML11', assetName: 'XP Malls', type: 'rendimento', amountPerShare: 0.93, totalAmount: 279, exDate: '2026-04-29', paymentDate: '2026-05-14', quantity: 300 },
+    { id: 'de24', ticker: 'KNRI11', assetName: 'Kinea Renda', type: 'rendimento', amountPerShare: 0.73, totalAmount: 146, exDate: '2026-04-29', paymentDate: '2026-05-14', quantity: 200 },
+    { id: 'de25', ticker: 'MXRF11', assetName: 'Maxi Renda', type: 'rendimento', amountPerShare: 0.10, totalAmount: 100, exDate: '2026-04-29', paymentDate: '2026-05-14', quantity: 1000 },
+    { id: 'de26', ticker: 'BBAS3', assetName: 'Banco do Brasil ON', type: 'dividend', amountPerShare: 1.70, totalAmount: 590, exDate: '2026-05-08', paymentDate: '2026-05-22', quantity: 349 },
+  ]},
+  { month: 'Jun', date: '2026-06', totalIncome: 2680, events: [
+    { id: 'de27', ticker: 'HGLG11', assetName: 'CSHG Logística', type: 'rendimento', amountPerShare: 0.82, totalAmount: 410, exDate: '2026-05-29', paymentDate: '2026-06-14', quantity: 500 },
+    { id: 'de28', ticker: 'XPML11', assetName: 'XP Malls', type: 'rendimento', amountPerShare: 0.94, totalAmount: 282, exDate: '2026-05-29', paymentDate: '2026-06-14', quantity: 300 },
+    { id: 'de29', ticker: 'KNRI11', assetName: 'Kinea Renda', type: 'rendimento', amountPerShare: 0.76, totalAmount: 152, exDate: '2026-05-29', paymentDate: '2026-06-14', quantity: 200 },
+    { id: 'de30', ticker: 'MXRF11', assetName: 'Maxi Renda', type: 'rendimento', amountPerShare: 0.10, totalAmount: 100, exDate: '2026-05-29', paymentDate: '2026-06-14', quantity: 1000 },
+    { id: 'de31', ticker: 'PETR4', assetName: 'Petrobras PN', type: 'dividend', amountPerShare: 3.10, totalAmount: 1240, exDate: '2026-06-10', paymentDate: '2026-06-25', quantity: 400 },
+    { id: 'de32', ticker: 'ITUB4', assetName: 'Itau Unibanco PN', type: 'jcp', amountPerShare: 0.60, totalAmount: 496, exDate: '2026-06-15', paymentDate: '2026-06-30', quantity: 839 },
+  ]},
+  { month: 'Jul', date: '2026-07', totalIncome: 930, events: [
+    { id: 'de33', ticker: 'HGLG11', assetName: 'CSHG Logística', type: 'rendimento', amountPerShare: 0.80, totalAmount: 400, exDate: '2026-06-29', paymentDate: '2026-07-14', quantity: 500 },
+    { id: 'de34', ticker: 'XPML11', assetName: 'XP Malls', type: 'rendimento', amountPerShare: 0.90, totalAmount: 270, exDate: '2026-06-29', paymentDate: '2026-07-14', quantity: 300 },
+    { id: 'de35', ticker: 'KNRI11', assetName: 'Kinea Renda', type: 'rendimento', amountPerShare: 0.73, totalAmount: 146, exDate: '2026-06-29', paymentDate: '2026-07-14', quantity: 200 },
+    { id: 'de36', ticker: 'MXRF11', assetName: 'Maxi Renda', type: 'rendimento', amountPerShare: 0.10, totalAmount: 100, exDate: '2026-06-29', paymentDate: '2026-07-14', quantity: 1000 },
+  ]},
+  { month: 'Ago', date: '2026-08', totalIncome: 1490, events: [
+    { id: 'de37', ticker: 'HGLG11', assetName: 'CSHG Logística', type: 'rendimento', amountPerShare: 0.83, totalAmount: 415, exDate: '2026-07-30', paymentDate: '2026-08-14', quantity: 500 },
+    { id: 'de38', ticker: 'XPML11', assetName: 'XP Malls', type: 'rendimento', amountPerShare: 0.92, totalAmount: 276, exDate: '2026-07-30', paymentDate: '2026-08-14', quantity: 300 },
+    { id: 'de39', ticker: 'KNRI11', assetName: 'Kinea Renda', type: 'rendimento', amountPerShare: 0.74, totalAmount: 148, exDate: '2026-07-30', paymentDate: '2026-08-14', quantity: 200 },
+    { id: 'de40', ticker: 'MXRF11', assetName: 'Maxi Renda', type: 'rendimento', amountPerShare: 0.10, totalAmount: 100, exDate: '2026-07-30', paymentDate: '2026-08-14', quantity: 1000 },
+    { id: 'de41', ticker: 'BBAS3', assetName: 'Banco do Brasil ON', type: 'dividend', amountPerShare: 1.58, totalAmount: 551, exDate: '2026-08-06', paymentDate: '2026-08-20', quantity: 349 },
+  ]},
+  { month: 'Set', date: '2026-09', totalIncome: 2320, events: [
+    { id: 'de42', ticker: 'HGLG11', assetName: 'CSHG Logística', type: 'rendimento', amountPerShare: 0.81, totalAmount: 405, exDate: '2026-08-28', paymentDate: '2026-09-14', quantity: 500 },
+    { id: 'de43', ticker: 'XPML11', assetName: 'XP Malls', type: 'rendimento', amountPerShare: 0.91, totalAmount: 273, exDate: '2026-08-28', paymentDate: '2026-09-14', quantity: 300 },
+    { id: 'de44', ticker: 'KNRI11', assetName: 'Kinea Renda', type: 'rendimento', amountPerShare: 0.75, totalAmount: 150, exDate: '2026-08-28', paymentDate: '2026-09-14', quantity: 200 },
+    { id: 'de45', ticker: 'MXRF11', assetName: 'Maxi Renda', type: 'rendimento', amountPerShare: 0.10, totalAmount: 100, exDate: '2026-08-28', paymentDate: '2026-09-14', quantity: 1000 },
+    { id: 'de46', ticker: 'PETR4', assetName: 'Petrobras PN', type: 'dividend', amountPerShare: 2.95, totalAmount: 1180, exDate: '2026-09-10', paymentDate: '2026-09-25', quantity: 400 },
+    { id: 'de47', ticker: 'ABEV3', assetName: 'Ambev ON', type: 'dividend', amountPerShare: 0.22, totalAmount: 220, exDate: '2026-09-12', paymentDate: '2026-09-26', quantity: 1000 },
+  ]},
+  { month: 'Out', date: '2026-10', totalIncome: 1010, events: [
+    { id: 'de48', ticker: 'HGLG11', assetName: 'CSHG Logística', type: 'rendimento', amountPerShare: 0.82, totalAmount: 410, exDate: '2026-09-29', paymentDate: '2026-10-14', quantity: 500 },
+    { id: 'de49', ticker: 'XPML11', assetName: 'XP Malls', type: 'rendimento', amountPerShare: 0.93, totalAmount: 279, exDate: '2026-09-29', paymentDate: '2026-10-14', quantity: 300 },
+    { id: 'de50', ticker: 'KNRI11', assetName: 'Kinea Renda', type: 'rendimento', amountPerShare: 0.73, totalAmount: 146, exDate: '2026-09-29', paymentDate: '2026-10-14', quantity: 200 },
+    { id: 'de51', ticker: 'MXRF11', assetName: 'Maxi Renda', type: 'rendimento', amountPerShare: 0.10, totalAmount: 100, exDate: '2026-09-29', paymentDate: '2026-10-14', quantity: 1000 },
+    { id: 'de52', ticker: 'ITUB4', assetName: 'Itau Unibanco PN', type: 'jcp', amountPerShare: 0.09, totalAmount: 75, exDate: '2026-10-01', paymentDate: '2026-10-15', quantity: 839 },
+  ]},
+  { month: 'Nov', date: '2026-11', totalIncome: 1510, events: [
+    { id: 'de53', ticker: 'HGLG11', assetName: 'CSHG Logística', type: 'rendimento', amountPerShare: 0.84, totalAmount: 420, exDate: '2026-10-30', paymentDate: '2026-11-14', quantity: 500 },
+    { id: 'de54', ticker: 'XPML11', assetName: 'XP Malls', type: 'rendimento', amountPerShare: 0.94, totalAmount: 282, exDate: '2026-10-30', paymentDate: '2026-11-14', quantity: 300 },
+    { id: 'de55', ticker: 'KNRI11', assetName: 'Kinea Renda', type: 'rendimento', amountPerShare: 0.76, totalAmount: 152, exDate: '2026-10-30', paymentDate: '2026-11-14', quantity: 200 },
+    { id: 'de56', ticker: 'MXRF11', assetName: 'Maxi Renda', type: 'rendimento', amountPerShare: 0.10, totalAmount: 100, exDate: '2026-10-30', paymentDate: '2026-11-14', quantity: 1000 },
+    { id: 'de57', ticker: 'BBAS3', assetName: 'Banco do Brasil ON', type: 'dividend', amountPerShare: 1.60, totalAmount: 558, exDate: '2026-11-06', paymentDate: '2026-11-20', quantity: 349 },
+  ]},
+  { month: 'Dez', date: '2026-12', totalIncome: 3240, events: [
+    { id: 'de58', ticker: 'HGLG11', assetName: 'CSHG Logística', type: 'rendimento', amountPerShare: 0.85, totalAmount: 425, exDate: '2026-11-28', paymentDate: '2026-12-14', quantity: 500 },
+    { id: 'de59', ticker: 'XPML11', assetName: 'XP Malls', type: 'rendimento', amountPerShare: 0.96, totalAmount: 288, exDate: '2026-11-28', paymentDate: '2026-12-14', quantity: 300 },
+    { id: 'de60', ticker: 'KNRI11', assetName: 'Kinea Renda', type: 'rendimento', amountPerShare: 0.77, totalAmount: 154, exDate: '2026-11-28', paymentDate: '2026-12-14', quantity: 200 },
+    { id: 'de61', ticker: 'MXRF11', assetName: 'Maxi Renda', type: 'rendimento', amountPerShare: 0.10, totalAmount: 100, exDate: '2026-11-28', paymentDate: '2026-12-14', quantity: 1000 },
+    { id: 'de62', ticker: 'PETR4', assetName: 'Petrobras PN', type: 'dividend', amountPerShare: 3.25, totalAmount: 1300, exDate: '2026-12-10', paymentDate: '2026-12-22', quantity: 400 },
+    { id: 'de63', ticker: 'ITUB4', assetName: 'Itau Unibanco PN', type: 'jcp', amountPerShare: 1.15, totalAmount: 965, exDate: '2026-12-15', paymentDate: '2026-12-29', quantity: 839 },
+    { id: 'de64', ticker: 'ABEV3', assetName: 'Ambev ON', type: 'dividend', amountPerShare: 0.01, totalAmount: 8, exDate: '2026-12-18', paymentDate: '2026-12-30', quantity: 1000 },
+  ]},
+];
+
+// =============================================================================
+// Wave 4 - Asset Comparison
+// =============================================================================
+
+export const demoComparisonAssets: AssetComparisonData[] = [
+  { ticker: 'PETR4', name: 'Petrobras PN', ytdReturn: 12.5, return12m: 35.2, volatility: 28.4, dividendYield: 14.2, pe: 4.8, marketCap: 520000000000, color: '#3A86FF' },
+  { ticker: 'VALE3', name: 'Vale ON', ytdReturn: -3.8, return12m: -8.5, volatility: 32.1, dividendYield: 8.5, pe: 6.2, marketCap: 310000000000, color: '#00D4AA' },
+  { ticker: 'ITUB4', name: 'Itau PN', ytdReturn: 8.2, return12m: 24.6, volatility: 18.5, dividendYield: 6.8, pe: 8.5, marketCap: 340000000000, color: '#FF6B6B' },
+  { ticker: 'BBAS3', name: 'Banco do Brasil ON', ytdReturn: 6.5, return12m: 18.3, volatility: 22.0, dividendYield: 12.0, pe: 5.5, marketCap: 180000000000, color: '#FFBE0B' },
+  { ticker: 'ABEV3', name: 'Ambev ON', ytdReturn: 2.1, return12m: 5.8, volatility: 15.2, dividendYield: 4.5, pe: 16.8, marketCap: 240000000000, color: '#A855F7' },
+  { ticker: 'HGLG11', name: 'CSHG Logística', ytdReturn: 4.8, return12m: 12.5, volatility: 10.2, dividendYield: 8.9, pe: 0, marketCap: 5200000000, color: '#F97316' },
+  { ticker: 'BTC', name: 'Bitcoin', ytdReturn: 18.5, return12m: 85.2, volatility: 55.0, dividendYield: 0, pe: 0, marketCap: 2050000000000, color: '#F3BA2F' },
+  { ticker: 'WEGE3', name: 'WEG ON', ytdReturn: 15.2, return12m: 32.8, volatility: 20.5, dividendYield: 1.2, pe: 35.0, marketCap: 195000000000, color: '#818CF8' },
+];
+
+// =============================================================================
+// Wave 4 - Budget
+// =============================================================================
+
+export const demoBudget: MonthlyBudget = {
+  month: '2026-02',
+  totalLimit: 17000,
+  totalSpent: 15600,
+  categories: [
+    { category: 'food', limit: 5000, spent: 4850, color: '#FF6B6B', icon: '\uD83C\uDF54' },
+    { category: 'transport', limit: 2500, spent: 1890, color: '#3A86FF', icon: '\uD83D\uDE97' },
+    { category: 'subscriptions', limit: 1000, spent: 780, color: '#A855F7', icon: '\uD83D\uDCF1' },
+    { category: 'shopping', limit: 3500, spent: 3200, color: '#00D4AA', icon: '\uD83D\uDECD\uFE0F' },
+    { category: 'fuel', limit: 2000, spent: 1560, color: '#FFBE0B', icon: '\u26FD' },
+    { category: 'health', limit: 1000, spent: 420, color: '#F97316', icon: '\uD83C\uDFE5' },
+    { category: 'travel', limit: 0, spent: 340, color: '#06B6D4', icon: '\u2708\uFE0F' },
+    { category: 'tech', limit: 2000, spent: 1560, color: '#818CF8', icon: '\uD83D\uDCBB' },
+  ],
+};
+
+// =============================================================================
+// Wave 4 - Cash Flow
+// =============================================================================
+
+export const demoCashFlow: CashFlowMonth[] = [
+  { month: 'Mar', date: '2026-03', income: 18000, expenses: 15500, savings: 2500 },
+  { month: 'Abr', date: '2026-04', income: 18000, expenses: 14200, savings: 3800 },
+  { month: 'Mai', date: '2026-05', income: 18500, expenses: 16000, savings: 2500 },
+  { month: 'Jun', date: '2026-06', income: 18500, expenses: 14800, savings: 3700 },
+  { month: 'Jul', date: '2026-07', income: 19000, expenses: 15200, savings: 3800 },
+  { month: 'Ago', date: '2026-08', income: 19000, expenses: 15800, savings: 3200 },
+];
+
+// =============================================================================
+// Wave 4 - Spending Insights
+// =============================================================================
+
+export const demoSpendingInsights: SpendingInsightsData = {
+  categoryTrends: [
+    { category: 'food', label: 'Alimentação', color: '#FF6B6B', months: [{ month: 'Nov', amount: 4200 }, { month: 'Dez', amount: 5100 }, { month: 'Jan', amount: 4600 }, { month: 'Fev', amount: 4850 }] },
+    { category: 'transport', label: 'Transporte', color: '#3A86FF', months: [{ month: 'Nov', amount: 1800 }, { month: 'Dez', amount: 2100 }, { month: 'Jan', amount: 1950 }, { month: 'Fev', amount: 1890 }] },
+    { category: 'shopping', label: 'Compras', color: '#00D4AA', months: [{ month: 'Nov', amount: 2800 }, { month: 'Dez', amount: 4500 }, { month: 'Jan', amount: 2200 }, { month: 'Fev', amount: 3200 }] },
+    { category: 'subscriptions', label: 'Assinaturas', color: '#A855F7', months: [{ month: 'Nov', amount: 750 }, { month: 'Dez', amount: 780 }, { month: 'Jan', amount: 780 }, { month: 'Fev', amount: 780 }] },
+    { category: 'fuel', label: 'Combustível', color: '#FFBE0B', months: [{ month: 'Nov', amount: 1400 }, { month: 'Dez', amount: 1600 }, { month: 'Jan', amount: 1500 }, { month: 'Fev', amount: 1560 }] },
+    { category: 'tech', label: 'Tecnologia', color: '#818CF8', months: [{ month: 'Nov', amount: 800 }, { month: 'Dez', amount: 2200 }, { month: 'Jan', amount: 500 }, { month: 'Fev', amount: 1560 }] },
+  ],
+  topMerchants: [
+    { name: 'iFood', total: 2850, count: 24 },
+    { name: 'Uber', total: 1420, count: 32 },
+    { name: 'Amazon', total: 1280, count: 5 },
+    { name: 'Shell', total: 980, count: 8 },
+    { name: 'Netflix', total: 55.90, count: 1 },
+  ],
+  avgDailySpend: 520,
+  biggestExpense: { description: 'Apple Store - AirPods Pro', amount: 2099, date: '2026-02-18' },
+  spendingVelocity: 108,
+  savingsRate: 14.5,
+  totalThisMonth: 15600,
+  totalLastMonth: 14200,
+};
+
+// =============================================================================
+// Wave 4 - Bills
+// =============================================================================
+
+export const demoBills: Bill[] = [
+  { id: 'b1', name: 'Aluguel', amount: 3500, dueDate: '2026-03-05', frequency: 'monthly', category: 'shopping', status: 'paid', icon: '\uD83C\uDFE0', color: '#3A86FF', reminder: true, createdAt: '2025-01-01' },
+  { id: 'b2', name: 'Condomínio', amount: 850, dueDate: '2026-03-10', frequency: 'monthly', category: 'shopping', status: 'paid', icon: '\uD83C\uDFE2', color: '#00D4AA', reminder: true, createdAt: '2025-01-01' },
+  { id: 'b3', name: 'Netflix', amount: 55.90, dueDate: '2026-03-17', frequency: 'monthly', category: 'subscriptions', status: 'pending', icon: '\uD83C\uDFAC', color: '#E50914', reminder: false, createdAt: '2025-03-15' },
+  { id: 'b4', name: 'Spotify', amount: 34.90, dueDate: '2026-03-15', frequency: 'monthly', category: 'subscriptions', status: 'paid', icon: '\uD83C\uDFB5', color: '#1DB954', reminder: false, createdAt: '2025-06-01' },
+  { id: 'b5', name: 'Seguro Auto', amount: 280, dueDate: '2026-03-20', frequency: 'monthly', category: 'transport', status: 'pending', icon: '\uD83D\uDE97', color: '#FFBE0B', reminder: true, createdAt: '2025-07-01' },
+  { id: 'b6', name: 'Internet Vivo', amount: 149.90, dueDate: '2026-03-12', frequency: 'monthly', category: 'tech', status: 'paid', icon: '\uD83C\uDF10', color: '#A855F7', reminder: true, createdAt: '2025-01-01' },
+  { id: 'b7', name: 'Energia Enel', amount: 320, dueDate: '2026-03-22', frequency: 'monthly', category: 'shopping', status: 'pending', icon: '\u26A1', color: '#F97316', reminder: true, createdAt: '2025-01-01' },
+  { id: 'b8', name: 'Gympass', amount: 149.90, dueDate: '2026-03-13', frequency: 'monthly', category: 'health', status: 'paid', icon: '\uD83C\uDFCB\uFE0F', color: '#06B6D4', reminder: false, createdAt: '2025-09-01' },
+];

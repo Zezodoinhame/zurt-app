@@ -369,3 +369,150 @@ export interface ClientPortfolio {
   topAssets: { ticker: string; name: string; value: number; variation: number }[];
   riskScore: number;
 }
+
+// -----------------------------------------------------------------------------
+// Watchlist
+// -----------------------------------------------------------------------------
+
+export interface WatchlistItem {
+  id: string;
+  ticker: string;
+  name: string;
+  class: AssetClass;
+  currentPrice: number;
+  dailyChange: number;
+  priceHistory: number[];
+  addedAt: string;
+}
+
+// -----------------------------------------------------------------------------
+// Market News
+// -----------------------------------------------------------------------------
+
+export type NewsCategory = 'market' | 'economy' | 'stocks' | 'crypto' | 'funds';
+
+export interface NewsArticle {
+  id: string;
+  title: string;
+  source: string;
+  date: string;
+  summary: string;
+  category: NewsCategory;
+  relatedTickers?: string[];
+  imageUrl?: string;
+}
+
+// -----------------------------------------------------------------------------
+// Dividend Calendar
+// -----------------------------------------------------------------------------
+
+export type DividendType = 'dividend' | 'jcp' | 'rendimento';
+
+export interface DividendEvent {
+  id: string;
+  ticker: string;
+  assetName: string;
+  type: DividendType;
+  amountPerShare: number;
+  totalAmount: number;
+  exDate: string;
+  paymentDate: string;
+  quantity: number;
+}
+
+export interface DividendMonth {
+  month: string;
+  date: string;
+  events: DividendEvent[];
+  totalIncome: number;
+}
+
+// -----------------------------------------------------------------------------
+// Asset Comparison
+// -----------------------------------------------------------------------------
+
+export interface AssetComparisonData {
+  ticker: string;
+  name: string;
+  ytdReturn: number;
+  return12m: number;
+  volatility: number;
+  dividendYield: number;
+  pe: number;
+  marketCap: number;
+  color: string;
+}
+
+// -----------------------------------------------------------------------------
+// Budget
+// -----------------------------------------------------------------------------
+
+export interface BudgetCategory {
+  category: TransactionCategory;
+  limit: number;
+  spent: number;
+  color: string;
+  icon: string;
+}
+
+export interface MonthlyBudget {
+  month: string;
+  totalLimit: number;
+  totalSpent: number;
+  categories: BudgetCategory[];
+}
+
+// -----------------------------------------------------------------------------
+// Cash Flow Forecast
+// -----------------------------------------------------------------------------
+
+export interface CashFlowMonth {
+  month: string;
+  date: string;
+  income: number;
+  expenses: number;
+  savings: number;
+}
+
+// -----------------------------------------------------------------------------
+// Spending Insights
+// -----------------------------------------------------------------------------
+
+export interface CategoryTrend {
+  category: TransactionCategory;
+  label: string;
+  color: string;
+  months: { month: string; amount: number }[];
+}
+
+export interface SpendingInsightsData {
+  categoryTrends: CategoryTrend[];
+  topMerchants: { name: string; total: number; count: number }[];
+  avgDailySpend: number;
+  biggestExpense: { description: string; amount: number; date: string };
+  spendingVelocity: number;
+  savingsRate: number;
+  totalThisMonth: number;
+  totalLastMonth: number;
+}
+
+// -----------------------------------------------------------------------------
+// Bill Reminders
+// -----------------------------------------------------------------------------
+
+export type BillStatus = 'paid' | 'pending' | 'overdue';
+export type BillFrequency = 'monthly' | 'yearly' | 'weekly' | 'one-time';
+
+export interface Bill {
+  id: string;
+  name: string;
+  amount: number;
+  dueDate: string;
+  frequency: BillFrequency;
+  category: TransactionCategory;
+  status: BillStatus;
+  icon: string;
+  color: string;
+  reminder: boolean;
+  createdAt: string;
+}

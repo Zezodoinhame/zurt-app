@@ -185,6 +185,38 @@ export default function RootLayout() {
             name="consultant"
             options={{ animation: 'slide_from_right' }}
           />
+          <Stack.Screen
+            name="watchlist"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="news"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="dividends"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="comparison"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="budget"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="cash-flow"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="spending-insights"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="bills"
+            options={{ animation: 'slide_from_right' }}
+          />
         </Stack>
         <RateLimitToast />
         {isLocked && isAuthenticated && <LockOverlay onUnlock={unlock} />}

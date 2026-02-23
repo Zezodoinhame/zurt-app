@@ -513,10 +513,18 @@ export default function HomeScreen() {
                       { emoji: '\u{1F9FE}', title: t('tools.taxDashboard'), desc: t('tools.taxDashboardDesc'), onPress: () => router.push('/tax-dashboard') },
                       { emoji: '\u{1F49A}', title: t('tools.health'), desc: t('tools.healthDesc'), onPress: () => router.push('/risk-metrics') },
                       { emoji: '\u{1F3C6}', title: t('tools.badges'), desc: t('tools.badgesDesc'), onPress: () => router.push('/badges') },
+                      { emoji: '\u{1F4CB}', title: t('tools.watchlist'), desc: t('tools.watchlistDesc'), onPress: () => router.push('/watchlist') },
+                      { emoji: '\u{1F4F0}', title: t('tools.news'), desc: t('tools.newsDesc'), onPress: () => router.push('/news') },
+                      { emoji: '\u{1F4B8}', title: t('tools.dividends'), desc: t('tools.dividendsDesc'), onPress: () => router.push('/dividends') },
+                      { emoji: '\u{1F504}', title: t('tools.comparison'), desc: t('tools.comparisonDesc'), onPress: () => router.push('/comparison') },
+                      { emoji: '\u{1F967}', title: t('tools.budget'), desc: t('tools.budgetDesc'), onPress: () => router.push('/budget') },
+                      { emoji: '\u{1F4C8}', title: t('tools.cashFlow'), desc: t('tools.cashFlowDesc'), onPress: () => router.push('/cash-flow') },
+                      { emoji: '\u{1F4C9}', title: t('tools.insights'), desc: t('tools.insightsDesc'), onPress: () => router.push('/spending-insights') },
+                      { emoji: '\u{1F9FE}', title: t('tools.bills'), desc: t('tools.billsDesc'), onPress: () => router.push('/bills') },
                     ];
-                    // Arrange as 2 rows x 5 columns
+                    // Arrange as 2 rows x 9 columns
                     const columns: Array<[typeof allTools[0], typeof allTools[0] | undefined]> = [];
-                    for (let c = 0; c < 5; c++) {
+                    for (let c = 0; c < 9; c++) {
                       columns.push([allTools[c * 2], allTools[c * 2 + 1]]);
                     }
                     return columns.map((col, ci) => (
