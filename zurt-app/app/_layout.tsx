@@ -257,6 +257,26 @@ export default function RootLayout() {
             name="learn"
             options={{ animation: 'slide_from_right' }}
           />
+          <Stack.Screen
+            name="crypto"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="subscriptions"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="real-estate"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="savings-challenges"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="fire"
+            options={{ animation: 'slide_from_right' }}
+          />
         </Stack>
         <RateLimitToast />
         {isLocked && isAuthenticated && <LockOverlay onUnlock={unlock} />}

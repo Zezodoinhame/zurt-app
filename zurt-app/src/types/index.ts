@@ -766,3 +766,142 @@ export interface LearnProgress {
   streak: number;
   lastCompletedDate: string;
 }
+
+// -----------------------------------------------------------------------------
+// Crypto Tracker
+// -----------------------------------------------------------------------------
+
+export interface CryptoHolding {
+  id: string;
+  symbol: string;
+  name: string;
+  quantity: number;
+  avgPrice: number;
+  currentPrice: number;
+  currentValue: number;
+  change24h: number;
+  change7d: number;
+  change30d: number;
+  sparkline: number[];
+  color: string;
+  icon: string;
+}
+
+export interface CryptoPortfolio {
+  totalValue: number;
+  totalInvested: number;
+  totalProfit: number;
+  change24h: number;
+  change7d: number;
+  change30d: number;
+  holdings: CryptoHolding[];
+  fearGreedIndex: number;
+  dominance: { symbol: string; percentage: number; color: string }[];
+}
+
+// -----------------------------------------------------------------------------
+// Subscription Manager
+// -----------------------------------------------------------------------------
+
+export type SubscriptionCategory = 'entertainment' | 'productivity' | 'health' | 'education' | 'cloud' | 'other';
+export type SubscriptionBilling = 'monthly' | 'yearly' | 'weekly';
+export type SubscriptionStatus = 'active' | 'cancelled';
+
+export interface Subscription {
+  id: string;
+  name: string;
+  amount: number;
+  billing: SubscriptionBilling;
+  category: SubscriptionCategory;
+  status: SubscriptionStatus;
+  nextBilling: string;
+  icon: string;
+  color: string;
+  createdAt: string;
+}
+
+// -----------------------------------------------------------------------------
+// Real Estate Calculator
+// -----------------------------------------------------------------------------
+
+export interface RealEstateParams {
+  propertyValue: number;
+  downPaymentPct: number;
+  annualRate: number;
+  termYears: number;
+  rentValue: number;
+  annualRentIncrease: number;
+  appreciationRate: number;
+  investmentReturn: number;
+}
+
+export interface RealEstateResult {
+  monthlyPayment: number;
+  totalPaid: number;
+  totalInterest: number;
+  downPayment: number;
+  loanAmount: number;
+  breakEvenYear: number;
+  buyTotalCost: number[];
+  rentTotalCost: number[];
+  propertyValues: number[];
+  recommendation: 'buy' | 'rent' | 'neutral';
+}
+
+// -----------------------------------------------------------------------------
+// Savings Challenges
+// -----------------------------------------------------------------------------
+
+export type ChallengeType = '52week' | 'roundUp' | 'noSpend' | 'custom';
+export type ChallengeStatus = 'active' | 'completed' | 'abandoned';
+
+export interface SavingsChallenge {
+  id: string;
+  name: string;
+  type: ChallengeType;
+  status: ChallengeStatus;
+  targetAmount: number;
+  currentAmount: number;
+  startDate: string;
+  endDate: string;
+  emoji: string;
+  color: string;
+  checkedItems: number[];
+  totalItems: number;
+  createdAt: string;
+}
+
+export interface ChallengesSummary {
+  totalSaved: number;
+  activeChallenges: number;
+  completedChallenges: number;
+  currentStreak: number;
+}
+
+// -----------------------------------------------------------------------------
+// FIRE (Financial Independence)
+// -----------------------------------------------------------------------------
+
+export interface FIREParams {
+  currentAge: number;
+  annualIncome: number;
+  annualExpenses: number;
+  currentNetWorth: number;
+  expectedReturn: number;
+  inflation: number;
+  safeWithdrawalRate: number;
+}
+
+export interface FIREResult {
+  fireNumber: number;
+  leanFireNumber: number;
+  fatFireNumber: number;
+  coastFireNumber: number;
+  coastFireAge: number;
+  savingsRate: number;
+  yearsToFI: number;
+  fiAge: number;
+  monthlySavings: number;
+  projectionByYear: { year: number; age: number; netWorth: number }[];
+  isCoastFIReached: boolean;
+}

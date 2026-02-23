@@ -59,6 +59,14 @@ import type {
   Lesson,
   GlossaryTerm,
   LearnProgress,
+  CryptoPortfolio,
+  CryptoHolding,
+  Subscription,
+  RealEstateParams,
+  RealEstateResult,
+  SavingsChallenge,
+  FIREParams,
+  FIREResult,
 } from '../types';
 
 // =============================================================================
@@ -2135,4 +2143,114 @@ export const demoLearnProgress: LearnProgress = {
   completedIds: ['l1', 'l2', 'l3'],
   streak: 5,
   lastCompletedDate: '2026-02-22',
+};
+
+// =============================================================================
+// Crypto Tracker
+// =============================================================================
+
+export const demoCryptoPortfolio: CryptoPortfolio = {
+  totalValue: 48750,
+  totalInvested: 38200,
+  totalProfit: 10550,
+  change24h: 2.34,
+  change7d: -1.12,
+  change30d: 8.56,
+  fearGreedIndex: 62,
+  holdings: [
+    {
+      id: 'c1', symbol: 'BTC', name: 'Bitcoin', quantity: 0.085,
+      avgPrice: 320000, currentPrice: 385000, currentValue: 32725,
+      change24h: 1.8, change7d: -0.5, change30d: 12.3,
+      sparkline: [375000, 378000, 372000, 380000, 376000, 382000, 385000],
+      color: '#F7931A', icon: '\u20BF',
+    },
+    {
+      id: 'c2', symbol: 'ETH', name: 'Ethereum', quantity: 1.5,
+      avgPrice: 6500, currentPrice: 7200, currentValue: 10800,
+      change24h: 3.2, change7d: -2.1, change30d: 5.8,
+      sparkline: [7050, 7100, 6980, 7150, 7080, 7180, 7200],
+      color: '#627EEA', icon: '\u039E',
+    },
+    {
+      id: 'c3', symbol: 'SOL', name: 'Solana', quantity: 8,
+      avgPrice: 520, currentPrice: 653, currentValue: 5225,
+      change24h: 4.1, change7d: 1.3, change30d: 9.2,
+      sparkline: [620, 635, 628, 640, 645, 650, 653],
+      color: '#9945FF', icon: '\u25CE',
+    },
+  ],
+  dominance: [
+    { symbol: 'BTC', percentage: 67.1, color: '#F7931A' },
+    { symbol: 'ETH', percentage: 22.2, color: '#627EEA' },
+    { symbol: 'SOL', percentage: 10.7, color: '#9945FF' },
+  ],
+};
+
+// =============================================================================
+// Subscriptions
+// =============================================================================
+
+export const demoSubscriptions: Subscription[] = [
+  { id: 'sub1', name: 'Netflix', amount: 55.90, billing: 'monthly', category: 'entertainment', status: 'active', nextBilling: '2026-03-15', icon: '\uD83C\uDFAC', color: '#E50914', createdAt: '2023-05-01' },
+  { id: 'sub2', name: 'Spotify', amount: 34.90, billing: 'monthly', category: 'entertainment', status: 'active', nextBilling: '2026-03-10', icon: '\uD83C\uDFB5', color: '#1DB954', createdAt: '2022-08-15' },
+  { id: 'sub3', name: 'iCloud 200GB', amount: 14.90, billing: 'monthly', category: 'cloud', status: 'active', nextBilling: '2026-03-05', icon: '\u2601\uFE0F', color: '#007AFF', createdAt: '2024-01-10' },
+  { id: 'sub4', name: 'ChatGPT Plus', amount: 104.90, billing: 'monthly', category: 'productivity', status: 'active', nextBilling: '2026-03-20', icon: '\uD83E\uDD16', color: '#10A37F', createdAt: '2024-06-01' },
+  { id: 'sub5', name: 'Academia SmartFit', amount: 109.90, billing: 'monthly', category: 'health', status: 'active', nextBilling: '2026-03-01', icon: '\uD83C\uDFCB\uFE0F', color: '#FFD700', createdAt: '2024-03-01' },
+  { id: 'sub6', name: 'Disney+', amount: 33.90, billing: 'monthly', category: 'entertainment', status: 'cancelled', nextBilling: '2026-02-28', icon: '\uD83C\uDFF0', color: '#113CCF', createdAt: '2023-11-01' },
+  { id: 'sub7', name: 'Notion', amount: 48, billing: 'monthly', category: 'productivity', status: 'active', nextBilling: '2026-03-12', icon: '\uD83D\uDCDD', color: '#000000', createdAt: '2025-01-15' },
+];
+
+// =============================================================================
+// Real Estate
+// =============================================================================
+
+export const demoRealEstateParams: RealEstateParams = {
+  propertyValue: 600000,
+  downPaymentPct: 20,
+  annualRate: 10.5,
+  termYears: 30,
+  rentValue: 2800,
+  annualRentIncrease: 5,
+  appreciationRate: 4,
+  investmentReturn: 11,
+};
+
+// =============================================================================
+// Savings Challenges
+// =============================================================================
+
+export const demoSavingsChallenges: SavingsChallenge[] = [
+  {
+    id: 'ch1', name: 'Desafio 52 Semanas', type: '52week', status: 'active',
+    targetAmount: 1378, currentAmount: 465, startDate: '2026-01-06', endDate: '2027-01-04',
+    emoji: '\uD83D\uDCB0', color: '#00D4AA',
+    checkedItems: [1,2,3,4,5,6,7,8], totalItems: 52, createdAt: '2026-01-06',
+  },
+  {
+    id: 'ch2', name: 'Mês Sem Gastos', type: 'noSpend', status: 'active',
+    targetAmount: 3000, currentAmount: 1200, startDate: '2026-02-01', endDate: '2026-02-28',
+    emoji: '\uD83D\uDEAB', color: '#FF6B6B',
+    checkedItems: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23], totalItems: 28, createdAt: '2026-02-01',
+  },
+  {
+    id: 'ch3', name: 'Arredondamento', type: 'roundUp', status: 'active',
+    targetAmount: 500, currentAmount: 187.50, startDate: '2026-01-15', endDate: '2026-07-15',
+    emoji: '\uD83D\uDD1D', color: '#3A86FF',
+    checkedItems: [1,2,3,4,5,6,7,8,9,10,11,12], totalItems: 26, createdAt: '2026-01-15',
+  },
+];
+
+// =============================================================================
+// FIRE
+// =============================================================================
+
+export const demoFIREParams: FIREParams = {
+  currentAge: 32,
+  annualIncome: 240000,
+  annualExpenses: 120000,
+  currentNetWorth: 847350,
+  expectedReturn: 10,
+  inflation: 5,
+  safeWithdrawalRate: 4,
 };

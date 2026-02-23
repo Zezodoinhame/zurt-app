@@ -531,10 +531,15 @@ export default function HomeScreen() {
                       { emoji: '\u{2602}\u{FE0F}', title: t('tools.retirement'), desc: t('tools.retirementDesc'), onPress: () => router.push('/retirement') },
                       { emoji: '\u{1F3B2}', title: t('tools.monteCarlo'), desc: t('tools.monteCarloDesc'), onPress: () => router.push('/monte-carlo') },
                       { emoji: '\u{1F4DA}', title: t('tools.learnHub'), desc: t('tools.learnHubDesc'), onPress: () => router.push('/learn') },
+                      { emoji: '\u{20BF}', title: t('tools.crypto'), desc: t('tools.cryptoDesc'), onPress: () => router.push('/crypto') },
+                      { emoji: '\u{1F4E6}', title: t('tools.subscriptions'), desc: t('tools.subscriptionsDesc'), onPress: () => router.push('/subscriptions') },
+                      { emoji: '\u{1F3E0}', title: t('tools.realEstate'), desc: t('tools.realEstateDesc'), onPress: () => router.push('/real-estate') },
+                      { emoji: '\u{1F3C5}', title: t('tools.challenges'), desc: t('tools.challengesDesc'), onPress: () => router.push('/savings-challenges') },
+                      { emoji: '\u{1F525}', title: t('tools.fire'), desc: t('tools.fireDesc'), onPress: () => router.push('/fire') },
                     ];
-                    // Arrange as 2 rows x 14 columns (28 slots, some may be empty)
+                    // Arrange as 2 rows x 17 columns (33 tools + 1 empty)
                     const columns: Array<[typeof allTools[0], typeof allTools[0] | undefined]> = [];
-                    for (let c = 0; c < 14; c++) {
+                    for (let c = 0; c < 17; c++) {
                       columns.push([allTools[c * 2], allTools[c * 2 + 1]]);
                     }
                     return columns.map((col, ci) => (

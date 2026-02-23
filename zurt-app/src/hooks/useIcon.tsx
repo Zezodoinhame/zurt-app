@@ -94,6 +94,10 @@ const ICON_MAP: Record<string, { lib: 'ion' | 'mci'; name: string; emoji: string
   retirement:   { lib: 'ion', name: 'umbrella-outline', emoji: '\u2602\uFE0F' },
   monteCarlo:   { lib: 'mci', name: 'chart-bell-curve', emoji: '\uD83C\uDFB2' },
   learnHub:     { lib: 'ion', name: 'book-outline', emoji: '\uD83D\uDCDA' },
+  crypto:       { lib: 'mci', name: 'bitcoin', emoji: '\u20BF' },
+  subscription: { lib: 'ion', name: 'card-outline', emoji: '\uD83D\uDCE6' },
+  realEstate:   { lib: 'ion', name: 'home-outline', emoji: '\uD83C\uDFE0' },
+  challenge:    { lib: 'ion', name: 'trophy-outline', emoji: '\uD83C\uDFC5' },
 };
 
 export type AppIconName = keyof typeof ICON_MAP;
