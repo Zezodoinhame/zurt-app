@@ -26,6 +26,9 @@ import type {
   TaxSummary,
   RiskMetrics,
   Badge,
+  SmartAlert,
+  ConsultantClient,
+  ClientPortfolio,
 } from '../types';
 
 // =============================================================================
@@ -1417,3 +1420,171 @@ export const demoBadges: Badge[] = [
   { id: 'b11', emoji: '\uD83D\uDCCA', title: 'Otimizador', description: 'Utilizou prejuízos para compensação', category: 'tax', status: 'inProgress', progress: 80 },
   { id: 'b12', emoji: '\uD83E\uDD47', title: 'Eficiência Máxima', description: 'Reduziu IR em 30% no ano', category: 'tax', status: 'locked' },
 ];
+
+// =============================================================================
+// Smart Alerts
+// =============================================================================
+
+export const demoSmartAlerts: SmartAlert[] = [
+  {
+    id: 'sa1',
+    type: 'portfolio_drift',
+    title: 'Alocação desbalanceada',
+    body: 'Renda fixa está 10% acima da meta. Considere rebalancear.',
+    date: '2026-02-23T08:00:00',
+    read: false,
+    data: { currentPct: 65, targetPct: 55, class: 'fixedIncome' },
+  },
+  {
+    id: 'sa2',
+    type: 'dividend_received',
+    title: 'Dividendo BBAS3',
+    body: 'Você recebeu R$ 612,50 em dividendos do Banco do Brasil.',
+    date: '2026-02-22T09:00:00',
+    read: false,
+    data: { ticker: 'BBAS3', amount: 612.5, date: '2026-02-22' },
+  },
+  {
+    id: 'sa3',
+    type: 'goal_milestone',
+    title: 'Meta 60% atingida!',
+    body: 'Reserva de emergência alcançou R$ 30.000 de R$ 50.000.',
+    date: '2026-02-21T10:00:00',
+    read: false,
+    data: { goalName: 'Reserva de emergência', progress: 60, current: 30000, target: 50000 },
+  },
+  {
+    id: 'sa4',
+    type: 'tax_deadline',
+    title: 'DARF vence em 5 dias',
+    body: 'DARF de fevereiro no valor de R$ 980,00 vence em 28/02.',
+    date: '2026-02-23T07:00:00',
+    read: false,
+    data: { amount: 980, dueDate: '2026-02-28', month: 'Fev' },
+  },
+  {
+    id: 'sa5',
+    type: 'market_alert',
+    title: 'PETR4 +5,2% hoje',
+    body: 'Petrobras PN subiu 5,2% na sessão. Sua posição valorizou R$ 960.',
+    date: '2026-02-22T17:30:00',
+    read: true,
+    data: { ticker: 'PETR4', change: 5.2, gainAmount: 960 },
+  },
+];
+
+// =============================================================================
+// Consultant Clients
+// =============================================================================
+
+export const demoConsultantClients: ConsultantClient[] = [
+  {
+    id: 'cc1',
+    name: 'Ana Carolina Mendes',
+    email: 'ana@email.com',
+    initials: 'AM',
+    netWorth: 1250000,
+    lastSync: '2026-02-23T10:00:00',
+    accountCount: 4,
+    riskProfile: 'moderate',
+  },
+  {
+    id: 'cc2',
+    name: 'Roberto Silva Neto',
+    email: 'roberto@email.com',
+    initials: 'RS',
+    netWorth: 3480000,
+    lastSync: '2026-02-22T15:30:00',
+    accountCount: 6,
+    riskProfile: 'aggressive',
+  },
+  {
+    id: 'cc3',
+    name: 'Maria Fernanda Costa',
+    email: 'maria.f@email.com',
+    initials: 'MC',
+    netWorth: 520000,
+    lastSync: '2026-02-21T09:00:00',
+    accountCount: 2,
+    riskProfile: 'conservative',
+  },
+  {
+    id: 'cc4',
+    name: 'Pedro Henrique Alves',
+    email: 'pedro.h@email.com',
+    initials: 'PA',
+    netWorth: 890000,
+    lastSync: '2026-02-23T08:45:00',
+    accountCount: 3,
+    riskProfile: 'moderate',
+  },
+];
+
+// =============================================================================
+// Client Portfolios
+// =============================================================================
+
+export const demoClientPortfolios: Record<string, ClientPortfolio> = {
+  cc1: {
+    summary: { totalValue: 1250000, investedValue: 1100000, profit: 150000, variation12m: 14.2 },
+    allocations: [
+      { class: 'fixedIncome', label: 'Renda Fixa', value: 625000, percentage: 50, color: '#3A86FF' },
+      { class: 'stocks', label: 'Ações', value: 250000, percentage: 20, color: '#00D4AA' },
+      { class: 'fiis', label: 'FIIs', value: 187500, percentage: 15, color: '#FFBE0B' },
+      { class: 'international', label: 'Internacional', value: 125000, percentage: 10, color: '#A855F7' },
+      { class: 'pension', label: 'Previdência', value: 62500, percentage: 5, color: '#F472B6' },
+    ],
+    topAssets: [
+      { ticker: 'SELIC2029', name: 'Tesouro Selic 2029', value: 350000, variation: 4.5 },
+      { ticker: 'PETR4', name: 'Petrobras PN', value: 120000, variation: 35.8 },
+      { ticker: 'HGLG11', name: 'CGHG Logistica', value: 95000, variation: 8.2 },
+    ],
+    riskScore: 62,
+  },
+  cc2: {
+    summary: { totalValue: 3480000, investedValue: 2900000, profit: 580000, variation12m: 22.1 },
+    allocations: [
+      { class: 'stocks', label: 'Ações', value: 1218000, percentage: 35, color: '#00D4AA' },
+      { class: 'fixedIncome', label: 'Renda Fixa', value: 870000, percentage: 25, color: '#3A86FF' },
+      { class: 'crypto', label: 'Cripto', value: 522000, percentage: 15, color: '#F3BA2F' },
+      { class: 'international', label: 'Internacional', value: 522000, percentage: 15, color: '#A855F7' },
+      { class: 'fiis', label: 'FIIs', value: 348000, percentage: 10, color: '#FFBE0B' },
+    ],
+    topAssets: [
+      { ticker: 'VALE3', name: 'Vale ON', value: 480000, variation: -5.8 },
+      { ticker: 'BTC', name: 'Bitcoin', value: 380000, variation: 45.2 },
+      { ticker: 'VOO', name: 'Vanguard S&P 500', value: 320000, variation: 18.5 },
+    ],
+    riskScore: 78,
+  },
+  cc3: {
+    summary: { totalValue: 520000, investedValue: 480000, profit: 40000, variation12m: 8.5 },
+    allocations: [
+      { class: 'fixedIncome', label: 'Renda Fixa', value: 390000, percentage: 75, color: '#3A86FF' },
+      { class: 'fiis', label: 'FIIs', value: 78000, percentage: 15, color: '#FFBE0B' },
+      { class: 'stocks', label: 'Ações', value: 52000, percentage: 10, color: '#00D4AA' },
+    ],
+    topAssets: [
+      { ticker: 'CDB-BTG', name: 'CDB BTG 110% CDI', value: 200000, variation: 7.0 },
+      { ticker: 'SELIC2029', name: 'Tesouro Selic 2029', value: 150000, variation: 4.5 },
+      { ticker: 'MXRF11', name: 'Maxi Renda', value: 50000, variation: 3.7 },
+    ],
+    riskScore: 35,
+  },
+  cc4: {
+    summary: { totalValue: 890000, investedValue: 780000, profit: 110000, variation12m: 16.8 },
+    allocations: [
+      { class: 'fixedIncome', label: 'Renda Fixa', value: 356000, percentage: 40, color: '#3A86FF' },
+      { class: 'stocks', label: 'Ações', value: 222500, percentage: 25, color: '#00D4AA' },
+      { class: 'international', label: 'Internacional', value: 133500, percentage: 15, color: '#A855F7' },
+      { class: 'fiis', label: 'FIIs', value: 89000, percentage: 10, color: '#FFBE0B' },
+      { class: 'crypto', label: 'Cripto', value: 89000, percentage: 10, color: '#F3BA2F' },
+    ],
+    topAssets: [
+      { ticker: 'ITUB4', name: 'Itau Unibanco PN', value: 120000, variation: 24.6 },
+      { ticker: 'QQQ', name: 'Invesco QQQ Trust', value: 85000, variation: 12.3 },
+      { ticker: 'ETH', name: 'Ethereum', value: 65000, variation: -6.7 },
+    ],
+    riskScore: 58,
+  },
+};

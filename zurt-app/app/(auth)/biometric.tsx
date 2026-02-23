@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo } from 'react';
+import React, { useEffect, useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -10,7 +10,10 @@ import { useSettingsStore } from '../../src/stores/settingsStore';
 import {
   authenticateWithBiometrics,
   checkBiometricAvailability,
+  hasPin,
 } from '../../src/services/auth';
+import { PinPad } from '../../src/components/ui/PinPad';
+import { AppIcon } from '../../src/hooks/useIcon';
 
 export default function BiometricScreen() {
   const insets = useSafeAreaInsets();
@@ -19,6 +22,12 @@ export default function BiometricScreen() {
   const { t } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const [showPin, setShowPin] = useState(false);
+  const [hasPinSetup, setHasPinSetup] = useState(false);
+
+  useEffect(() => {
+    hasPin().then(setHasPinSetup);
+  }, []);
 
   const authenticate = useCallback(async () => {
     try {
@@ -41,6 +50,22 @@ export default function BiometricScreen() {
   useEffect(() => {
     authenticate();
   }, [authenticate]);
+
+  const handlePinSuccess = useCallback(() => {
+    router.replace('/(tabs)');
+  }, [router]);
+
+  if (showPin) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+        <PinPad
+          onSuccess={handlePinSuccess}
+          onForgotPin={() => router.replace('/(auth)/login')}
+          showBiometric
+        />
+      </View>
+    );
+  }
 
   return (
     <View
@@ -72,6 +97,18 @@ export default function BiometricScreen() {
         <Text style={styles.hint}>
           {t('common.loading').replace('...', '') || 'Toque para autenticar'}
         </Text>
+
+        {hasPinSetup && (
+          <TouchableOpacity
+            onPress={() => setShowPin(true)}
+            style={styles.fallback}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <AppIcon name="keypad" size={16} color={colors.accent} />
+              <Text style={styles.fallbackText}>{t('biometric.usePin')}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           onPress={() => router.replace('/(auth)/login')}

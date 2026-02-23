@@ -650,6 +650,73 @@ export const translations: Record<Language, Record<string, string>> = {
     'tools.healthDesc': 'Score de risco',
     'tools.badges': 'Conquistas',
     'tools.badgesDesc': 'Seus achievements',
+
+    // Rate Limiting
+    'rateLimit.tooMany': 'Muitas requisições. Tentando novamente...',
+    'rateLimit.retrying': 'Tentando novamente em {n}s...',
+    'rateLimit.failed': 'Servidor ocupado. Tente novamente mais tarde.',
+
+    // Offline
+    'offline.banner': 'Você está offline',
+    'offline.lastSync': 'Última sincronização: {n}',
+    'offline.queued': 'Ação salva. Será sincronizada quando voltar online.',
+    'offline.syncing': 'Sincronizando ações pendentes...',
+
+    // Analytics
+    'analytics.optOut': 'Desativar analytics',
+    'analytics.optOutDesc': 'Não enviar dados de uso anônimos',
+    'analytics.sessionStarted': 'Sessão iniciada',
+
+    // Biometric Lock
+    'biometric.lockTitle': 'ZURT Bloqueado',
+    'biometric.lockSubtitle': 'Toque para desbloquear',
+    'biometric.unlockBiometric': 'Desbloquear com biometria',
+    'biometric.usePin': 'Usar PIN',
+    'biometric.enterPin': 'Digite seu PIN',
+    'biometric.wrongPin': 'PIN incorreto. Tente novamente.',
+    'biometric.forgotPin': 'Esqueceu o PIN? Use a senha',
+    'biometric.setupPin': 'Configurar PIN',
+    'biometric.confirmPin': 'Confirme o PIN',
+    'biometric.pinMismatch': 'PINs não coincidem. Tente novamente.',
+
+    // Smart Alerts
+    'alerts.smart': 'Alertas Inteligentes',
+    'alerts.preferences': 'Preferências de Alertas',
+    'alerts.preferencesDesc': 'Escolha quais tipos de alerta receber',
+    'alerts.portfolioDrift': 'Desvio de alocação',
+    'alerts.portfolioDriftDesc': 'Quando a alocação desviar da meta',
+    'alerts.dividendReceived': 'Dividendos recebidos',
+    'alerts.dividendReceivedDesc': 'Ao receber dividendos ou rendimentos',
+    'alerts.goalMilestone': 'Marco de meta',
+    'alerts.goalMilestoneDesc': 'Quando uma meta atingir um marco',
+    'alerts.taxDeadline': 'Prazo fiscal',
+    'alerts.taxDeadlineDesc': 'Lembrete de vencimento de DARF',
+    'alerts.marketAlert': 'Alerta de mercado',
+    'alerts.marketAlertDesc': 'Variações significativas em ativos',
+    'alerts.rebalance': 'Rebalancear',
+    'alerts.viewGoal': 'Ver meta',
+    'alerts.payDarf': 'Pagar DARF',
+    'alerts.viewAsset': 'Ver ativo',
+    'alerts.enableAll': 'Ativar todos',
+    'alerts.disableAll': 'Desativar todos',
+
+    // Consultant
+    'consultant.title': 'Modo Consultor',
+    'consultant.searchClients': 'Buscar clientes...',
+    'consultant.clients': 'Clientes',
+    'consultant.netWorth': 'Patrimônio',
+    'consultant.riskProfile': 'Perfil de Risco',
+    'consultant.conservative': 'Conservador',
+    'consultant.moderate': 'Moderado',
+    'consultant.aggressive': 'Agressivo',
+    'consultant.accounts': 'contas',
+    'consultant.lastSync': 'Última sync',
+    'consultant.portfolio': 'Portfólio',
+    'consultant.topAssets': 'Principais Ativos',
+    'consultant.allocations': 'Alocação',
+    'consultant.riskScore': 'Score de Risco',
+    'consultant.noClients': 'Nenhum cliente encontrado',
+    'consultant.readOnly': 'Modo somente leitura',
   },
   en: {
     // Tabs
@@ -1302,6 +1369,73 @@ export const translations: Record<Language, Record<string, string>> = {
     'tools.healthDesc': 'Risk score',
     'tools.badges': 'Achievements',
     'tools.badgesDesc': 'Your badges',
+
+    // Rate Limiting
+    'rateLimit.tooMany': 'Too many requests. Retrying...',
+    'rateLimit.retrying': 'Retrying in {n}s...',
+    'rateLimit.failed': 'Server busy. Please try again later.',
+
+    // Offline
+    'offline.banner': 'You are offline',
+    'offline.lastSync': 'Last sync: {n}',
+    'offline.queued': 'Action saved. Will sync when back online.',
+    'offline.syncing': 'Syncing pending actions...',
+
+    // Analytics
+    'analytics.optOut': 'Opt out of analytics',
+    'analytics.optOutDesc': 'Do not send anonymous usage data',
+    'analytics.sessionStarted': 'Session started',
+
+    // Biometric Lock
+    'biometric.lockTitle': 'ZURT Locked',
+    'biometric.lockSubtitle': 'Tap to unlock',
+    'biometric.unlockBiometric': 'Unlock with biometrics',
+    'biometric.usePin': 'Use PIN',
+    'biometric.enterPin': 'Enter your PIN',
+    'biometric.wrongPin': 'Wrong PIN. Try again.',
+    'biometric.forgotPin': 'Forgot PIN? Use password',
+    'biometric.setupPin': 'Set up PIN',
+    'biometric.confirmPin': 'Confirm PIN',
+    'biometric.pinMismatch': 'PINs do not match. Try again.',
+
+    // Smart Alerts
+    'alerts.smart': 'Smart Alerts',
+    'alerts.preferences': 'Alert Preferences',
+    'alerts.preferencesDesc': 'Choose which alert types to receive',
+    'alerts.portfolioDrift': 'Portfolio drift',
+    'alerts.portfolioDriftDesc': 'When allocation drifts from target',
+    'alerts.dividendReceived': 'Dividends received',
+    'alerts.dividendReceivedDesc': 'When dividends or income are received',
+    'alerts.goalMilestone': 'Goal milestone',
+    'alerts.goalMilestoneDesc': 'When a goal reaches a milestone',
+    'alerts.taxDeadline': 'Tax deadline',
+    'alerts.taxDeadlineDesc': 'DARF due date reminder',
+    'alerts.marketAlert': 'Market alert',
+    'alerts.marketAlertDesc': 'Significant asset price changes',
+    'alerts.rebalance': 'Rebalance',
+    'alerts.viewGoal': 'View goal',
+    'alerts.payDarf': 'Pay DARF',
+    'alerts.viewAsset': 'View asset',
+    'alerts.enableAll': 'Enable all',
+    'alerts.disableAll': 'Disable all',
+
+    // Consultant
+    'consultant.title': 'Consultant Mode',
+    'consultant.searchClients': 'Search clients...',
+    'consultant.clients': 'Clients',
+    'consultant.netWorth': 'Net Worth',
+    'consultant.riskProfile': 'Risk Profile',
+    'consultant.conservative': 'Conservative',
+    'consultant.moderate': 'Moderate',
+    'consultant.aggressive': 'Aggressive',
+    'consultant.accounts': 'accounts',
+    'consultant.lastSync': 'Last sync',
+    'consultant.portfolio': 'Portfolio',
+    'consultant.topAssets': 'Top Assets',
+    'consultant.allocations': 'Allocation',
+    'consultant.riskScore': 'Risk Score',
+    'consultant.noClients': 'No clients found',
+    'consultant.readOnly': 'Read-only mode',
   },
   zh: {
     // Tabs
@@ -1954,6 +2088,73 @@ export const translations: Record<Language, Record<string, string>> = {
     'tools.healthDesc': '风险评分',
     'tools.badges': '成就',
     'tools.badgesDesc': '您的徽章',
+
+    // Rate Limiting
+    'rateLimit.tooMany': '请求过多，正在重试...',
+    'rateLimit.retrying': '{n}秒后重试...',
+    'rateLimit.failed': '服务器繁忙，请稍后再试。',
+
+    // Offline
+    'offline.banner': '您已离线',
+    'offline.lastSync': '上次同步：{n}',
+    'offline.queued': '操作已保存，恢复在线后将同步。',
+    'offline.syncing': '正在同步待处理操作...',
+
+    // Analytics
+    'analytics.optOut': '退出分析',
+    'analytics.optOutDesc': '不发送匿名使用数据',
+    'analytics.sessionStarted': '会话已开始',
+
+    // Biometric Lock
+    'biometric.lockTitle': 'ZURT 已锁定',
+    'biometric.lockSubtitle': '点击解锁',
+    'biometric.unlockBiometric': '使用生物识别解锁',
+    'biometric.usePin': '使用PIN码',
+    'biometric.enterPin': '输入您的PIN码',
+    'biometric.wrongPin': 'PIN码错误，请重试。',
+    'biometric.forgotPin': '忘记PIN码？使用密码',
+    'biometric.setupPin': '设置PIN码',
+    'biometric.confirmPin': '确认PIN码',
+    'biometric.pinMismatch': 'PIN码不匹配，请重试。',
+
+    // Smart Alerts
+    'alerts.smart': '智能提醒',
+    'alerts.preferences': '提醒偏好',
+    'alerts.preferencesDesc': '选择接收哪些类型的提醒',
+    'alerts.portfolioDrift': '投资组合偏离',
+    'alerts.portfolioDriftDesc': '当配置偏离目标时',
+    'alerts.dividendReceived': '收到股息',
+    'alerts.dividendReceivedDesc': '收到股息或收益时',
+    'alerts.goalMilestone': '目标里程碑',
+    'alerts.goalMilestoneDesc': '当目标达到里程碑时',
+    'alerts.taxDeadline': '税务截止日',
+    'alerts.taxDeadlineDesc': 'DARF到期提醒',
+    'alerts.marketAlert': '市场提醒',
+    'alerts.marketAlertDesc': '资产价格重大变动',
+    'alerts.rebalance': '再平衡',
+    'alerts.viewGoal': '查看目标',
+    'alerts.payDarf': '支付DARF',
+    'alerts.viewAsset': '查看资产',
+    'alerts.enableAll': '全部启用',
+    'alerts.disableAll': '全部禁用',
+
+    // Consultant
+    'consultant.title': '顾问模式',
+    'consultant.searchClients': '搜索客户...',
+    'consultant.clients': '客户',
+    'consultant.netWorth': '净值',
+    'consultant.riskProfile': '风险偏好',
+    'consultant.conservative': '保守',
+    'consultant.moderate': '适中',
+    'consultant.aggressive': '激进',
+    'consultant.accounts': '个账户',
+    'consultant.lastSync': '上次同步',
+    'consultant.portfolio': '投资组合',
+    'consultant.topAssets': '主要资产',
+    'consultant.allocations': '配置',
+    'consultant.riskScore': '风险评分',
+    'consultant.noClients': '未找到客户',
+    'consultant.readOnly': '只读模式',
   },
   ar: {
     // Tabs
@@ -2606,5 +2807,72 @@ export const translations: Record<Language, Record<string, string>> = {
     'tools.healthDesc': 'درجة المخاطر',
     'tools.badges': 'الإنجازات',
     'tools.badgesDesc': 'شاراتك',
+
+    // Rate Limiting
+    'rateLimit.tooMany': 'طلبات كثيرة. جاري إعادة المحاولة...',
+    'rateLimit.retrying': 'إعادة المحاولة خلال {n} ثانية...',
+    'rateLimit.failed': 'الخادم مشغول. يرجى المحاولة لاحقاً.',
+
+    // Offline
+    'offline.banner': 'أنت غير متصل',
+    'offline.lastSync': 'آخر مزامنة: {n}',
+    'offline.queued': 'تم حفظ الإجراء. سيتم المزامنة عند الاتصال.',
+    'offline.syncing': 'جاري مزامنة الإجراءات المعلقة...',
+
+    // Analytics
+    'analytics.optOut': 'إلغاء التحليلات',
+    'analytics.optOutDesc': 'عدم إرسال بيانات الاستخدام المجهولة',
+    'analytics.sessionStarted': 'بدأت الجلسة',
+
+    // Biometric Lock
+    'biometric.lockTitle': 'ZURT مقفل',
+    'biometric.lockSubtitle': 'اضغط لفتح القفل',
+    'biometric.unlockBiometric': 'فتح بالبصمة',
+    'biometric.usePin': 'استخدام رمز PIN',
+    'biometric.enterPin': 'أدخل رمز PIN',
+    'biometric.wrongPin': 'رمز PIN خاطئ. حاول مرة أخرى.',
+    'biometric.forgotPin': 'نسيت PIN؟ استخدم كلمة المرور',
+    'biometric.setupPin': 'إعداد رمز PIN',
+    'biometric.confirmPin': 'تأكيد رمز PIN',
+    'biometric.pinMismatch': 'رموز PIN غير متطابقة. حاول مرة أخرى.',
+
+    // Smart Alerts
+    'alerts.smart': 'تنبيهات ذكية',
+    'alerts.preferences': 'تفضيلات التنبيهات',
+    'alerts.preferencesDesc': 'اختر أنواع التنبيهات التي تريد تلقيها',
+    'alerts.portfolioDrift': 'انحراف المحفظة',
+    'alerts.portfolioDriftDesc': 'عندما ينحرف التوزيع عن الهدف',
+    'alerts.dividendReceived': 'أرباح مستلمة',
+    'alerts.dividendReceivedDesc': 'عند استلام أرباح أو عوائد',
+    'alerts.goalMilestone': 'معلم الهدف',
+    'alerts.goalMilestoneDesc': 'عندما يصل هدف إلى معلم',
+    'alerts.taxDeadline': 'موعد ضريبي',
+    'alerts.taxDeadlineDesc': 'تذكير بموعد استحقاق DARF',
+    'alerts.marketAlert': 'تنبيه السوق',
+    'alerts.marketAlertDesc': 'تغيرات كبيرة في أسعار الأصول',
+    'alerts.rebalance': 'إعادة التوازن',
+    'alerts.viewGoal': 'عرض الهدف',
+    'alerts.payDarf': 'دفع DARF',
+    'alerts.viewAsset': 'عرض الأصل',
+    'alerts.enableAll': 'تفعيل الكل',
+    'alerts.disableAll': 'تعطيل الكل',
+
+    // Consultant
+    'consultant.title': 'وضع المستشار',
+    'consultant.searchClients': 'البحث عن عملاء...',
+    'consultant.clients': 'العملاء',
+    'consultant.netWorth': 'صافي الثروة',
+    'consultant.riskProfile': 'ملف المخاطر',
+    'consultant.conservative': 'محافظ',
+    'consultant.moderate': 'معتدل',
+    'consultant.aggressive': 'عدواني',
+    'consultant.accounts': 'حسابات',
+    'consultant.lastSync': 'آخر مزامنة',
+    'consultant.portfolio': 'المحفظة',
+    'consultant.topAssets': 'أهم الأصول',
+    'consultant.allocations': 'التوزيع',
+    'consultant.riskScore': 'درجة المخاطر',
+    'consultant.noClients': 'لم يتم العثور على عملاء',
+    'consultant.readOnly': 'وضع القراءة فقط',
   },
 };

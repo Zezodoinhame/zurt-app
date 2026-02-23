@@ -45,3 +45,21 @@ export async function clearSession(): Promise<void> {
   await SecureStore.deleteItemAsync(SESSION_KEY);
   await SecureStore.deleteItemAsync(PIN_KEY);
 }
+
+// Biometric preference helpers (persisted in AsyncStorage for quick access)
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const BIOMETRIC_PREF_KEY = 'biometric_enabled';
+
+export async function saveBiometricPreference(enabled: boolean): Promise<void> {
+  if (enabled) {
+    await AsyncStorage.setItem(BIOMETRIC_PREF_KEY, 'true');
+  } else {
+    await AsyncStorage.removeItem(BIOMETRIC_PREF_KEY);
+  }
+}
+
+export async function getBiometricPreference(): Promise<boolean> {
+  const val = await AsyncStorage.getItem(BIOMETRIC_PREF_KEY);
+  return val === 'true';
+}

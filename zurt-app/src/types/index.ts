@@ -301,3 +301,71 @@ export interface Badge {
   progress?: number; // 0-100, for inProgress
   earnedAt?: string;
 }
+
+// -----------------------------------------------------------------------------
+// Pending Actions (Offline Queue)
+// -----------------------------------------------------------------------------
+
+export interface PendingAction {
+  id: string;
+  method: string;
+  path: string;
+  body?: any;
+  createdAt: string;
+}
+
+// -----------------------------------------------------------------------------
+// Smart Alerts
+// -----------------------------------------------------------------------------
+
+export type SmartAlertType =
+  | 'portfolio_drift'
+  | 'dividend_received'
+  | 'goal_milestone'
+  | 'tax_deadline'
+  | 'market_alert';
+
+export interface SmartAlert {
+  id: string;
+  type: SmartAlertType;
+  title: string;
+  body: string;
+  date: string;
+  read: boolean;
+  data?: Record<string, any>;
+}
+
+export interface AlertPreferences {
+  portfolio_drift: boolean;
+  dividend_received: boolean;
+  goal_milestone: boolean;
+  tax_deadline: boolean;
+  market_alert: boolean;
+}
+
+// -----------------------------------------------------------------------------
+// Consultant Mode
+// -----------------------------------------------------------------------------
+
+export interface ConsultantClient {
+  id: string;
+  name: string;
+  email: string;
+  initials: string;
+  netWorth: number;
+  lastSync: string;
+  accountCount: number;
+  riskProfile: 'conservative' | 'moderate' | 'aggressive';
+}
+
+export interface ClientPortfolio {
+  summary: {
+    totalValue: number;
+    investedValue: number;
+    profit: number;
+    variation12m: number;
+  };
+  allocations: Allocation[];
+  topAssets: { ticker: string; name: string; value: number; variation: number }[];
+  riskScore: number;
+}

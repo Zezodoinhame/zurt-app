@@ -35,6 +35,9 @@ import { formatDate, formatCurrency } from '../../src/utils/formatters';
 import { changePassword, updateUserProfile } from '../../src/services/api';
 import { AppIcon, type AppIconName } from '../../src/hooks/useIcon';
 import * as ImagePicker from 'expo-image-picker';
+import { getAnalyticsOptOut, setAnalyticsOptOut } from '../../src/services/analytics';
+import { hasPin } from '../../src/services/auth';
+import { PinSetup } from '../../src/components/ui/PinSetup';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -588,6 +591,16 @@ export default function ProfileScreen() {
   const avatarState = useAvatarState();
   const { cards } = useCardsStore();
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [analyticsOptOut, setAnalyticsOptOutState] = useState(false);
+  const [showPinSetup, setShowPinSetup] = useState(false);
+  const [hasPinSetup, setHasPinSetup] = useState(false);
+
+  // Load analytics opt-out and PIN status
+  React.useEffect(() => {
+    getAnalyticsOptOut().then(setAnalyticsOptOutState);
+    hasPin().then(setHasPinSetup);
+  }, []);
+
   const {
     permissionStatus,
     preferences: pushPreferences,
@@ -673,6 +686,15 @@ export default function ProfileScreen() {
       }
     },
     [updateUser, t]
+  );
+
+  const toggleAnalyticsOptOut = useCallback(
+    async (value: boolean) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setAnalyticsOptOutState(value);
+      await setAnalyticsOptOut(value);
+    },
+    []
   );
 
   const togglePush = useCallback(
@@ -843,6 +865,13 @@ export default function ProfileScreen() {
               />
             }
           />
+          {user.biometricEnabled && !hasPinSetup && (
+            <SettingRow
+              iconName="keypad"
+              label={t('biometric.setupPin')}
+              onPress={() => setShowPinSetup(true)}
+            />
+          )}
           <SettingRow iconName="password" label={t('profile.changePassword')} onPress={handleChangePassword} />
         </View>
       </View>
@@ -935,6 +964,17 @@ export default function ProfileScreen() {
                 value={user.hideValuesOnOpen}
                 onValueChange={toggleHideValues}
                 accessibilityLabel={t('profile.hideValuesOnOpen')}
+              />
+            }
+          />
+          <SettingRow
+            iconName="chart"
+            label={t('analytics.optOut')}
+            rightElement={
+              <Toggle
+                value={analyticsOptOut}
+                onValueChange={toggleAnalyticsOptOut}
+                accessibilityLabel={t('analytics.optOut')}
               />
             }
           />
@@ -1116,6 +1156,11 @@ export default function ProfileScreen() {
       <View>
         <View style={styles.section}>
           <SettingRow
+            iconName="briefcase"
+            label={t('consultant.title')}
+            onPress={() => router.push('/consultant')}
+          />
+          <SettingRow
             iconName="taxes"
             label={t('taxes.title')}
             onPress={() => router.push('/taxes')}
@@ -1203,6 +1248,18 @@ export default function ProfileScreen() {
         onClose={() => setShowHelpModal(false)}
         t={t}
       />
+      {showPinSetup && (
+        <Modal visible={showPinSetup} transparent animationType="fade" onRequestClose={() => setShowPinSetup(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { width: '90%', paddingVertical: spacing.xl * 2 }]}>
+              <PinSetup
+                onComplete={() => { setShowPinSetup(false); setHasPinSetup(true); }}
+                onCancel={() => setShowPinSetup(false)}
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
     </ScrollView>
   );
 }

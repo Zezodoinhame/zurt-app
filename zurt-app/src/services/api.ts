@@ -147,6 +147,21 @@ async function apiRequest<T>(
       throw new Error('Unauthorized');
     }
 
+    // Rate limiting: 429 handler with exponential backoff
+    if (response.status === 429 && retryCount < 3) {
+      const retryAfter = parseInt(response.headers.get('Retry-After') ?? '', 10);
+      const delay = retryAfter > 0 ? retryAfter * 1000 : Math.min(1000 * Math.pow(2, retryCount), 8000);
+      logger.log(`[ZURT API] 429 Rate limited, retrying in ${delay}ms (attempt ${retryCount + 1}/3)`);
+      // Lazy import to avoid circular dependency
+      try {
+        const { triggerRateLimitToast } = require('../components/ui/RateLimitToast');
+        triggerRateLimitToast(`Too many requests. Retrying in ${Math.ceil(delay / 1000)}s...`);
+      } catch { /* component not loaded yet */ }
+      clearTimeout(timeoutId);
+      await new Promise((r) => setTimeout(r, delay));
+      return apiRequest<T>(path, options, retryCount + 1, timeout);
+    }
+
     if (response.status >= 500 && retryCount < MAX_RETRIES) {
       clearTimeout(timeoutId);
       await new Promise((r) => setTimeout(r, 1000));
@@ -168,6 +183,25 @@ async function apiRequest<T>(
     } else {
       logger.log(`[ZURT API] !! ERROR ${path}:`, err?.message ?? err);
     }
+
+    // Queue write operations when offline
+    const method = options?.method?.toUpperCase() ?? 'GET';
+    if (method !== 'GET' && (err?.message === 'Network request failed' || err?.name === 'TypeError')) {
+      try {
+        const { useNetworkStore } = require('../stores/networkStore');
+        const store = useNetworkStore.getState();
+        if (!store.isOnline) {
+          store.addPendingAction({
+            method,
+            path,
+            body: options?.body ? JSON.parse(options.body as string) : undefined,
+          });
+          logger.log(`[ZURT API] Queued offline action: ${method} ${path}`);
+          return {} as T; // Return empty response for queued actions
+        }
+      } catch { /* networkStore not available */ }
+    }
+
     throw err;
   } finally {
     clearTimeout(timeoutId);

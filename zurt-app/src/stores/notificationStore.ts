@@ -1,25 +1,30 @@
 import { create } from 'zustand';
 import * as Notifications from 'expo-notifications';
-import type { Notification, NotificationType } from '../types';
+import type { Notification, NotificationType, SmartAlert } from '../types';
 import {
   fetchNotificationsApi,
   markNotificationReadApi,
   markAllNotificationsReadApi,
   deleteNotificationApi,
+  isDemoMode,
 } from '../services/api';
+import { demoSmartAlerts } from '../data/demo';
 
 interface NotificationState {
   notifications: Notification[];
+  smartAlerts: SmartAlert[];
   isLoading: boolean;
   isRefreshing: boolean;
   error: string | null;
   filter: NotificationType | 'all';
 
   loadNotifications: () => Promise<void>;
+  loadSmartAlerts: () => Promise<void>;
   refresh: () => Promise<void>;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   dismiss: (id: string) => void;
+  dismissSmartAlert: (id: string) => void;
   setFilter: (filter: NotificationType | 'all') => void;
   getUnreadCount: () => number;
   getFilteredNotifications: () => Notification[];
@@ -27,6 +32,7 @@ interface NotificationState {
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
+  smartAlerts: [],
   isLoading: false,
   isRefreshing: false,
   error: null,
@@ -85,6 +91,26 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     }));
     // Fire-and-forget API call
     deleteNotificationApi(id);
+  },
+
+  loadSmartAlerts: async () => {
+    try {
+      if (isDemoMode()) {
+        set({ smartAlerts: demoSmartAlerts });
+        return;
+      }
+      // Real API call would go here:
+      // const data = await apiRequest('/notifications/smart-alerts');
+      set({ smartAlerts: demoSmartAlerts });
+    } catch {
+      // Silently fail
+    }
+  },
+
+  dismissSmartAlert: (id: string) => {
+    set((state) => ({
+      smartAlerts: state.smartAlerts.filter((a) => a.id !== id),
+    }));
   },
 
   setFilter: (filter: NotificationType | 'all') => set({ filter }),

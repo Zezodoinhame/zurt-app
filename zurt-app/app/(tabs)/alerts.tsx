@@ -13,6 +13,7 @@ import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
 import { type ThemeColors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
+import { useRouter } from 'expo-router';
 import { useNotificationStore } from '../../src/stores/notificationStore';
 import { formatRelativeDate } from '../../src/utils/formatters';
 import { useSettingsStore } from '../../src/stores/settingsStore';
@@ -21,6 +22,7 @@ import { ErrorState } from '../../src/components/shared/ErrorState';
 import { fetchAIAlerts, type AIAlert } from '../../src/services/api';
 import type { NotificationType } from '../../src/types';
 import { AppIcon, type AppIconName } from '../../src/hooks/useIcon';
+import { SmartAlertCard } from '../../src/components/alerts/SmartAlertCard';
 
 const filterOptions: Array<{ key: NotificationType | 'all'; labelKey: string; iconName?: AppIconName }> = [
   { key: 'all', labelKey: 'alerts.all' },
@@ -31,18 +33,31 @@ const filterOptions: Array<{ key: NotificationType | 'all'; labelKey: string; ic
   { key: 'system', labelKey: 'alerts.system', iconName: 'notification' },
 ];
 
+// Extended filter that includes smart alert types
+const smartFilterOptions: Array<{ key: string; labelKey: string; iconName?: AppIconName }> = [
+  { key: 'portfolio_drift', labelKey: 'alerts.portfolioDrift', iconName: 'rebalance' },
+  { key: 'dividend_received', labelKey: 'alerts.dividendReceived', iconName: 'dividend' },
+  { key: 'goal_milestone', labelKey: 'alerts.goalMilestone', iconName: 'target' },
+  { key: 'tax_deadline', labelKey: 'alerts.taxDeadline', iconName: 'calendar' },
+  { key: 'market_alert', labelKey: 'alerts.marketAlert', iconName: 'trending' },
+];
+
 export default function AlertsScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const {
     isLoading,
     isRefreshing,
     error,
     filter,
+    smartAlerts,
     loadNotifications,
+    loadSmartAlerts,
     refresh,
     markAsRead,
     markAllAsRead,
     dismiss,
+    dismissSmartAlert,
     setFilter,
     getUnreadCount,
     getFilteredNotifications,
@@ -75,7 +90,8 @@ export default function AlertsScreen() {
 
   useEffect(() => {
     loadNotifications();
-  }, [loadNotifications]);
+    loadSmartAlerts();
+  }, [loadNotifications, loadSmartAlerts]);
 
   // Auto-refresh when a push notification arrives while on this screen
   useEffect(() => {
@@ -159,11 +175,16 @@ export default function AlertsScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.screenTitle}>{t('alerts.title')}</Text>
-        {unreadCount > 0 && (
-          <TouchableOpacity onPress={handleMarkAllRead} style={styles.markAll}>
-            <Text style={styles.markAllText}>{t('alerts.markAllRead')}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {unreadCount > 0 && (
+            <TouchableOpacity onPress={handleMarkAllRead} style={styles.markAll}>
+              <Text style={styles.markAllText}>{t('alerts.markAllRead')}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={() => router.push('/alert-preferences')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <AppIcon name="settings" size={20} color={colors.text.secondary} />
           </TouchableOpacity>
-        )}
+        </View>
       </View>
 
       {/* Filter chips */}
@@ -212,6 +233,25 @@ export default function AlertsScreen() {
           />
         }
       >
+        {/* Smart Alerts Section */}
+        {smartAlerts.length > 0 && (
+          <View style={styles.aiSection}>
+            <View style={styles.aiSectionHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <AppIcon name="notification" size={15} color={colors.accent} />
+                <Text style={styles.aiSectionTitle}>{t('alerts.smart')}</Text>
+              </View>
+            </View>
+            {smartAlerts.map((alert) => (
+              <SmartAlertCard
+                key={alert.id}
+                alert={alert}
+                onDismiss={dismissSmartAlert}
+              />
+            ))}
+          </View>
+        )}
+
         {/* AI Alerts Section */}
         <View style={styles.aiSection}>
           <View style={styles.aiSectionHeader}>

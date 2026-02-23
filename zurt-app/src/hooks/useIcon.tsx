@@ -71,6 +71,12 @@ const ICON_MAP: Record<string, { lib: 'ion' | 'mci'; name: string; emoji: string
   calendar:     { lib: 'ion', name: 'calendar-outline', emoji: '\uD83D\uDCC5' },
   health:       { lib: 'ion', name: 'pulse-outline', emoji: '\uD83D\uDC9A' },
   taxDashboard: { lib: 'ion', name: 'receipt-outline', emoji: '\uD83E\uDDFE' },
+  hourglass:    { lib: 'ion', name: 'hourglass-outline', emoji: '\u23F3' },
+  keypad:       { lib: 'ion', name: 'keypad-outline', emoji: '\uD83D\uDD22' },
+  lock:         { lib: 'ion', name: 'lock-closed-outline', emoji: '\uD83D\uDD12' },
+  target:       { lib: 'mci', name: 'target', emoji: '\uD83C\uDFAF' },
+  dividend:     { lib: 'mci', name: 'cash-multiple', emoji: '\uD83D\uDCB8' },
+  wifiOff:      { lib: 'ion', name: 'cloud-offline-outline', emoji: '\uD83D\uDCF5' },
 };
 
 export type AppIconName = keyof typeof ICON_MAP;
