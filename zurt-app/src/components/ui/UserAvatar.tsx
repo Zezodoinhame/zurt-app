@@ -1,26 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AVATAR_ICON_MAP, AVATAR_CHARACTER_LIST } from './AvatarIcons';
 
 const AVATAR_CUSTOM_KEY = 'zurt:avatar:custom';
 const AVATAR_PRESET_KEY = 'zurt:avatar';
 
-export const AVATAR_PRESETS = [
-  { id: 'person', icon: 'person', color: '#00D4AA' },
-  { id: 'happy', icon: 'happy', color: '#45B7D1' },
-  { id: 'star', icon: 'star', color: '#FFD93D' },
-  { id: 'heart', icon: 'heart', color: '#FF6B6B' },
-  { id: 'diamond', icon: 'diamond', color: '#A855F7' },
-  { id: 'rocket', icon: 'rocket', color: '#F97316' },
-  { id: 'leaf', icon: 'leaf', color: '#00D4AA' },
-  { id: 'flame', icon: 'flame', color: '#FF6B6B' },
-  { id: 'globe', icon: 'globe', color: '#45B7D1' },
-  { id: 'shield', icon: 'shield-checkmark', color: '#FFD93D' },
-  { id: 'fish', icon: 'fish', color: '#A855F7' },
-  { id: 'paw', icon: 'paw', color: '#F97316' },
-] as const;
+// Re-export for convenience
+export { AVATAR_CHARACTER_LIST } from './AvatarIcons';
+export type { AvatarIconId } from './AvatarIcons';
 
-export type AvatarPresetId = (typeof AVATAR_PRESETS)[number]['id'];
+export type AvatarPresetId = (typeof AVATAR_CHARACTER_LIST)[number]['id'];
 
 interface UserAvatarProps {
   size?: number;
@@ -50,28 +40,10 @@ export function UserAvatar({
     );
   }
 
-  // Preset avatar
-  if (presetId) {
-    const preset = AVATAR_PRESETS.find((p) => p.id === presetId);
-    if (preset) {
-      return (
-        <View
-          style={[
-            styles.circle,
-            {
-              width: size,
-              height: size,
-              borderRadius: size / 2,
-              backgroundColor: preset.color,
-            },
-          ]}
-        >
-          <Text style={[styles.initials, { fontSize: size * 0.36 }]}>
-            {initials}
-          </Text>
-        </View>
-      );
-    }
+  // SVG avatar preset
+  if (presetId && AVATAR_ICON_MAP[presetId]) {
+    const AvatarComponent = AVATAR_ICON_MAP[presetId];
+    return <AvatarComponent size={size} />;
   }
 
   // Fallback: initials with accent color

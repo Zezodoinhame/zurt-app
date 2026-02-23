@@ -26,7 +26,8 @@ import type { Language } from '../../src/i18n/translations';
 import type { Currency, ThemeMode, IconStyle } from '../../src/stores/settingsStore';
 import { Toggle } from '../../src/components/ui/Toggle';
 import { Card } from '../../src/components/ui/Card';
-import { UserAvatar, AVATAR_PRESETS, useAvatarState, type AvatarPresetId } from '../../src/components/ui/UserAvatar';
+import { UserAvatar, AVATAR_CHARACTER_LIST, useAvatarState, type AvatarPresetId } from '../../src/components/ui/UserAvatar';
+import { AVATAR_ICON_MAP } from '../../src/components/ui/AvatarIcons';
 import { formatDate, formatCurrency } from '../../src/utils/formatters';
 import { changePassword, updateUserProfile } from '../../src/services/api';
 import { AppIcon, type AppIconName } from '../../src/hooks/useIcon';
@@ -453,25 +454,24 @@ function EditProfileModal({
               <Text style={styles.uploadPhotoText}>{t('profile.uploadPhoto')}</Text>
             </TouchableOpacity>
 
-            {/* Preset grid */}
+            {/* Character avatar grid — 4x4 */}
             <View style={styles.avatarGrid}>
-              {AVATAR_PRESETS.map((preset) => {
-                const isSelected = avatarState.presetId === preset.id && !avatarState.customUri;
+              {AVATAR_CHARACTER_LIST.map((char) => {
+                const isSelected = avatarState.presetId === char.id && !avatarState.customUri;
+                const AvatarComp = AVATAR_ICON_MAP[char.id];
                 return (
                   <TouchableOpacity
-                    key={preset.id}
-                    style={[
-                      styles.avatarPresetItem,
-                      isSelected && { borderColor: colors.accent, borderWidth: 2 },
-                    ]}
-                    onPress={() => handleSelectPreset(preset.id)}
+                    key={char.id}
+                    style={styles.avatarPresetItem}
+                    onPress={() => handleSelectPreset(char.id)}
                     activeOpacity={0.7}
                   >
-                    <View style={[styles.avatarPresetCircle, { backgroundColor: preset.color }]}>
-                      <Text style={styles.avatarPresetInitials}>
-                        {currentName.split(' ').filter(Boolean).map((w) => w[0]).join('').toUpperCase().slice(0, 2)}
+                    <AvatarComp size={60} selected={isSelected} />
+                    {isSelected && (
+                      <Text style={[styles.avatarPresetLabel, { color: colors.accent }]}>
+                        {t(char.labelKey)}
                       </Text>
-                    </View>
+                    )}
                   </TouchableOpacity>
                 );
               })}
@@ -766,7 +766,7 @@ export default function ProfileScreen() {
       <Card variant="glow" delay={0}>
         <View style={styles.userCard}>
           <UserAvatar
-            size={56}
+            size={80}
             initials={user.initials}
             customUri={avatarState.customUri}
             presetId={avatarState.presetId}
@@ -1532,25 +1532,16 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     marginBottom: spacing.lg,
   },
   avatarPresetItem: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 1.5,
-    borderColor: colors.border,
+    width: 68,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: spacing.xs,
   },
-  avatarPresetCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarPresetInitials: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#FFFFFF',
+  avatarPresetLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    marginTop: 3,
+    textAlign: 'center',
   },
 
   // -- FAQ styles ----------------------------------------------------------
