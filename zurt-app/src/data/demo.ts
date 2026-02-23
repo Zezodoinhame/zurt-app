@@ -21,6 +21,11 @@ import type {
   CategorySpending,
   PortfolioSummary,
   Goal,
+  TargetAllocation,
+  RebalanceResult,
+  TaxSummary,
+  RiskMetrics,
+  Badge,
 } from '../types';
 
 // =============================================================================
@@ -1315,3 +1320,100 @@ export const demoBenchmarks = {
   '6M': { cdi: 6.3, ipca: 3.1, ibov: 8.5 },
   '12M': { cdi: 12.8, ipca: 6.2, ibov: 18.0 },
 } as const;
+
+// =============================================================================
+// Target Allocations (Rebalance)
+// =============================================================================
+
+export const demoTargetAllocations: TargetAllocation[] = [
+  { class: 'fixedIncome', label: 'Renda Fixa', currentPct: 65.1, targetPct: 55, color: '#3A86FF' },
+  { class: 'stocks', label: 'Ações', currentPct: 10.8, targetPct: 15, color: '#00D4AA' },
+  { class: 'fiis', label: 'FIIs', currentPct: 4.5, targetPct: 8, color: '#FFBE0B' },
+  { class: 'crypto', label: 'Cripto', currentPct: 12.3, targetPct: 10, color: '#F3BA2F' },
+  { class: 'international', label: 'Internacional', currentPct: 5.8, targetPct: 7, color: '#A855F7' },
+  { class: 'pension', label: 'Previdência', currentPct: 5.9, targetPct: 5, color: '#F472B6' },
+];
+
+export const demoRebalanceResult: RebalanceResult = {
+  trades: [
+    { class: 'fixedIncome', label: 'Renda Fixa', action: 'SELL', amount: 85600, color: '#3A86FF' },
+    { class: 'stocks', label: 'Ações', action: 'BUY', amount: 35573, color: '#00D4AA' },
+    { class: 'fiis', label: 'FIIs', action: 'BUY', amount: 29664, color: '#FFBE0B' },
+    { class: 'crypto', label: 'Cripto', action: 'SELL', amount: 19470, color: '#F3BA2F' },
+    { class: 'international', label: 'Internacional', action: 'BUY', amount: 10174, color: '#A855F7' },
+    { class: 'pension', label: 'Previdência', action: 'SELL', amount: 7603, color: '#F472B6' },
+  ],
+  totalBuy: 75411,
+  totalSell: 112673,
+  estimatedTax: 3450,
+  netCashRequired: -37262,
+};
+
+// =============================================================================
+// Tax Summary
+// =============================================================================
+
+const MONTH_NAMES_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+export const demoTaxSummary: TaxSummary = {
+  year: 2026,
+  estimatedIR: 12480,
+  totalGains: 127350,
+  totalLosses: 8300,
+  netGains: 119050,
+  exemptAmount: 82400,
+  taxableAmount: 36650,
+  darfs: MONTH_NAMES_SHORT.map((label, i) => {
+    const month = i + 1;
+    if (month > 2) {
+      return { month, label, amount: 0, status: 'exempt' as const, dueDate: `2026-${String(month + 1).padStart(2, '0')}-28` };
+    }
+    const amounts = [1240, 980];
+    const statuses: Array<'paid' | 'pending'> = ['paid', 'pending'];
+    return {
+      month,
+      label,
+      amount: amounts[i],
+      status: statuses[i],
+      dueDate: `2026-${String(month + 1).padStart(2, '0')}-28`,
+    };
+  }),
+};
+
+// =============================================================================
+// Risk Metrics
+// =============================================================================
+
+export const demoRiskMetrics: RiskMetrics = {
+  healthScore: 72,
+  sharpe: 1.35,
+  beta: 0.82,
+  maxDrawdown: -8.5,
+  volatility: 12.4,
+  diversification: 78,
+  concentration: 35,
+  historicalScores: [65, 68, 64, 70, 72, 69, 73, 71, 74, 72, 70, 72],
+};
+
+// =============================================================================
+// Badges
+// =============================================================================
+
+export const demoBadges: Badge[] = [
+  // Milestones
+  { id: 'b1', emoji: '\uD83D\uDE80', title: 'Primeiro Investimento', description: 'Fez seu primeiro aporte', category: 'milestones', status: 'earned', earnedAt: '2024-01-20' },
+  { id: 'b2', emoji: '\uD83D\uDCB0', title: 'R$ 100k', description: 'Patrimônio ultrapassou R$ 100.000', category: 'milestones', status: 'earned', earnedAt: '2024-06-15' },
+  { id: 'b3', emoji: '\uD83D\uDC8E', title: 'R$ 500k', description: 'Patrimônio ultrapassou R$ 500.000', category: 'milestones', status: 'earned', earnedAt: '2025-03-10' },
+  // Consistency
+  { id: 'b4', emoji: '\uD83D\uDD25', title: 'Sequência 3 meses', description: 'Aportou 3 meses seguidos', category: 'consistency', status: 'earned', earnedAt: '2024-04-01' },
+  { id: 'b5', emoji: '\u26A1', title: 'Sequência 6 meses', description: 'Aportou 6 meses seguidos', category: 'consistency', status: 'inProgress', progress: 67 },
+  { id: 'b6', emoji: '\uD83C\uDFC6', title: 'Sequência 12 meses', description: 'Aportou 12 meses seguidos', category: 'consistency', status: 'locked' },
+  // Education
+  { id: 'b7', emoji: '\uD83D\uDCDA', title: 'Estudante', description: 'Completou 3 módulos educativos', category: 'education', status: 'earned', earnedAt: '2024-08-20' },
+  { id: 'b8', emoji: '\uD83C\uDF93', title: 'Mestre', description: 'Completou todos os módulos', category: 'education', status: 'inProgress', progress: 45 },
+  { id: 'b9', emoji: '\uD83E\uDDD1\u200D\uD83C\uDFEB', title: 'Mentor', description: 'Convidou 5 pessoas', category: 'education', status: 'locked' },
+  // Tax Efficiency
+  { id: 'b10', emoji: '\uD83E\uDDEE', title: 'DARF em Dia', description: 'Pagou todas as DARFs no prazo', category: 'tax', status: 'earned', earnedAt: '2025-01-30' },
+  { id: 'b11', emoji: '\uD83D\uDCCA', title: 'Otimizador', description: 'Utilizou prejuízos para compensação', category: 'tax', status: 'inProgress', progress: 80 },
+  { id: 'b12', emoji: '\uD83E\uDD47', title: 'Eficiência Máxima', description: 'Reduziu IR em 30% no ano', category: 'tax', status: 'locked' },
+];

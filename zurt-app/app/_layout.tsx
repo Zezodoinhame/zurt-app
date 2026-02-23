@@ -139,6 +139,22 @@ export default function RootLayout() {
             name="simulator"
             options={{ animation: 'slide_from_right' }}
           />
+          <Stack.Screen
+            name="rebalance"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="tax-dashboard"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="risk-metrics"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="badges"
+            options={{ animation: 'slide_from_right' }}
+          />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>

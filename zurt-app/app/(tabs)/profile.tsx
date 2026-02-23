@@ -1120,6 +1120,11 @@ export default function ProfileScreen() {
             label={t('taxes.title')}
             onPress={() => router.push('/taxes')}
           />
+          <SettingRow
+            iconName="trophy"
+            label={t('badges.title')}
+            onPress={() => router.push('/badges')}
+          />
           <TouchableOpacity
             style={styles.settingRow}
             onPress={handleGenerateReport}

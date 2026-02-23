@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   Animated,
+  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -490,26 +491,50 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* Tools Grid — Ferramentas ZURT                                   */}
+            {/* Tools Grid — Ferramentas ZURT (horizontal scroll 2 rows)       */}
             {/* -------------------------------------------------------------- */}
             <View style={styles.toolsSection}>
-              <Text style={styles.sectionTitle}>{t('tools.title')}</Text>
-              <View style={styles.toolsGrid}>
-                {([
-                  { emoji: '\u{1F916}', title: t('tools.agent'), desc: t('tools.agentDesc'), onPress: () => router.push('/(tabs)/agent') },
-                  { emoji: '\u{1F4C8}', title: t('tools.simulator'), desc: t('tools.simulatorDesc'), onPress: () => router.push('/simulator') },
-                  { emoji: '\u{1F3AF}', title: t('tools.goals'), desc: t('tools.goalsDesc'), onPress: () => router.push('/goals') },
-                  { emoji: '\u{1F4C4}', title: t('tools.report'), desc: t('tools.reportDesc'), onPress: handleExportPdf },
-                  { emoji: '\u{1F46A}', title: t('tools.family'), desc: t('tools.familyDesc'), onPress: () => router.push('/family') },
-                  { emoji: '\u{1F4B3}', title: t('tools.cards'), desc: t('tools.cardsDesc'), onPress: () => router.push('/(tabs)/cards') },
-                ] as const).map((tool, i) => (
-                  <ToolCardAnimated key={i} index={i} onPress={tool.onPress} style={styles.toolCard}>
-                    <Text style={styles.toolEmoji}>{tool.emoji}</Text>
-                    <Text style={styles.toolTitle}>{tool.title}</Text>
-                    <Text style={styles.toolDesc} numberOfLines={1}>{tool.desc}</Text>
-                  </ToolCardAnimated>
-                ))}
-              </View>
+              <Text style={[styles.sectionTitle, { paddingHorizontal: spacing.xl }]}>{t('tools.title')}</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.toolsScrollContent}
+              >
+                <View style={styles.toolsColumns}>
+                  {(() => {
+                    const allTools = [
+                      { emoji: '\u{1F916}', title: t('tools.agent'), desc: t('tools.agentDesc'), onPress: () => router.push('/(tabs)/agent') },
+                      { emoji: '\u{1F4C8}', title: t('tools.simulator'), desc: t('tools.simulatorDesc'), onPress: () => router.push('/simulator') },
+                      { emoji: '\u{1F3AF}', title: t('tools.goals'), desc: t('tools.goalsDesc'), onPress: () => router.push('/goals') },
+                      { emoji: '\u{1F4C4}', title: t('tools.report'), desc: t('tools.reportDesc'), onPress: handleExportPdf },
+                      { emoji: '\u{1F46A}', title: t('tools.family'), desc: t('tools.familyDesc'), onPress: () => router.push('/family') },
+                      { emoji: '\u{1F4B3}', title: t('tools.cards'), desc: t('tools.cardsDesc'), onPress: () => router.push('/(tabs)/cards') },
+                      { emoji: '\u{2696}\u{FE0F}', title: t('tools.rebalance'), desc: t('tools.rebalanceDesc'), onPress: () => router.push('/rebalance') },
+                      { emoji: '\u{1F9FE}', title: t('tools.taxDashboard'), desc: t('tools.taxDashboardDesc'), onPress: () => router.push('/tax-dashboard') },
+                      { emoji: '\u{1F49A}', title: t('tools.health'), desc: t('tools.healthDesc'), onPress: () => router.push('/risk-metrics') },
+                      { emoji: '\u{1F3C6}', title: t('tools.badges'), desc: t('tools.badgesDesc'), onPress: () => router.push('/badges') },
+                    ];
+                    // Arrange as 2 rows x 5 columns
+                    const columns: Array<[typeof allTools[0], typeof allTools[0] | undefined]> = [];
+                    for (let c = 0; c < 5; c++) {
+                      columns.push([allTools[c * 2], allTools[c * 2 + 1]]);
+                    }
+                    return columns.map((col, ci) => (
+                      <View key={ci} style={styles.toolColumn}>
+                        {col.map((tool, ri) =>
+                          tool ? (
+                            <ToolCardAnimated key={ci * 2 + ri} index={ci * 2 + ri} onPress={tool.onPress} style={styles.toolCard}>
+                              <Text style={styles.toolEmoji}>{tool.emoji}</Text>
+                              <Text style={styles.toolTitle}>{tool.title}</Text>
+                              <Text style={styles.toolDesc} numberOfLines={1}>{tool.desc}</Text>
+                            </ToolCardAnimated>
+                          ) : null,
+                        )}
+                      </View>
+                    ));
+                  })()}
+                </View>
+              </ScrollView>
             </View>
 
             {/* -------------------------------------------------------------- */}
@@ -944,18 +969,23 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: '700',
     },
 
-    // -- Tools grid ---------------------------------------------------------------
+    // -- Tools grid (horizontal scroll) -------------------------------------------
     toolsSection: {
       marginBottom: spacing.md,
+      marginHorizontal: -spacing.xl,
     },
-    toolsGrid: {
+    toolsScrollContent: {
+      paddingHorizontal: spacing.xl,
+    },
+    toolsColumns: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'space-between',
+      gap: spacing.sm,
+    },
+    toolColumn: {
       gap: spacing.sm,
     },
     toolCard: {
-      width: '48%' as any,
+      width: (Dimensions.get('window').width - spacing.xl * 2 - spacing.sm * 2) / 3,
       backgroundColor: colors.card,
       borderRadius: radius.lg,
       borderWidth: 1,

@@ -585,6 +585,30 @@ export default function WalletScreen() {
             </View>
           )}
 
+          {/* Risk Health + Rebalance CTA */}
+          <TouchableOpacity
+            style={styles.riskMiniCard}
+            onPress={() => router.push('/risk-metrics')}
+            activeOpacity={0.7}
+          >
+            <AppIcon name="health" size={20} color={colors.accent} />
+            <View style={styles.riskMiniInfo}>
+              <Text style={styles.riskMiniLabel}>{t('risk.healthScore')}</Text>
+              <Text style={[styles.riskMiniScore, { color: colors.accent }]}>72</Text>
+            </View>
+            <AppIcon name="chevron" size={16} color={colors.text.muted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.rebalanceCta}
+            onPress={() => router.push('/rebalance')}
+            activeOpacity={0.7}
+          >
+            <AppIcon name="rebalance" size={20} color={colors.accent} />
+            <Text style={styles.rebalanceCtaText}>{t('rebalance.ctaShort')}</Text>
+            <AppIcon name="chevron" size={16} color={colors.text.muted} />
+          </TouchableOpacity>
+
           {viewMode === 'class' ? renderClassView() : renderInstitutionView()}
         </ScrollView>
       )}
@@ -856,6 +880,48 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: '600',
       textAlign: 'right',
       fontVariant: ['tabular-nums'],
+    },
+
+    // Risk mini-card & Rebalance CTA
+    riskMiniCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.lg,
+      marginBottom: spacing.sm,
+      gap: spacing.sm,
+    },
+    riskMiniInfo: {
+      flex: 1,
+    },
+    riskMiniLabel: {
+      fontSize: 12,
+      color: colors.text.secondary,
+    },
+    riskMiniScore: {
+      fontSize: 18,
+      fontWeight: '800',
+      fontVariant: ['tabular-nums'],
+    },
+    rebalanceCta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.lg,
+      marginBottom: spacing.xl,
+      gap: spacing.sm,
+    },
+    rebalanceCtaText: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text.primary,
     },
 
     // Empty state

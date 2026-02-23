@@ -63,6 +63,14 @@ const ICON_MAP: Record<string, { lib: 'ion' | 'mci'; name: string; emoji: string
   car:          { lib: 'ion', name: 'car-outline', emoji: '\uD83D\uDE97' },
   shield:       { lib: 'ion', name: 'shield-outline', emoji: '\uD83D\uDEE1\uFE0F' },
   add:          { lib: 'ion', name: 'add-outline', emoji: '\u2795' },
+  rebalance:    { lib: 'mci', name: 'scale-balance', emoji: '\u2696\uFE0F' },
+  radar:        { lib: 'mci', name: 'radar', emoji: '\uD83D\uDCE1' },
+  gauge:        { lib: 'ion', name: 'speedometer-outline', emoji: '\uD83D\uDCDF' },
+  trophy:       { lib: 'ion', name: 'trophy-outline', emoji: '\uD83C\uDFC6' },
+  badge:        { lib: 'ion', name: 'ribbon-outline', emoji: '\uD83C\uDF96\uFE0F' },
+  calendar:     { lib: 'ion', name: 'calendar-outline', emoji: '\uD83D\uDCC5' },
+  health:       { lib: 'ion', name: 'pulse-outline', emoji: '\uD83D\uDC9A' },
+  taxDashboard: { lib: 'ion', name: 'receipt-outline', emoji: '\uD83E\uDDFE' },
 };
 
 export type AppIconName = keyof typeof ICON_MAP;

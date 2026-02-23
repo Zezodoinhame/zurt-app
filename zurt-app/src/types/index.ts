@@ -207,3 +207,97 @@ export interface Goal {
   monthly_contribution: number;
   created_at: string;
 }
+
+// -----------------------------------------------------------------------------
+// Rebalancing
+// -----------------------------------------------------------------------------
+
+export interface TargetAllocation {
+  class: AssetClass;
+  label: string;
+  currentPct: number;
+  targetPct: number;
+  color: string;
+}
+
+export type TradeAction = 'BUY' | 'SELL' | 'HOLD';
+
+export interface RebalanceTrade {
+  class: AssetClass;
+  label: string;
+  action: TradeAction;
+  amount: number;
+  color: string;
+}
+
+export interface RebalanceResult {
+  trades: RebalanceTrade[];
+  totalBuy: number;
+  totalSell: number;
+  estimatedTax: number;
+  netCashRequired: number;
+}
+
+// -----------------------------------------------------------------------------
+// Tax Dashboard
+// -----------------------------------------------------------------------------
+
+export type DarfStatus = 'paid' | 'pending' | 'overdue' | 'exempt';
+
+export interface DarfEntry {
+  month: number; // 1-12
+  label: string;
+  amount: number;
+  status: DarfStatus;
+  dueDate: string;
+}
+
+export interface TaxSummary {
+  year: number;
+  estimatedIR: number;
+  totalGains: number;
+  totalLosses: number;
+  netGains: number;
+  exemptAmount: number;
+  taxableAmount: number;
+  darfs: DarfEntry[];
+}
+
+// -----------------------------------------------------------------------------
+// Risk Metrics
+// -----------------------------------------------------------------------------
+
+export interface RadarDimension {
+  label: string;
+  value: number; // 0-100
+}
+
+export interface RiskMetrics {
+  healthScore: number; // 0-100
+  sharpe: number;
+  beta: number;
+  maxDrawdown: number;
+  volatility: number;
+  diversification: number;
+  concentration: number;
+  historicalScores: number[];
+}
+
+// -----------------------------------------------------------------------------
+// Badges / Achievements
+// -----------------------------------------------------------------------------
+
+export type BadgeCategory = 'milestones' | 'consistency' | 'education' | 'tax';
+
+export type BadgeStatus = 'earned' | 'inProgress' | 'locked';
+
+export interface Badge {
+  id: string;
+  emoji: string;
+  title: string;
+  description: string;
+  category: BadgeCategory;
+  status: BadgeStatus;
+  progress?: number; // 0-100, for inProgress
+  earnedAt?: string;
+}
