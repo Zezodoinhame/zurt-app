@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -24,6 +25,7 @@ import { useSettingsStore } from '../../src/stores/settingsStore';
 import { Input } from '../../src/components/ui/Input';
 import { saveToken } from '../../src/services/api';
 import { logger } from '../../src/utils/logger';
+import Constants from 'expo-constants';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -55,7 +57,8 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [googleAvailable, setGoogleAvailable] = useState(true);
+  const isExpoGo = Constants.appOwnership === 'expo';
+  const [googleAvailable, setGoogleAvailable] = useState(!isExpoGo);
 
   const displayError = error || storeError || '';
 
@@ -305,9 +308,11 @@ export default function LoginScreen() {
         <View style={styles.content}>
           {/* Logo */}
           <View style={styles.logoContainer}>
-            <View style={styles.logoCircle}>
-              <Text style={styles.logoText}>Z</Text>
-            </View>
+            <Image
+              source={require('../../assets/ZURT_logo_200x200_transparent.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
             <Text style={styles.brandName}>ZURT</Text>
             <Text style={styles.brandSub}>Wealth Intelligence</Text>
           </View>
@@ -327,7 +332,11 @@ export default function LoginScreen() {
                 <Text style={[styles.googleIcon, !googleAvailable && { color: '#999' }]}>G</Text>
               )}
               <Text style={[styles.googleButtonText, !googleAvailable && { color: '#999' }]}>
-                {googleAvailable ? t('login.googleLogin') : t('login.googleFinalVersion')}
+                {isExpoGo
+                  ? t('login.googleExpoGo')
+                  : googleAvailable
+                    ? t('login.googleLogin')
+                    : t('login.googleFinalVersion')}
               </Text>
             </TouchableOpacity>
 
@@ -446,24 +455,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.section + 10,
   },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
+  logoImage: {
+    width: 120,
+    height: 120,
+    alignSelf: 'center',
     marginBottom: spacing.lg,
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  logoText: {
-    fontSize: 36,
-    fontWeight: '900',
-    color: colors.text.inverse,
   },
   brandName: {
     fontSize: 32,

@@ -263,6 +263,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'login.googleUnavailable': 'Login com Google indisponível no momento',
     'login.googleCreateAccount': 'Crie sua conta primeiro em zurt.com.br',
     'login.googleFinalVersion': 'Disponível na versão final',
+    'login.googleExpoGo': 'Disponível na versão instalada',
     'login.or': 'ou',
 
     // Biometric
@@ -736,6 +737,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'login.googleUnavailable': 'Google login is currently unavailable',
     'login.googleCreateAccount': 'Create your account first at zurt.com.br',
     'login.googleFinalVersion': 'Available in final version',
+    'login.googleExpoGo': 'Available in installed version',
     'login.or': 'or',
 
     // Biometric
@@ -1211,6 +1213,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'login.googleUnavailable': 'Google登录暂时不可用',
     'login.googleCreateAccount': '请先在 zurt.com.br 创建您的账户',
     'login.googleFinalVersion': '将在正式版中提供',
+    'login.googleExpoGo': '在安装版中可用',
     'login.or': '或',
 
     // Biometric
@@ -1686,6 +1689,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'login.googleUnavailable': 'تسجيل الدخول بـ Google غير متاح حالياً',
     'login.googleCreateAccount': 'أنشئ حسابك أولاً على zurt.com.br',
     'login.googleFinalVersion': 'متاح في النسخة النهائية',
+    'login.googleExpoGo': 'متاح في النسخة المثبتة',
     'login.or': 'أو',
 
     // Biometric

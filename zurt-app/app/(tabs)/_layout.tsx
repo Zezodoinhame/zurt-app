@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotificationStore } from '../../src/stores/notificationStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import type { ThemeColors } from '../../src/theme/colors';
@@ -44,6 +45,7 @@ export default function TabLayout() {
   const getUnreadCount = useNotificationStore((s) => s.getUnreadCount);
   const t = useSettingsStore((s) => s.t);
   const colors = useSettingsStore((s) => s.colors);
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -53,9 +55,9 @@ export default function TabLayout() {
           backgroundColor: colors.tabBar,
           borderTopColor: colors.tabBarBorder,
           borderTopWidth: 0.5,
-          height: 85,
+          height: 60 + (insets.bottom || 0),
           paddingTop: 8,
-          paddingBottom: 20,
+          paddingBottom: insets.bottom || 8,
           elevation: 0,
           shadowOpacity: 0,
         },
