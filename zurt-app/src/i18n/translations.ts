@@ -474,6 +474,108 @@ export const translations: Record<Language, Record<string, string>> = {
     'push.insight': 'Insights',
     'push.system': 'Sistema',
     'push.permissionDenied': 'Notificações bloqueadas nas configurações do dispositivo. Ative nas Configurações > ZURT.',
+
+    // Goals
+    'goals.title': 'Metas financeiras',
+    'goals.empty': 'Nenhuma meta criada ainda',
+    'goals.emptyCta': 'Criar primeira meta',
+    'goals.createTitle': 'Nova meta',
+    'goals.editTitle': 'Editar meta',
+    'goals.name': 'Nome da meta',
+    'goals.targetAmount': 'Valor alvo',
+    'goals.currentAmount': 'Valor atual',
+    'goals.deadline': 'Prazo',
+    'goals.category': 'Categoria',
+    'goals.save': 'Salvar',
+    'goals.delete': 'Excluir',
+    'goals.deleteConfirm': 'Deseja excluir esta meta?',
+    'goals.viewAll': 'Ver todas',
+    'goals.projected': 'Projeção: {date}',
+
+    // Goal categories
+    'goalCategory.emergency': 'Emergência',
+    'goalCategory.trip': 'Viagem',
+    'goalCategory.car': 'Carro',
+    'goalCategory.house': 'Casa',
+    'goalCategory.retirement': 'Aposentadoria',
+    'goalCategory.education': 'Educação',
+    'goalCategory.custom': 'Outro',
+
+    // Simulator
+    'simulator.title': 'Simulador de aportes',
+    'simulator.monthlyContribution': 'Aporte mensal',
+    'simulator.term': 'Prazo',
+    'simulator.years': 'anos',
+    'simulator.riskProfile': 'Perfil de risco',
+    'simulator.conservative': 'Conservador',
+    'simulator.moderate': 'Moderado',
+    'simulator.aggressive': 'Agressivo',
+    'simulator.estimatedAmount': 'Valor estimado',
+    'simulator.totalInvested': 'Total investido',
+    'simulator.projectedGains': 'Ganhos projetados',
+    'simulator.disclaimer': 'Simulação baseada em retornos históricos. Rentabilidade passada não garante resultados futuros.',
+    'simulator.cta': 'Simular aportes',
+
+    // Goals - extra
+    'goals.monthlyContribution': 'Aporte mensal',
+    'goals.timeRemaining': 'Tempo restante',
+    'goals.months': 'meses',
+    'goals.atCurrentRate': 'Ao ritmo atual, em {n} meses',
+    'goals.reached': 'Meta atingida!',
+    'goals.addGoal': 'Adicionar meta',
+    'goals.selectIcon': 'Ícone',
+    'goals.selectColor': 'Cor',
+    'goals.of': 'de',
+
+    // Simulator - extra
+    'simulator.initialAmount': 'Aporte inicial',
+    'simulator.perYear': '/ano',
+
+    // Performance comparison
+    'comparison.title': 'Rentabilidade vs Benchmarks',
+    'comparison.portfolio': 'Sua carteira',
+    'comparison.cdi': 'CDI',
+    'comparison.ipca': 'IPCA',
+    'comparison.ibov': 'IBOV',
+    'comparison.period12m': 'Últimos 12 meses',
+
+    // Tools grid
+    'tools.title': 'Ferramentas ZURT',
+    'tools.agent': 'Agent IA',
+    'tools.agentDesc': 'Tire dúvidas com IA',
+    'tools.simulator': 'Simulador',
+    'tools.simulatorDesc': 'Simule seus aportes',
+    'tools.goals': 'Metas',
+    'tools.goalsDesc': 'Planeje seus objetivos',
+    'tools.report': 'Relatório',
+    'tools.reportDesc': 'Exporte seu patrimônio',
+    'tools.family': 'Família',
+    'tools.familyDesc': 'Gerencie membros',
+    'tools.cards': 'Cartões',
+    'tools.cardsDesc': 'Gerencie seus cartões',
+
+    // PDF Report (Home & Profile)
+    'home.exportPdf': 'Exportar PDF',
+    'profile.generateReport': 'Gerar Relatório Patrimonial',
+    'report.exporting': 'Gerando PDF...',
+
+    // Spending Analysis (Cards)
+    'cards.spendingAnalysis': 'Análise de gastos',
+    'cards.analyzeWithAI': 'Analisar com IA',
+    'cards.aiAnalysisTitle': 'Análise da IA',
+    'cards.vsPreviousMonth': 'vs mês anterior',
+    'cards.noSpendingData': 'Sem dados de gastos',
+    'cards.totalSpending': 'Total de gastos',
+    'cards.aiAnalyzing': 'Analisando seus gastos...',
+
+    // Accent Color
+    'profile.accentColor': 'Cor de acento',
+    'profile.accentGreen': 'Verde ZURT',
+    'profile.accentBlue': 'Azul',
+    'profile.accentPurple': 'Roxo',
+    'profile.accentGold': 'Dourado',
+    'profile.accentPink': 'Rosa',
+    'profile.accentCyan': 'Ciano',
   },
   en: {
     // Tabs
@@ -950,6 +1052,108 @@ export const translations: Record<Language, Record<string, string>> = {
     'push.insight': 'Insights',
     'push.system': 'System',
     'push.permissionDenied': 'Notifications are blocked in device settings. Enable them in Settings > ZURT.',
+
+    // Goals
+    'goals.title': 'Financial goals',
+    'goals.empty': 'No goals created yet',
+    'goals.emptyCta': 'Create first goal',
+    'goals.createTitle': 'New goal',
+    'goals.editTitle': 'Edit goal',
+    'goals.name': 'Goal name',
+    'goals.targetAmount': 'Target amount',
+    'goals.currentAmount': 'Current amount',
+    'goals.deadline': 'Deadline',
+    'goals.category': 'Category',
+    'goals.save': 'Save',
+    'goals.delete': 'Delete',
+    'goals.deleteConfirm': 'Do you want to delete this goal?',
+    'goals.viewAll': 'View all',
+    'goals.projected': 'Projected: {date}',
+
+    // Goal categories
+    'goalCategory.emergency': 'Emergency',
+    'goalCategory.trip': 'Trip',
+    'goalCategory.car': 'Car',
+    'goalCategory.house': 'House',
+    'goalCategory.retirement': 'Retirement',
+    'goalCategory.education': 'Education',
+    'goalCategory.custom': 'Custom',
+
+    // Simulator
+    'simulator.title': 'Investment simulator',
+    'simulator.monthlyContribution': 'Monthly contribution',
+    'simulator.term': 'Term',
+    'simulator.years': 'years',
+    'simulator.riskProfile': 'Risk profile',
+    'simulator.conservative': 'Conservative',
+    'simulator.moderate': 'Moderate',
+    'simulator.aggressive': 'Aggressive',
+    'simulator.estimatedAmount': 'Estimated amount',
+    'simulator.totalInvested': 'Total invested',
+    'simulator.projectedGains': 'Projected gains',
+    'simulator.disclaimer': 'Simulation based on historical returns. Past performance does not guarantee future results.',
+    'simulator.cta': 'Simulate investments',
+
+    // Goals - extra
+    'goals.monthlyContribution': 'Monthly contribution',
+    'goals.timeRemaining': 'Time remaining',
+    'goals.months': 'months',
+    'goals.atCurrentRate': 'At current rate, in {n} months',
+    'goals.reached': 'Goal reached!',
+    'goals.addGoal': 'Add goal',
+    'goals.selectIcon': 'Icon',
+    'goals.selectColor': 'Color',
+    'goals.of': 'of',
+
+    // Simulator - extra
+    'simulator.initialAmount': 'Initial amount',
+    'simulator.perYear': '/year',
+
+    // Performance comparison
+    'comparison.title': 'Performance vs Benchmarks',
+    'comparison.portfolio': 'Your portfolio',
+    'comparison.cdi': 'CDI',
+    'comparison.ipca': 'IPCA',
+    'comparison.ibov': 'IBOV',
+    'comparison.period12m': 'Last 12 months',
+
+    // Tools grid
+    'tools.title': 'ZURT Tools',
+    'tools.agent': 'AI Agent',
+    'tools.agentDesc': 'Ask questions with AI',
+    'tools.simulator': 'Simulator',
+    'tools.simulatorDesc': 'Simulate your investments',
+    'tools.goals': 'Goals',
+    'tools.goalsDesc': 'Plan your objectives',
+    'tools.report': 'Report',
+    'tools.reportDesc': 'Export your portfolio',
+    'tools.family': 'Family',
+    'tools.familyDesc': 'Manage members',
+    'tools.cards': 'Cards',
+    'tools.cardsDesc': 'Manage your cards',
+
+    // PDF Report (Home & Profile)
+    'home.exportPdf': 'Export PDF',
+    'profile.generateReport': 'Generate Patrimonial Report',
+    'report.exporting': 'Generating PDF...',
+
+    // Spending Analysis (Cards)
+    'cards.spendingAnalysis': 'Spending analysis',
+    'cards.analyzeWithAI': 'Analyze with AI',
+    'cards.aiAnalysisTitle': 'AI Analysis',
+    'cards.vsPreviousMonth': 'vs previous month',
+    'cards.noSpendingData': 'No spending data',
+    'cards.totalSpending': 'Total spending',
+    'cards.aiAnalyzing': 'Analyzing your spending...',
+
+    // Accent Color
+    'profile.accentColor': 'Accent color',
+    'profile.accentGreen': 'ZURT Green',
+    'profile.accentBlue': 'Blue',
+    'profile.accentPurple': 'Purple',
+    'profile.accentGold': 'Gold',
+    'profile.accentPink': 'Pink',
+    'profile.accentCyan': 'Cyan',
   },
   zh: {
     // Tabs
@@ -1426,6 +1630,108 @@ export const translations: Record<Language, Record<string, string>> = {
     'push.insight': '洞察',
     'push.system': '系统',
     'push.permissionDenied': '通知已在设备设置中被阻止。请在设置 > ZURT中启用。',
+
+    // Goals
+    'goals.title': '财务目标',
+    'goals.empty': '尚未创建目标',
+    'goals.emptyCta': '创建第一个目标',
+    'goals.createTitle': '新目标',
+    'goals.editTitle': '编辑目标',
+    'goals.name': '目标名称',
+    'goals.targetAmount': '目标金额',
+    'goals.currentAmount': '当前金额',
+    'goals.deadline': '截止日期',
+    'goals.category': '类别',
+    'goals.save': '保存',
+    'goals.delete': '删除',
+    'goals.deleteConfirm': '确定要删除此目标吗？',
+    'goals.viewAll': '查看全部',
+    'goals.projected': '预计：{date}',
+
+    // Goal categories
+    'goalCategory.emergency': '紧急储备',
+    'goalCategory.trip': '旅行',
+    'goalCategory.car': '汽车',
+    'goalCategory.house': '房子',
+    'goalCategory.retirement': '退休',
+    'goalCategory.education': '教育',
+    'goalCategory.custom': '其他',
+
+    // Simulator
+    'simulator.title': '投资模拟器',
+    'simulator.monthlyContribution': '每月投入',
+    'simulator.term': '期限',
+    'simulator.years': '年',
+    'simulator.riskProfile': '风险偏好',
+    'simulator.conservative': '保守',
+    'simulator.moderate': '稳健',
+    'simulator.aggressive': '激进',
+    'simulator.estimatedAmount': '预估金额',
+    'simulator.totalInvested': '总投入',
+    'simulator.projectedGains': '预计收益',
+    'simulator.disclaimer': '模拟基于历史收益。过去的表现不保证未来的结果。',
+    'simulator.cta': '模拟投资',
+
+    // Goals - extra
+    'goals.monthlyContribution': '每月投入',
+    'goals.timeRemaining': '剩余时间',
+    'goals.months': '个月',
+    'goals.atCurrentRate': '按当前速度，还需{n}个月',
+    'goals.reached': '目标已达成！',
+    'goals.addGoal': '添加目标',
+    'goals.selectIcon': '图标',
+    'goals.selectColor': '颜色',
+    'goals.of': '/',
+
+    // Simulator - extra
+    'simulator.initialAmount': '初始投入',
+    'simulator.perYear': '/年',
+
+    // Performance comparison
+    'comparison.title': '收益率对比基准',
+    'comparison.portfolio': '您的投资组合',
+    'comparison.cdi': 'CDI',
+    'comparison.ipca': 'IPCA',
+    'comparison.ibov': 'IBOV',
+    'comparison.period12m': '近12个月',
+
+    // Tools grid
+    'tools.title': 'ZURT 工具',
+    'tools.agent': 'AI 助手',
+    'tools.agentDesc': '向AI提问',
+    'tools.simulator': '模拟器',
+    'tools.simulatorDesc': '模拟您的投资',
+    'tools.goals': '目标',
+    'tools.goalsDesc': '规划您的目标',
+    'tools.report': '报告',
+    'tools.reportDesc': '导出您的资产',
+    'tools.family': '家庭',
+    'tools.familyDesc': '管理成员',
+    'tools.cards': '卡片',
+    'tools.cardsDesc': '管理您的卡片',
+
+    // PDF Report (Home & Profile)
+    'home.exportPdf': '导出PDF',
+    'profile.generateReport': '生成资产报告',
+    'report.exporting': '正在生成PDF...',
+
+    // Spending Analysis (Cards)
+    'cards.spendingAnalysis': '支出分析',
+    'cards.analyzeWithAI': 'AI分析',
+    'cards.aiAnalysisTitle': 'AI分析',
+    'cards.vsPreviousMonth': '对比上月',
+    'cards.noSpendingData': '暂无支出数据',
+    'cards.totalSpending': '总支出',
+    'cards.aiAnalyzing': '正在分析您的支出...',
+
+    // Accent Color
+    'profile.accentColor': '强调色',
+    'profile.accentGreen': 'ZURT绿',
+    'profile.accentBlue': '蓝色',
+    'profile.accentPurple': '紫色',
+    'profile.accentGold': '金色',
+    'profile.accentPink': '粉色',
+    'profile.accentCyan': '青色',
   },
   ar: {
     // Tabs
@@ -1902,5 +2208,107 @@ export const translations: Record<Language, Record<string, string>> = {
     'push.insight': 'الرؤى',
     'push.system': 'النظام',
     'push.permissionDenied': 'الإشعارات محظورة في إعدادات الجهاز. قم بتفعيلها في الإعدادات > ZURT.',
+
+    // Goals
+    'goals.title': 'الأهداف المالية',
+    'goals.empty': 'لم يتم إنشاء أهداف بعد',
+    'goals.emptyCta': 'إنشاء أول هدف',
+    'goals.createTitle': 'هدف جديد',
+    'goals.editTitle': 'تعديل الهدف',
+    'goals.name': 'اسم الهدف',
+    'goals.targetAmount': 'المبلغ المستهدف',
+    'goals.currentAmount': 'المبلغ الحالي',
+    'goals.deadline': 'الموعد النهائي',
+    'goals.category': 'الفئة',
+    'goals.save': 'حفظ',
+    'goals.delete': 'حذف',
+    'goals.deleteConfirm': 'هل تريد حذف هذا الهدف؟',
+    'goals.viewAll': 'عرض الكل',
+    'goals.projected': 'المتوقع: {date}',
+
+    // Goal categories
+    'goalCategory.emergency': 'طوارئ',
+    'goalCategory.trip': 'سفر',
+    'goalCategory.car': 'سيارة',
+    'goalCategory.house': 'منزل',
+    'goalCategory.retirement': 'تقاعد',
+    'goalCategory.education': 'تعليم',
+    'goalCategory.custom': 'أخرى',
+
+    // Simulator
+    'simulator.title': 'محاكي الاستثمار',
+    'simulator.monthlyContribution': 'المساهمة الشهرية',
+    'simulator.term': 'المدة',
+    'simulator.years': 'سنوات',
+    'simulator.riskProfile': 'ملف المخاطر',
+    'simulator.conservative': 'محافظ',
+    'simulator.moderate': 'معتدل',
+    'simulator.aggressive': 'جريء',
+    'simulator.estimatedAmount': 'المبلغ المقدر',
+    'simulator.totalInvested': 'إجمالي المستثمر',
+    'simulator.projectedGains': 'الأرباح المتوقعة',
+    'simulator.disclaimer': 'محاكاة مبنية على عوائد تاريخية. الأداء السابق لا يضمن نتائج مستقبلية.',
+    'simulator.cta': 'محاكاة الاستثمار',
+
+    // Goals - extra
+    'goals.monthlyContribution': 'المساهمة الشهرية',
+    'goals.timeRemaining': 'الوقت المتبقي',
+    'goals.months': 'أشهر',
+    'goals.atCurrentRate': 'بالمعدل الحالي، خلال {n} أشهر',
+    'goals.reached': 'تم تحقيق الهدف!',
+    'goals.addGoal': 'إضافة هدف',
+    'goals.selectIcon': 'أيقونة',
+    'goals.selectColor': 'اللون',
+    'goals.of': 'من',
+
+    // Simulator - extra
+    'simulator.initialAmount': 'المبلغ الأولي',
+    'simulator.perYear': '/سنة',
+
+    // Performance comparison
+    'comparison.title': 'الأداء مقابل المعايير',
+    'comparison.portfolio': 'محفظتك',
+    'comparison.cdi': 'CDI',
+    'comparison.ipca': 'IPCA',
+    'comparison.ibov': 'IBOV',
+    'comparison.period12m': 'آخر 12 شهر',
+
+    // Tools grid
+    'tools.title': 'أدوات ZURT',
+    'tools.agent': 'وكيل الذكاء',
+    'tools.agentDesc': 'اسأل الذكاء الاصطناعي',
+    'tools.simulator': 'المحاكي',
+    'tools.simulatorDesc': 'حاكي استثماراتك',
+    'tools.goals': 'الأهداف',
+    'tools.goalsDesc': 'خطط لأهدافك',
+    'tools.report': 'التقرير',
+    'tools.reportDesc': 'صدّر محفظتك',
+    'tools.family': 'العائلة',
+    'tools.familyDesc': 'إدارة الأعضاء',
+    'tools.cards': 'البطاقات',
+    'tools.cardsDesc': 'إدارة بطاقاتك',
+
+    // PDF Report (Home & Profile)
+    'home.exportPdf': 'تصدير PDF',
+    'profile.generateReport': 'إنشاء تقرير الأصول',
+    'report.exporting': 'جارٍ إنشاء PDF...',
+
+    // Spending Analysis (Cards)
+    'cards.spendingAnalysis': 'تحليل الإنفاق',
+    'cards.analyzeWithAI': 'تحليل بالذكاء الاصطناعي',
+    'cards.aiAnalysisTitle': 'تحليل الذكاء الاصطناعي',
+    'cards.vsPreviousMonth': 'مقارنة بالشهر السابق',
+    'cards.noSpendingData': 'لا توجد بيانات إنفاق',
+    'cards.totalSpending': 'إجمالي الإنفاق',
+    'cards.aiAnalyzing': 'جارٍ تحليل إنفاقك...',
+
+    // Accent Color
+    'profile.accentColor': 'لون التمييز',
+    'profile.accentGreen': 'أخضر ZURT',
+    'profile.accentBlue': 'أزرق',
+    'profile.accentPurple': 'بنفسجي',
+    'profile.accentGold': 'ذهبي',
+    'profile.accentPink': 'وردي',
+    'profile.accentCyan': 'سماوي',
   },
 };

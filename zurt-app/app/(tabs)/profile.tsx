@@ -23,7 +23,10 @@ import { usePortfolioStore } from '../../src/stores/portfolioStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { usePushStore, type PushPreferences } from '../../src/stores/pushStore';
 import type { Language } from '../../src/i18n/translations';
-import type { Currency, ThemeMode, IconStyle } from '../../src/stores/settingsStore';
+import type { Currency, ThemeMode, IconStyle, AccentColor } from '../../src/stores/settingsStore';
+import { ACCENT_COLORS } from '../../src/stores/settingsStore';
+import { useCardsStore } from '../../src/stores/cardsStore';
+import { generatePatrimonialReport } from '../../src/services/reportGenerator';
 import { Toggle } from '../../src/components/ui/Toggle';
 import { Card } from '../../src/components/ui/Card';
 import { UserAvatar, AVATAR_CHARACTER_LIST, useAvatarState, type AvatarPresetId } from '../../src/components/ui/UserAvatar';
@@ -580,7 +583,11 @@ export default function ProfileScreen() {
   const setTheme = useSettingsStore((s) => s.setTheme);
   const iconStyle = useSettingsStore((s) => s.iconStyle);
   const setIconStyle = useSettingsStore((s) => s.setIconStyle);
+  const accentColor = useSettingsStore((s) => s.accentColor);
+  const setAccentColor = useSettingsStore((s) => s.setAccentColor);
   const avatarState = useAvatarState();
+  const { cards } = useCardsStore();
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const {
     permissionStatus,
     preferences: pushPreferences,
@@ -714,6 +721,38 @@ export default function ProfileScreen() {
     },
     [setIconStyle]
   );
+
+  // -- Accent color handler -------------------------------------------------
+  const handleAccentColorSelect = useCallback(
+    (selected: AccentColor) => {
+      Haptics.selectionAsync();
+      setAccentColor(selected);
+    },
+    [setAccentColor]
+  );
+
+  // -- PDF report handler ---------------------------------------------------
+  const handleGenerateReport = useCallback(async () => {
+    if (!user || isExportingPdf) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsExportingPdf(true);
+    try {
+      const { summary, institutions: insts, allocations: allocs, assets } = usePortfolioStore.getState();
+      if (!summary) {
+        Alert.alert(t('common.error'), t('report.error'));
+        return;
+      }
+      await generatePatrimonialReport(
+        { summary, institutions: insts, allocations: allocs, cards, assets },
+        user,
+        accentColor,
+      );
+    } catch {
+      Alert.alert(t('common.error'), t('report.error'));
+    } finally {
+      setIsExportingPdf(false);
+    }
+  }, [user, cards, accentColor, isExportingPdf, t]);
 
   // -- About section handlers -----------------------------------------------
   const handleTerms = useCallback(() => {
@@ -973,6 +1012,31 @@ export default function ProfileScreen() {
               );
             })}
           </View>
+
+          {/* Accent color selector */}
+          <Text style={styles.iconStyleLabel}>{t('profile.accentColor')}</Text>
+          <View style={styles.accentColorRow}>
+            {ACCENT_COLORS.map((opt) => {
+              const isSelected = accentColor === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[
+                    styles.accentColorButton,
+                    { borderColor: isSelected ? opt.key : colors.border },
+                  ]}
+                  onPress={() => handleAccentColorSelect(opt.key)}
+                  activeOpacity={0.7}
+                  accessibilityLabel={t(opt.label)}
+                >
+                  <View style={[styles.accentColorSwatch, { backgroundColor: opt.key }]} />
+                  {isSelected && (
+                    <Text style={[styles.accentColorCheck, { color: opt.key }]}>{'\u2713'}</Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
       </View>
 
@@ -1047,15 +1111,10 @@ export default function ProfileScreen() {
         </View>
       </Card>
 
-      {/* Family & Taxes */}
+      {/* Tools */}
       <SectionTitle title={t('profile.tools')} iconName="tools" />
       <View>
         <View style={styles.section}>
-          <SettingRow
-            iconName="family"
-            label={t('family.title')}
-            onPress={() => router.push('/family')}
-          />
           <SettingRow
             iconName="taxes"
             label={t('taxes.title')}
@@ -1063,14 +1122,17 @@ export default function ProfileScreen() {
           />
           <TouchableOpacity
             style={styles.settingRow}
-            onPress={() => router.push('/report')}
+            onPress={handleGenerateReport}
             activeOpacity={0.7}
+            disabled={isExportingPdf}
           >
-            <View style={styles.settingIcon}><AppIcon name="report" size={16} color={colors.text.secondary} /></View>
-            <View style={{ flex: 1, flexShrink: 1 }}>
-              <Text style={styles.settingLabel} numberOfLines={1}>{t('report.title')}</Text>
-              <Text style={[styles.settingValue, { marginRight: 0, marginTop: 2 }]} numberOfLines={1}>{t('report.subtitle')}</Text>
+            <View style={styles.settingIcon}>
+              {isExportingPdf
+                ? <ActivityIndicator size="small" color={colors.accent} />
+                : <AppIcon name="report" size={16} color={colors.accent} />
+              }
             </View>
+            <Text style={[styles.settingLabel, { color: colors.accent }]}>{t('profile.generateReport')}</Text>
             <AppIcon name="chevron" size={20} color={colors.text.muted} />
           </TouchableOpacity>
         </View>
@@ -1374,6 +1436,30 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: spacing.md,
     marginTop: spacing.sm,
     marginBottom: spacing.xs,
+  },
+  accentColorRow: {
+    flexDirection: 'row',
+    padding: spacing.md,
+    gap: spacing.sm,
+    justifyContent: 'center',
+  },
+  accentColorButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  accentColorSwatch: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+  accentColorCheck: {
+    position: 'absolute',
+    fontSize: 14,
+    fontWeight: '800',
   },
 
   logoutButton: {

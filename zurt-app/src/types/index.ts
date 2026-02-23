@@ -188,3 +188,22 @@ export interface Insight {
   action: string;
   type: 'warning' | 'info' | 'opportunity';
 }
+
+// -----------------------------------------------------------------------------
+// Goals
+// -----------------------------------------------------------------------------
+
+export type GoalCategory = 'emergency' | 'trip' | 'car' | 'house' | 'retirement' | 'education' | 'custom';
+
+export interface Goal {
+  id: string;
+  name: string;
+  target_amount: number;
+  current_amount: number;
+  deadline: string;
+  category: GoalCategory;
+  icon: string;
+  color: string;
+  monthly_contribution: number;
+  created_at: string;
+}

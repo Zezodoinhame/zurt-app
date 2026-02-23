@@ -59,6 +59,10 @@ const ICON_MAP: Record<string, { lib: 'ion' | 'mci'; name: string; emoji: string
   search:       { lib: 'ion', name: 'search-outline', emoji: '\uD83D\uDD0D' },
   diamond:      { lib: 'ion', name: 'diamond-outline', emoji: '\uD83D\uDC8E' },
   briefcase:    { lib: 'ion', name: 'briefcase-outline', emoji: '\uD83D\uDCBC' },
+  airplane:     { lib: 'ion', name: 'airplane-outline', emoji: '\u2708\uFE0F' },
+  car:          { lib: 'ion', name: 'car-outline', emoji: '\uD83D\uDE97' },
+  shield:       { lib: 'ion', name: 'shield-outline', emoji: '\uD83D\uDEE1\uFE0F' },
+  add:          { lib: 'ion', name: 'add-outline', emoji: '\u2795' },
 };
 
 export type AppIconName = keyof typeof ICON_MAP;

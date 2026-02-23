@@ -26,6 +26,7 @@ import { formatPct, maskValue, formatCurrency } from '../../src/utils/formatters
 import type { Asset, AssetClass, InstitutionId } from '../../src/types';
 import { AppIcon } from '../../src/hooks/useIcon';
 import { logger } from '../../src/utils/logger';
+import { demoBenchmarks } from '../../src/data/demo';
 
 // ---------------------------------------------------------------------------
 // Label Maps
@@ -79,6 +80,9 @@ export default function WalletScreen() {
   >(new Set());
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [sheetVisible, setSheetVisible] = useState(false);
+  const [benchmarkPeriod, setBenchmarkPeriod] = useState<'1M' | '3M' | '6M' | '12M'>('1M');
+
+  const summary = usePortfolioStore((s) => s.summary);
 
   // Load data on mount & expand first group
   useEffect(() => {
@@ -511,6 +515,76 @@ export default function WalletScreen() {
             />
           }
         >
+          {/* Performance Comparison */}
+          {summary && (
+            <View style={styles.comparisonSection}>
+              <Text style={styles.comparisonTitle}>{t('comparison.title')}</Text>
+
+              {/* Period pills */}
+              <View style={styles.compPillRow}>
+                {(['1M', '3M', '6M', '12M'] as const).map((p) => {
+                  const sel = benchmarkPeriod === p;
+                  return (
+                    <TouchableOpacity
+                      key={p}
+                      style={[styles.compPill, sel && styles.compPillSel]}
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setBenchmarkPeriod(p);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.compPillText, sel && styles.compPillTextSel]}>
+                        {p}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Bars */}
+              {(() => {
+                const bench = demoBenchmarks[benchmarkPeriod];
+                const portfolioVar = benchmarkPeriod === '1M'
+                  ? (summary.variation1m ?? 0)
+                  : benchmarkPeriod === '12M'
+                    ? (summary.variation12m ?? 0)
+                    : benchmarkPeriod === '3M'
+                      ? (summary.variation1m ?? 0) * 3
+                      : (summary.variation1m ?? 0) * 6;
+
+                const bars = [
+                  { label: t('comparison.portfolio'), value: portfolioVar, color: colors.accent },
+                  { label: t('comparison.cdi'), value: bench.cdi, color: colors.info },
+                  { label: t('comparison.ipca'), value: bench.ipca, color: colors.warning },
+                  { label: t('comparison.ibov'), value: bench.ibov, color: '#A855F7' },
+                ];
+
+                const maxVal = Math.max(...bars.map((b) => Math.abs(b.value)), 1);
+
+                return bars.map((bar) => (
+                  <View key={bar.label} style={styles.compBarRow}>
+                    <Text style={styles.compBarLabel} numberOfLines={1}>{bar.label}</Text>
+                    <View style={styles.compBarTrack}>
+                      <View
+                        style={[
+                          styles.compBarFill,
+                          {
+                            width: `${(Math.abs(bar.value) / maxVal) * 100}%`,
+                            backgroundColor: bar.color,
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={[styles.compBarValue, { color: bar.value >= 0 ? colors.positive : colors.negative }]}>
+                      {valuesHidden ? '••••' : `${bar.value >= 0 ? '+' : ''}${bar.value.toFixed(1)}%`}
+                    </Text>
+                  </View>
+                ));
+              })()}
+            </View>
+          )}
+
           {viewMode === 'class' ? renderClassView() : renderInstitutionView()}
         </ScrollView>
       )}
@@ -717,6 +791,70 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 14,
       fontWeight: '600',
       color: colors.text.primary,
+      fontVariant: ['tabular-nums'],
+    },
+
+    // Performance comparison
+    comparisonSection: {
+      marginBottom: spacing.xl,
+    },
+    comparisonTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text.primary,
+      marginBottom: spacing.md,
+    },
+    compPillRow: {
+      flexDirection: 'row',
+      marginBottom: spacing.lg,
+      gap: spacing.sm,
+    },
+    compPill: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs + 2,
+      borderRadius: radius.full,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    compPillSel: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    compPillText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.text.secondary,
+    },
+    compPillTextSel: {
+      color: colors.background,
+    },
+    compBarRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    compBarLabel: {
+      width: 90,
+      fontSize: 12,
+      color: colors.text.secondary,
+    },
+    compBarTrack: {
+      flex: 1,
+      height: 12,
+      backgroundColor: colors.border,
+      borderRadius: 6,
+      marginHorizontal: spacing.sm,
+      overflow: 'hidden',
+    },
+    compBarFill: {
+      height: 12,
+      borderRadius: 6,
+    },
+    compBarValue: {
+      width: 52,
+      fontSize: 12,
+      fontWeight: '600',
+      textAlign: 'right',
       fontVariant: ['tabular-nums'],
     },
 

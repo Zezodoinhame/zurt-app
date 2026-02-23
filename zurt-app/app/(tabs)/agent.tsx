@@ -10,6 +10,7 @@ import {
   Platform,
   Animated,
   Alert,
+  Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Markdown from 'react-native-markdown-display';
@@ -254,6 +255,14 @@ export default function AgentScreen() {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
   }, [messages, isLoading]);
 
+  // Auto-scroll when keyboard shows (fixes Android input hidden by keyboard)
+  useEffect(() => {
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+    });
+    return () => sub.remove();
+  }, []);
+
   const handleSend = useCallback(() => {
     const text = inputText.trim();
     if (!text || isLoading) return;
@@ -284,6 +293,12 @@ export default function AgentScreen() {
   // Find last assistant message index
   const lastAiIndex = messages.reduce((acc, m, i) => (m.role === 'assistant' ? i : acc), -1);
 
+  // Tab bar height = 60 + bottom inset (matches _layout.tsx)
+  const tabBarHeight = 60 + (insets.bottom || 0);
+  const kavOffset = Platform.OS === 'ios'
+    ? insets.top + tabBarHeight
+    : insets.top + tabBarHeight;
+
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {/* Header */}
@@ -306,8 +321,8 @@ export default function AgentScreen() {
 
       <KeyboardAvoidingView
         style={styles.flex1}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={kavOffset}
       >
         {/* Messages */}
         <ScrollView

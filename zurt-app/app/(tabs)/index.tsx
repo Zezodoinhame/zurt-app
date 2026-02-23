@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo } from 'react';
+import React, { useEffect, useCallback, useMemo, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
+  Alert,
+  ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -16,6 +19,9 @@ import { spacing, radius } from '../../src/theme/spacing';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePortfolioStore } from '../../src/stores/portfolioStore';
 import { useNotificationStore } from '../../src/stores/notificationStore';
+import { useGoalsStore } from '../../src/stores/goalsStore';
+import { useCardsStore } from '../../src/stores/cardsStore';
+import { generatePatrimonialReport } from '../../src/services/reportGenerator';
 
 import { Card } from '../../src/components/ui/Card';
 import { Badge, DotBadge } from '../../src/components/ui/Badge';
@@ -27,6 +33,7 @@ import {
   SkeletonChart,
   SkeletonList,
 } from '../../src/components/skeletons/Skeleton';
+import { CircularProgress } from '../../src/components/charts/CircularProgress';
 import { ErrorState } from '../../src/components/shared/ErrorState';
 
 import {
@@ -34,6 +41,7 @@ import {
   formatPct,
   maskValue,
 } from '../../src/utils/formatters';
+import { demoBenchmarks } from '../../src/data/demo';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { AppIcon } from '../../src/hooks/useIcon';
 
@@ -43,6 +51,43 @@ import { AppIcon } from '../../src/hooks/useIcon';
 
 const TIME_RANGES = ['1M', '3M', '6M', '1A', 'MAX'] as const;
 type TimeRange = (typeof TIME_RANGES)[number];
+
+// ===========================================================================
+// Animated Tool Card (stagger fadeIn)
+// ===========================================================================
+
+function ToolCardAnimated({
+  index,
+  onPress,
+  style,
+  children,
+}: {
+  index: number;
+  onPress: () => void;
+  style: any;
+  children: React.ReactNode;
+}) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(16)).current;
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(opacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: 0, duration: 400, useNativeDriver: true }),
+      ]).start();
+    }, index * 60);
+    return () => clearTimeout(timer);
+  }, [index, opacity, translateY]);
+
+  return (
+    <Animated.View style={[style, { opacity, transform: [{ translateY }] }]}>
+      <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={{ flex: 1 }}>
+        {children}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
 
 // ===========================================================================
 // HomeScreen
@@ -68,8 +113,12 @@ export default function HomeScreen() {
     setTimeRange,
   } = usePortfolioStore();
   const { getUnreadCount, loadNotifications } = useNotificationStore();
+  const { goals, loadGoals } = useGoalsStore();
   const { t, currency } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
+  const accentColor = useSettingsStore((s) => s.accentColor);
+  const { cards } = useCardsStore();
+  const [isExporting, setIsExporting] = useState(false);
 
   // ---- Memoised styles & constants ----------------------------------------
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -87,6 +136,7 @@ export default function HomeScreen() {
   useEffect(() => {
     loadPortfolio();
     loadNotifications();
+    loadGoals();
   }, []);
 
   // ---- Handlers -----------------------------------------------------------
@@ -108,6 +158,24 @@ export default function HomeScreen() {
     refresh();
   }, [refresh]);
 
+  const handleExportPdf = useCallback(async () => {
+    if (!summary || !user || isExporting) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsExporting(true);
+    try {
+      const { assets } = usePortfolioStore.getState();
+      await generatePatrimonialReport(
+        { summary, institutions, allocations, cards, assets },
+        user,
+        accentColor,
+      );
+    } catch (err: any) {
+      Alert.alert(t('common.error'), t('report.error'));
+    } finally {
+      setIsExporting(false);
+    }
+  }, [summary, user, institutions, allocations, cards, accentColor, isExporting, t]);
+
   // ---- Derived values -----------------------------------------------------
   const unreadCount = getUnreadCount();
   const firstName = user?.name?.split(' ')[0] ?? '';
@@ -127,11 +195,43 @@ export default function HomeScreen() {
   const displayPct = (value: number) =>
     valuesHidden ? '••••' : formatPct(value);
 
-  // ---- Chart data ---------------------------------------------------------
-  const chartData = (summary?.history ?? []).map((h) => ({
-    label: h.month,
-    value: h.value,
-  }));
+  // ---- Chart data (filtered by selected time range) ----------------------
+  const chartData = useMemo(() => {
+    const history = summary?.history ?? [];
+    if (history.length === 0) return [];
+
+    const cutoffDays: Record<TimeRange, number> = {
+      '1M': 30,
+      '3M': 90,
+      '6M': 180,
+      '1A': 365,
+      'MAX': Infinity,
+    };
+    const days = cutoffDays[selectedTimeRange] ?? 365;
+
+    if (days === Infinity) {
+      return history.map((h) => ({ label: h.month, value: h.value }));
+    }
+
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const filtered = history.filter((h) => new Date(h.date) >= cutoff);
+
+    // Fallback: if filter returns < 2 points, take last N proportional points
+    if (filtered.length < 2) {
+      const fallbackCount: Record<TimeRange, number> = {
+        '1M': 5,
+        '3M': 15,
+        '6M': 30,
+        '1A': 52,
+        'MAX': history.length,
+      };
+      const count = Math.min(history.length, fallbackCount[selectedTimeRange] ?? history.length);
+      return history.slice(-count).map((h) => ({ label: h.month, value: h.value }));
+    }
+
+    return filtered.map((h) => ({ label: h.month, value: h.value }));
+  }, [summary?.history, selectedTimeRange]);
 
   // =========================================================================
   // Render
@@ -163,20 +263,37 @@ export default function HomeScreen() {
             <Text style={styles.greeting}>{greeting}</Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.bellContainer}
-            activeOpacity={0.7}
-            accessibilityLabel={`${t('home.notifications')}, ${unreadCount} ${t('home.unread')}`}
-            onPress={() => router.push('/(tabs)/alerts')}
-          >
-            <AppIcon name="notification" size={22} color={colors.text.primary} />
-            {unreadCount > 0 && (
-              <DotBadge
-                count={unreadCount}
-                style={styles.dotBadge}
-              />
+          <View style={styles.headerActions}>
+            {summary && (
+              <TouchableOpacity
+                style={styles.pdfButton}
+                activeOpacity={0.7}
+                accessibilityLabel={t('home.exportPdf')}
+                onPress={handleExportPdf}
+                disabled={isExporting}
+              >
+                {isExporting ? (
+                  <ActivityIndicator size="small" color={colors.accent} />
+                ) : (
+                  <AppIcon name="report" size={20} color={colors.text.primary} />
+                )}
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.bellContainer}
+              activeOpacity={0.7}
+              accessibilityLabel={`${t('home.notifications')}, ${unreadCount} ${t('home.unread')}`}
+              onPress={() => router.push('/(tabs)/alerts')}
+            >
+              <AppIcon name="notification" size={22} color={colors.text.primary} />
+              {unreadCount > 0 && (
+                <DotBadge
+                  count={unreadCount}
+                  style={styles.dotBadge}
+                />
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* ---------------------------------------------------------------- */}
@@ -329,6 +446,140 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
+            {/* Performance Comparison                                          */}
+            {/* -------------------------------------------------------------- */}
+            {summary && (
+              <Card delay={350}>
+                <Text style={styles.sectionTitleInCard}>
+                  {t('comparison.title')}
+                </Text>
+                <Text style={styles.compPeriod}>{t('comparison.period12m')}</Text>
+
+                {(() => {
+                  const benchmarks = demoBenchmarks['12M'];
+                  const portfolioReturn = summary.variation12m ?? 0;
+                  const items = [
+                    { label: t('comparison.portfolio'), value: portfolioReturn, color: colors.accent },
+                    { label: t('comparison.cdi'), value: benchmarks.cdi, color: colors.info },
+                    { label: t('comparison.ipca'), value: benchmarks.ipca, color: colors.warning },
+                    { label: t('comparison.ibov'), value: benchmarks.ibov, color: '#A855F7' },
+                  ];
+                  const maxVal = Math.max(...items.map((i) => Math.abs(i.value)), 1);
+
+                  return items.map((item, i) => (
+                    <View key={i} style={styles.compRow}>
+                      <Text style={styles.compLabel}>{item.label}</Text>
+                      <View style={styles.compBarBg}>
+                        <View
+                          style={[
+                            styles.compBarFill,
+                            {
+                              width: `${Math.max((Math.abs(item.value) / maxVal) * 100, 4)}%`,
+                              backgroundColor: item.color,
+                            },
+                          ]}
+                        />
+                      </View>
+                      <Text style={[styles.compValue, { color: item.color }]}>
+                        {valuesHidden ? '\u{2022}\u{2022}\u{2022}\u{2022}' : displayPct(item.value)}
+                      </Text>
+                    </View>
+                  ));
+                })()}
+              </Card>
+            )}
+
+            {/* -------------------------------------------------------------- */}
+            {/* Tools Grid — Ferramentas ZURT                                   */}
+            {/* -------------------------------------------------------------- */}
+            <View style={styles.toolsSection}>
+              <Text style={styles.sectionTitle}>{t('tools.title')}</Text>
+              <View style={styles.toolsGrid}>
+                {([
+                  { emoji: '\u{1F916}', title: t('tools.agent'), desc: t('tools.agentDesc'), onPress: () => router.push('/(tabs)/agent') },
+                  { emoji: '\u{1F4C8}', title: t('tools.simulator'), desc: t('tools.simulatorDesc'), onPress: () => router.push('/simulator') },
+                  { emoji: '\u{1F3AF}', title: t('tools.goals'), desc: t('tools.goalsDesc'), onPress: () => router.push('/goals') },
+                  { emoji: '\u{1F4C4}', title: t('tools.report'), desc: t('tools.reportDesc'), onPress: handleExportPdf },
+                  { emoji: '\u{1F46A}', title: t('tools.family'), desc: t('tools.familyDesc'), onPress: () => router.push('/family') },
+                  { emoji: '\u{1F4B3}', title: t('tools.cards'), desc: t('tools.cardsDesc'), onPress: () => router.push('/(tabs)/cards') },
+                ] as const).map((tool, i) => (
+                  <ToolCardAnimated key={i} index={i} onPress={tool.onPress} style={styles.toolCard}>
+                    <Text style={styles.toolEmoji}>{tool.emoji}</Text>
+                    <Text style={styles.toolTitle}>{tool.title}</Text>
+                    <Text style={styles.toolDesc} numberOfLines={1}>{tool.desc}</Text>
+                  </ToolCardAnimated>
+                ))}
+              </View>
+            </View>
+
+            {/* -------------------------------------------------------------- */}
+            {/* Goals Preview                                                   */}
+            {/* -------------------------------------------------------------- */}
+            {goals.length > 0 && (
+              <View>
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={styles.sectionTitle}>{t('goals.title')}</Text>
+                  <TouchableOpacity
+                    onPress={() => router.push('/goals')}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.viewAllLink}>{t('goals.viewAll')} →</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {goals.slice(0, 2).map((goal) => {
+                  const progress = goal.target_amount > 0
+                    ? goal.current_amount / goal.target_amount
+                    : 0;
+                  const pct = Math.round(progress * 100);
+                  const goalColor = goal.color || colors.accent;
+
+                  return (
+                    <TouchableOpacity
+                      key={goal.id}
+                      style={styles.goalMiniCard}
+                      onPress={() => router.push('/goals')}
+                      activeOpacity={0.7}
+                    >
+                      <CircularProgress
+                        progress={progress}
+                        size={48}
+                        strokeWidth={5}
+                        color={goalColor}
+                      >
+                        <Text style={[styles.goalMiniPct, { color: goalColor }]}>{pct}%</Text>
+                      </CircularProgress>
+                      <View style={styles.goalMiniInfo}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <Text style={{ fontSize: 16, marginRight: 6 }}>{goal.icon || '\u{1F3AF}'}</Text>
+                          <Text style={styles.goalMiniName} numberOfLines={1}>{goal.name}</Text>
+                        </View>
+                        <Text style={styles.goalMiniProgress}>
+                          {valuesHidden
+                            ? 'R$ \u{2022}\u{2022}\u{2022}\u{2022}\u{2022} / R$ \u{2022}\u{2022}\u{2022}\u{2022}\u{2022}'
+                            : `${formatCurrency(goal.current_amount, currency)} / ${formatCurrency(goal.target_amount, currency)}`}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* -------------------------------------------------------------- */}
+            {/* Simulator CTA                                                   */}
+            {/* -------------------------------------------------------------- */}
+            <TouchableOpacity
+              style={styles.simulatorCta}
+              onPress={() => router.push('/simulator')}
+              activeOpacity={0.7}
+            >
+              <AppIcon name="trending" size={20} color={colors.accent} />
+              <Text style={styles.simulatorCtaText}>{t('simulator.cta')}</Text>
+              <AppIcon name="chevron" size={16} color={colors.text.muted} />
+            </TouchableOpacity>
+
+            {/* -------------------------------------------------------------- */}
             {/* Contas Conectadas                                               */}
             {/* -------------------------------------------------------------- */}
             {institutions.length > 0 && (
@@ -440,6 +691,17 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 22,
       fontWeight: '700',
       color: colors.text.primary,
+    },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    pdfButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     bellContainer: {
       position: 'relative',
@@ -600,6 +862,138 @@ const createStyles = (colors: ThemeColors) =>
     insightActionText: {
       fontSize: 13,
       fontWeight: '600',
+    },
+
+    // -- Performance comparison ---------------------------------------------------
+    compPeriod: {
+      fontSize: 12,
+      color: colors.text.muted,
+      marginBottom: spacing.lg,
+    },
+    compRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    compLabel: {
+      width: 80,
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.text.secondary,
+    },
+    compBarBg: {
+      flex: 1,
+      height: 8,
+      backgroundColor: colors.border,
+      borderRadius: 4,
+      overflow: 'hidden',
+      marginHorizontal: spacing.sm,
+    },
+    compBarFill: {
+      height: 8,
+      borderRadius: 4,
+    },
+    compValue: {
+      width: 60,
+      fontSize: 12,
+      fontWeight: '700',
+      textAlign: 'right',
+      fontVariant: ['tabular-nums'],
+    },
+
+    // -- Goals preview ----------------------------------------------------------
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: spacing.xl,
+      marginBottom: spacing.md,
+    },
+    viewAllLink: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.accent,
+    },
+    goalMiniCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.lg,
+      marginBottom: spacing.sm,
+    },
+    goalMiniInfo: {
+      flex: 1,
+      marginLeft: spacing.md,
+    },
+    goalMiniName: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text.primary,
+      marginBottom: 2,
+    },
+    goalMiniProgress: {
+      fontSize: 12,
+      color: colors.text.secondary,
+      fontVariant: ['tabular-nums'],
+    },
+    goalMiniPct: {
+      fontSize: 11,
+      fontWeight: '700',
+    },
+
+    // -- Tools grid ---------------------------------------------------------------
+    toolsSection: {
+      marginBottom: spacing.md,
+    },
+    toolsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+      gap: spacing.sm,
+    },
+    toolCard: {
+      width: '48%' as any,
+      backgroundColor: colors.card,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.md,
+    },
+    toolEmoji: {
+      fontSize: 22,
+      marginBottom: spacing.xs,
+    },
+    toolTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.text.primary,
+      marginBottom: 1,
+    },
+    toolDesc: {
+      fontSize: 11,
+      color: colors.text.muted,
+    },
+
+    // -- Simulator CTA ----------------------------------------------------------
+    simulatorCta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.lg,
+      marginTop: spacing.md,
+      gap: spacing.sm,
+    },
+    simulatorCtaText: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text.primary,
     },
 
     // -- Empty state -----------------------------------------------------------

@@ -131,6 +131,14 @@ export default function RootLayout() {
             name="taxes"
             options={{ animation: 'slide_from_right' }}
           />
+          <Stack.Screen
+            name="goals"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="simulator"
+            options={{ animation: 'slide_from_right' }}
+          />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>

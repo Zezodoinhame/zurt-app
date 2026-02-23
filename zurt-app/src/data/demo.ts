@@ -20,6 +20,7 @@ import type {
   Allocation,
   CategorySpending,
   PortfolioSummary,
+  Goal,
 } from '../types';
 
 // =============================================================================
@@ -43,26 +44,55 @@ export const demoUser: User = {
 // Portfolio Summary
 // =============================================================================
 
+// Generate weekly history points from ~420 days ago until today
+const MONTH_LABELS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+function generateDemoHistory(): MonthlyData[] {
+  const points: MonthlyData[] = [];
+  const now = new Date();
+  const startValue = 420000;
+  const endValue = 847350;
+  const totalDays = 420;
+  const intervalDays = 7; // weekly points
+  const totalPoints = Math.floor(totalDays / intervalDays) + 1;
+
+  for (let i = 0; i < totalPoints; i++) {
+    const daysAgo = totalDays - i * intervalDays;
+    const d = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+    const progress = i / (totalPoints - 1);
+    // Smooth growth with slight random variation (seeded by index for determinism)
+    const noise = Math.sin(i * 1.7) * 0.015 + Math.sin(i * 3.1) * 0.008;
+    const value = Math.round(startValue + (endValue - startValue) * (progress + noise * progress));
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    points.push({
+      month: MONTH_LABELS[d.getMonth()],
+      date: `${d.getFullYear()}-${mm}-${dd}`,
+      value,
+    });
+  }
+
+  // Ensure last point is today with exact final value
+  const last = points[points.length - 1];
+  const todayMM = String(now.getMonth() + 1).padStart(2, '0');
+  const todayDD = String(now.getDate()).padStart(2, '0');
+  const todayStr = `${now.getFullYear()}-${todayMM}-${todayDD}`;
+  if (last.date !== todayStr) {
+    points.push({ month: MONTH_LABELS[now.getMonth()], date: todayStr, value: endValue });
+  } else {
+    last.value = endValue;
+  }
+
+  return points;
+}
+
 export const portfolioSummary: PortfolioSummary = {
   totalValue: 847350,
   investedValue: 720000,
   profit: 127350,
   variation1m: 2.34,
   variation12m: 18.7,
-  history: [
-    { month: 'Mar', date: '2025-03', value: 580000 },
-    { month: 'Abr', date: '2025-04', value: 598400 },
-    { month: 'Mai', date: '2025-05', value: 615200 },
-    { month: 'Jun', date: '2025-06', value: 607800 },
-    { month: 'Jul', date: '2025-07', value: 638500 },
-    { month: 'Ago', date: '2025-08', value: 662100 },
-    { month: 'Set', date: '2025-09', value: 685700 },
-    { month: 'Out', date: '2025-10', value: 710300 },
-    { month: 'Nov', date: '2025-11', value: 735800 },
-    { month: 'Dez', date: '2025-12', value: 768200 },
-    { month: 'Jan', date: '2026-01', value: 828000 },
-    { month: 'Fev', date: '2026-02', value: 847350 },
-  ],
+  history: generateDemoHistory(),
 };
 
 // =============================================================================
@@ -1231,3 +1261,57 @@ export const insights: Insight[] = [
     type: 'opportunity',
   },
 ];
+
+// =============================================================================
+// Goals
+// =============================================================================
+
+export const demoGoals: Goal[] = [
+  {
+    id: 'g1',
+    name: 'Reserva de emergência',
+    target_amount: 50000,
+    current_amount: 30000,
+    deadline: '2026-12-31',
+    category: 'emergency',
+    icon: '\u{1F6E1}\u{FE0F}',
+    color: '#FF6B6B',
+    monthly_contribution: 2000,
+    created_at: '2025-06-01',
+  },
+  {
+    id: 'g2',
+    name: 'Viagem Europa',
+    target_amount: 20000,
+    current_amount: 5000,
+    deadline: '2027-06-15',
+    category: 'trip',
+    icon: '\u{2708}\u{FE0F}',
+    color: '#60A5FA',
+    monthly_contribution: 800,
+    created_at: '2025-09-10',
+  },
+  {
+    id: 'g3',
+    name: 'Aposentadoria',
+    target_amount: 1000000,
+    current_amount: 80000,
+    deadline: '2050-01-01',
+    category: 'retirement',
+    icon: '\u{1F3E0}',
+    color: '#A855F7',
+    monthly_contribution: 3000,
+    created_at: '2024-01-15',
+  },
+];
+
+// =============================================================================
+// Benchmarks — demo values for performance comparison
+// =============================================================================
+
+export const demoBenchmarks = {
+  '1M': { cdi: 1.0, ipca: 0.5, ibov: 1.5 },
+  '3M': { cdi: 3.1, ipca: 1.6, ibov: 4.2 },
+  '6M': { cdi: 6.3, ipca: 3.1, ibov: 8.5 },
+  '12M': { cdi: 12.8, ipca: 6.2, ibov: 18.0 },
+} as const;
