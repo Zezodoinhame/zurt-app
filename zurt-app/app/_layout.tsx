@@ -6,10 +6,12 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../src/stores/authStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { usePushStore } from '../src/stores/pushStore';
 import { useNotificationStore } from '../src/stores/notificationStore';
+import { ONBOARDING_KEY } from './onboarding';
 import { logger } from '../src/utils/logger';
 
 SplashScreen.preventAutoHideAsync();
@@ -25,14 +27,21 @@ export default function RootLayout() {
   const markAsRead = useNotificationStore((s) => s.markAsRead);
   const router = useRouter();
   const [ready, setReady] = useState(false);
+  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
 
   useEffect(() => {
     logger.log('[ZURT App] RootLayout mounted, restoring session...');
     (async () => {
       try {
-        await Promise.all([restoreSession(), loadSettings()]);
+        const [, , onboardingVal] = await Promise.all([
+          restoreSession(),
+          loadSettings(),
+          AsyncStorage.getItem(ONBOARDING_KEY),
+        ]);
+        setOnboardingDone(onboardingVal === 'true');
       } catch (err: any) {
         logger.log('[ZURT App] restoreSession error:', err?.message ?? err);
+        setOnboardingDone(true); // Skip onboarding on error
       } finally {
         logger.log('[ZURT App] Ready! Showing app.');
         setReady(true);
@@ -40,6 +49,14 @@ export default function RootLayout() {
       }
     })();
   }, []);
+
+  // Route to onboarding if not completed
+  useEffect(() => {
+    if (!ready || onboardingDone === null) return;
+    if (!onboardingDone) {
+      router.replace('/onboarding');
+    }
+  }, [ready, onboardingDone]);
 
   // Initialize push notifications when authenticated
   useEffect(() => {

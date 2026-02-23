@@ -2,13 +2,12 @@ import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   StyleSheet,
   Dimensions,
   TouchableOpacity,
   Animated,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
+  ViewToken,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -16,27 +15,25 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { type ThemeColors } from '../src/theme/colors';
 import { spacing, radius } from '../src/theme/spacing';
+import { AppIcon, type AppIconName } from '../src/hooks/useIcon';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const ONBOARDING_KEY = '@zurt:onboarding_done';
+export const ONBOARDING_KEY = 'zurt:onboarding_complete';
 
 interface OnboardingPage {
+  id: string;
   titleKey: string;
   descKey: string;
-  icon: string;
+  iconName: AppIconName;
   accentColor: string;
 }
 
 const PAGES: OnboardingPage[] = [
-  { titleKey: 'onboarding.title1', descKey: 'onboarding.desc1', icon: '\u{1F4CA}', accentColor: '#00D4AA' },
-  { titleKey: 'onboarding.title2', descKey: 'onboarding.desc2', icon: '\u2728',   accentColor: '#FFD93D' },
-  { titleKey: 'onboarding.title3', descKey: 'onboarding.desc3', icon: '\u{1F4C8}', accentColor: '#45B7D1' },
-  { titleKey: 'onboarding.title4', descKey: 'onboarding.desc4', icon: '\u{1F680}', accentColor: '#00D4AA' },
+  { id: '1', titleKey: 'onboarding.title1', descKey: 'onboarding.desc1', iconName: 'chart', accentColor: '#00D4AA' },
+  { id: '2', titleKey: 'onboarding.title2', descKey: 'onboarding.desc2', iconName: 'sparkle', accentColor: '#A855F7' },
+  { id: '3', titleKey: 'onboarding.title3', descKey: 'onboarding.desc3', iconName: 'family', accentColor: '#45B7D1' },
+  { id: '4', titleKey: 'onboarding.title4', descKey: 'onboarding.desc4', iconName: 'rocket', accentColor: '#00D4AA' },
 ];
-
-// ===========================================================================
-// OnboardingScreen
-// ===========================================================================
 
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
@@ -46,58 +43,34 @@ export default function OnboardingScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [activePage, setActivePage] = useState(0);
-  const scrollRef = useRef<ScrollView>(null);
+  const flatListRef = useRef<FlatList>(null);
 
-  // One Animated.Value per page for the icon fade/pulse
-  const iconAnimations = useRef(
-    PAGES.map(() => new Animated.Value(0))
-  ).current;
+  // Animated values per page for fade-in + scale
+  const pageAnims = useRef(PAGES.map(() => new Animated.Value(0))).current;
 
-  // Trigger the fade-in animation for the active page
+  // Animate active page
   useEffect(() => {
-    // Reset all animations
-    iconAnimations.forEach((anim, i) => {
-      if (i !== activePage) {
-        anim.setValue(0);
-      }
+    pageAnims.forEach((anim, i) => {
+      if (i !== activePage) anim.setValue(0);
     });
 
-    // Animate the active page icon
-    Animated.timing(iconAnimations[activePage], {
+    Animated.spring(pageAnims[activePage], {
       toValue: 1,
-      duration: 600,
+      friction: 8,
+      tension: 40,
       useNativeDriver: true,
-    }).start(() => {
-      // Subtle pulse loop after fade-in
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(iconAnimations[activePage], {
-            toValue: 0.7,
-            duration: 1200,
-            useNativeDriver: true,
-          }),
-          Animated.timing(iconAnimations[activePage], {
-            toValue: 1,
-            duration: 1200,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    });
-  }, [activePage, iconAnimations]);
+    }).start();
+  }, [activePage, pageAnims]);
 
-  const handleScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const offsetX = event.nativeEvent.contentOffset.x;
-      const page = Math.round(offsetX / SCREEN_WIDTH);
-      if (page !== activePage && page >= 0 && page < PAGES.length) {
-        setActivePage(page);
-      }
-    },
-    [activePage]
-  );
+  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
+    if (viewableItems.length > 0 && viewableItems[0].index != null) {
+      setActivePage(viewableItems[0].index);
+    }
+  }).current;
 
-  const markOnboardingDone = useCallback(async () => {
+  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
+
+  const markDone = useCallback(async () => {
     try {
       await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
     } catch {
@@ -106,34 +79,122 @@ export default function OnboardingScreen() {
   }, []);
 
   const handleSkip = useCallback(async () => {
-    await markOnboardingDone();
+    await markDone();
     router.replace('/(auth)/login');
-  }, [markOnboardingDone, router]);
+  }, [markDone, router]);
 
   const handleNext = useCallback(() => {
     if (activePage < PAGES.length - 1) {
-      scrollRef.current?.scrollTo({
-        x: SCREEN_WIDTH * (activePage + 1),
-        animated: true,
-      });
+      flatListRef.current?.scrollToIndex({ index: activePage + 1, animated: true });
     }
   }, [activePage]);
 
   const handleCreateAccount = useCallback(async () => {
-    await markOnboardingDone();
+    await markDone();
     router.replace('/(auth)/login');
-  }, [markOnboardingDone, router]);
+  }, [markDone, router]);
 
-  const handleAlreadyHaveAccount = useCallback(async () => {
-    await markOnboardingDone();
+  const handleLogin = useCallback(async () => {
+    await markDone();
     router.replace('/(auth)/login');
-  }, [markOnboardingDone, router]);
+  }, [markDone, router]);
 
   const isLastPage = activePage === PAGES.length - 1;
 
+  const renderPage = useCallback(({ item, index }: { item: OnboardingPage; index: number }) => {
+    const opacity = pageAnims[index];
+    const scale = pageAnims[index].interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.8, 1],
+    });
+
+    return (
+      <View style={styles.page}>
+        {/* Gradient overlay effect */}
+        <View style={styles.gradientTop} />
+
+        <View style={styles.pageContent}>
+          {/* Animated icon circle */}
+          <Animated.View
+            style={[
+              styles.iconCircle,
+              { backgroundColor: item.accentColor + '20', borderColor: item.accentColor + '40' },
+              { opacity, transform: [{ scale }] },
+            ]}
+          >
+            <AppIcon name={item.iconName} size={48} color={item.accentColor} />
+          </Animated.View>
+
+          {/* Title */}
+          <Animated.Text style={[styles.title, { opacity }]}>
+            {t(item.titleKey)}
+          </Animated.Text>
+
+          {/* Description */}
+          <Animated.Text style={[styles.description, { opacity }]}>
+            {t(item.descKey)}
+          </Animated.Text>
+        </View>
+
+        {/* Bottom section */}
+        <View style={styles.bottomSection}>
+          {/* Dots */}
+          <View style={styles.dotsContainer}>
+            {PAGES.map((_, dotIndex) => (
+              <View
+                key={dotIndex}
+                style={[
+                  styles.dot,
+                  dotIndex === index
+                    ? { backgroundColor: item.accentColor, width: 24 }
+                    : { backgroundColor: colors.border },
+                ]}
+              />
+            ))}
+          </View>
+
+          {/* Buttons */}
+          {index < PAGES.length - 1 ? (
+            <TouchableOpacity
+              style={[styles.nextButton, { backgroundColor: item.accentColor }]}
+              onPress={handleNext}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.nextButtonText}>
+                {t('onboarding.next')}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.lastPageButtons}>
+              <TouchableOpacity
+                style={[styles.createAccountButton, { backgroundColor: item.accentColor }]}
+                onPress={handleCreateAccount}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.createAccountText}>
+                  {t('onboarding.createAccount')}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleLogin}
+                activeOpacity={0.7}
+                style={styles.alreadyHaveAccountButton}
+              >
+                <Text style={[styles.alreadyHaveAccountText, { color: colors.accent }]}>
+                  {t('onboarding.alreadyHaveAccount')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  }, [colors, pageAnims, t, handleNext, handleCreateAccount, handleLogin, styles]);
+
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      {/* Skip button — hidden on last page */}
+      {/* Skip button */}
       {!isLastPage && (
         <TouchableOpacity
           style={[styles.skipButton, { top: insets.top + spacing.sm }]}
@@ -144,108 +205,32 @@ export default function OnboardingScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Horizontal paging ScrollView */}
-      <ScrollView
-        ref={scrollRef}
+      <FlatList
+        ref={flatListRef}
+        data={PAGES}
+        renderItem={renderPage}
+        keyExtractor={(item) => item.id}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={handleScroll}
-        scrollEventThrottle={16}
         bounces={false}
-        style={styles.scrollView}
-      >
-        {PAGES.map((page, index) => (
-          <View key={index} style={styles.page}>
-            <View style={styles.pageContent}>
-              {/* Animated icon */}
-              <Animated.Text
-                style={[
-                  styles.icon,
-                  { opacity: iconAnimations[index] },
-                ]}
-              >
-                {page.icon}
-              </Animated.Text>
-
-              {/* Title */}
-              <Text style={styles.title}>{t(page.titleKey)}</Text>
-
-              {/* Description */}
-              <Text style={styles.description}>{t(page.descKey)}</Text>
-            </View>
-
-            {/* Page-specific bottom content */}
-            <View style={styles.bottomSection}>
-              {/* Page dots */}
-              <View style={styles.dotsContainer}>
-                {PAGES.map((_, dotIndex) => (
-                  <View
-                    key={dotIndex}
-                    style={[
-                      styles.dot,
-                      dotIndex === index
-                        ? { backgroundColor: page.accentColor }
-                        : { backgroundColor: colors.border },
-                    ]}
-                  />
-                ))}
-              </View>
-
-              {/* Buttons */}
-              {index < PAGES.length - 1 ? (
-                <TouchableOpacity
-                  style={[styles.nextButton, { backgroundColor: page.accentColor }]}
-                  onPress={handleNext}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.nextButtonText}>
-                    {t('onboarding.next')} {'\u2192'}
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                <View style={styles.lastPageButtons}>
-                  <TouchableOpacity
-                    style={[styles.createAccountButton, { backgroundColor: page.accentColor }]}
-                    onPress={handleCreateAccount}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.createAccountText}>
-                      {t('onboarding.createAccount')}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={handleAlreadyHaveAccount}
-                    activeOpacity={0.7}
-                    style={styles.alreadyHaveAccountButton}
-                  >
-                    <Text style={[styles.alreadyHaveAccountText, { color: colors.accent }]}>
-                      {t('onboarding.alreadyHaveAccount')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        getItemLayout={(_, index) => ({
+          length: SCREEN_WIDTH,
+          offset: SCREEN_WIDTH * index,
+          index,
+        })}
+      />
     </View>
   );
 }
-
-// ===========================================================================
-// Styles
-// ===========================================================================
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
-    },
-    scrollView: {
-      flex: 1,
+      backgroundColor: '#080D14',
     },
     skipButton: {
       position: 'absolute',
@@ -265,14 +250,28 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'space-between',
       paddingHorizontal: spacing.xxxl,
     },
+    gradientTop: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 200,
+      backgroundColor: '#0D1520',
+      opacity: 0.5,
+    },
     pageContent: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
     },
-    icon: {
-      fontSize: 72,
+    iconCircle: {
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+      alignItems: 'center',
+      justifyContent: 'center',
       marginBottom: spacing.xxxl,
+      borderWidth: 2,
     },
     title: {
       fontSize: 28,
@@ -305,8 +304,8 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 4,
     },
     nextButton: {
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.xxxl,
+      paddingVertical: spacing.lg,
+      paddingHorizontal: spacing.xxxl + spacing.xxxl,
       borderRadius: radius.full,
       alignItems: 'center',
       justifyContent: 'center',

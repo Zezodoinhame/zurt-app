@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import React, { useEffect, useRef, useMemo } from 'react';
+import { Animated, StyleSheet, ViewStyle } from 'react-native';
 import { type ThemeColors } from '../../theme/colors';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { spacing, radius } from '../../theme/spacing';
@@ -23,10 +23,39 @@ export function Card({
   const variantStyle = createVariantStyles(colors)[variant];
   const styles = useMemo(() => createStyles(colors), [colors]);
 
+  const fadeAnim = useRef(new Animated.Value(animated ? 0 : 1)).current;
+  const translateY = useRef(new Animated.Value(animated ? 16 : 0)).current;
+
+  useEffect(() => {
+    if (!animated) return;
+    const timer = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [animated, delay, fadeAnim, translateY]);
+
   return (
-    <View style={[styles.base, variantStyle, style]}>
+    <Animated.View
+      style={[
+        styles.base,
+        variantStyle,
+        animated && { opacity: fadeAnim, transform: [{ translateY }] },
+        style,
+      ]}
+    >
       {children}
-    </View>
+    </Animated.View>
   );
 }
 
