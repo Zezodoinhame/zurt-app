@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useEffect, useMemo, useCallback, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -38,12 +38,21 @@ export default function CryptoScreen() {
     portfolio,
     isLoading,
     loadCrypto,
+    fetchMarketData,
     getDominance,
   } = useCryptoStore();
+
+  const [refreshing, setRefreshing] = useState(false);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => { loadCrypto(); }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadCrypto();
+    setRefreshing(false);
+  }, [loadCrypto]);
 
   const displayVal = useCallback(
     (v: number) => (valuesHidden ? maskValue('', currency) : formatCurrency(v, currency)),
@@ -52,7 +61,7 @@ export default function CryptoScreen() {
 
   const dominance = useMemo(() => getDominance(), [portfolio]);
 
-  const fearGreedScore = portfolio.fearGreedIndex;
+  const fearGreedScore = portfolio.fearGreedIndex ?? 50;
   const fearGreedLabel = useMemo(() => {
     if (fearGreedScore < 30) return t('crypto.fear');
     if (fearGreedScore > 70) return t('crypto.greed');
@@ -93,7 +102,13 @@ export default function CryptoScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accentColor} colors={[accentColor]} />
+        }
+      >
         {/* Hero Card */}
         <Card variant="glow">
           <Text style={styles.heroLabel}>{t('crypto.totalValue')}</Text>

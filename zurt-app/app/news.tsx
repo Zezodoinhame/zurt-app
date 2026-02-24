@@ -272,8 +272,8 @@ const createStyles = (colors: ThemeColors) =>
       gap: spacing.sm,
     },
     filterPill: {
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.xs + 2,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
       borderRadius: radius.full,
       borderWidth: 1,
       borderColor: colors.border,
@@ -284,7 +284,7 @@ const createStyles = (colors: ThemeColors) =>
       borderColor: colors.accent,
     },
     filterPillText: {
-      fontSize: 12,
+      fontSize: 14,
       fontWeight: '600',
       color: colors.text.secondary,
     },

@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -12,7 +12,7 @@ import { Card } from '../src/components/ui/Card';
 import { Badge } from '../src/components/ui/Badge';
 import { CircularProgress } from '../src/components/charts/CircularProgress';
 import { AppIcon } from '../src/hooks/useIcon';
-import { formatCurrency, maskValue } from '../src/utils/formatters';
+import { formatCurrency, maskValue, formatCurrencyInput } from '../src/utils/formatters';
 
 export default function EmergencyFundScreen() {
   const insets = useSafeAreaInsets();
@@ -24,6 +24,7 @@ export default function EmergencyFundScreen() {
   const { data, loadFund, addSavings, setTargetMonths, getMonthsCovered, getProgress, isProtected, getMonthsToTarget } = useEmergencyFundStore();
   const [showSheet, setShowSheet] = useState(false);
   const [addAmount, setAddAmount] = useState('');
+  const [addAmountRaw, setAddAmountRaw] = useState(0);
 
   useEffect(() => { loadFund(); }, []);
 
@@ -41,14 +42,20 @@ export default function EmergencyFundScreen() {
   const pct = Math.round(progress * 100);
   const targetAmount = data.monthlyExpenses * data.targetMonths;
 
+  const handleAmountChange = useCallback((text: string) => {
+    const { display, raw } = formatCurrencyInput(text, currency);
+    setAddAmount(display);
+    setAddAmountRaw(raw);
+  }, [currency]);
+
   const handleAdd = useCallback(() => {
-    const num = parseFloat(addAmount.replace(/[^0-9.]/g, ''));
-    if (!num || num <= 0) return;
+    if (!addAmountRaw || addAmountRaw <= 0) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    addSavings(num);
+    addSavings(addAmountRaw);
     setAddAmount('');
+    setAddAmountRaw(0);
     setShowSheet(false);
-  }, [addAmount, addSavings]);
+  }, [addAmountRaw, addSavings]);
 
   const handleTargetUp = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -145,23 +152,25 @@ export default function EmergencyFundScreen() {
       {showSheet && (
         <View style={styles.sheetOverlay}>
           <TouchableOpacity style={styles.sheetBg} activeOpacity={1} onPress={() => setShowSheet(false)} />
-          <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
-            <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>{t('emergency.addSavings')}</Text>
-            <Text style={styles.inputLabel}>{t('emergency.amount')}</Text>
-            <TextInput
-              style={styles.input}
-              value={addAmount}
-              onChangeText={setAddAmount}
-              keyboardType="decimal-pad"
-              placeholder="0.00"
-              placeholderTextColor={colors.text.muted}
-              autoFocus
-            />
-            <TouchableOpacity style={[styles.saveBtn, { backgroundColor: accentColor }]} onPress={handleAdd}>
-              <Text style={styles.saveBtnText}>{t('common.save')}</Text>
-            </TouchableOpacity>
-          </View>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
+              <View style={styles.sheetHandle} />
+              <Text style={styles.sheetTitle}>{t('emergency.addSavings')}</Text>
+              <Text style={styles.inputLabel}>{t('emergency.amount')}</Text>
+              <TextInput
+                style={styles.input}
+                value={addAmount}
+                onChangeText={handleAmountChange}
+                keyboardType="numeric"
+                placeholder={formatCurrency(0, currency)}
+                placeholderTextColor={colors.text.muted}
+                autoFocus
+              />
+              <TouchableOpacity style={[styles.saveBtn, { backgroundColor: accentColor }]} onPress={handleAdd}>
+                <Text style={styles.saveBtnText}>{t('common.save')}</Text>
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
         </View>
       )}
     </View>

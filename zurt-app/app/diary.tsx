@@ -81,14 +81,20 @@ export default function DiaryScreen() {
         </TouchableOpacity>
         {ALL_TAGS.map((tag) => (
           <TouchableOpacity key={tag} style={[styles.tagPill, selectedTag === tag && { backgroundColor: accentColor, borderColor: accentColor }]} onPress={() => { Haptics.selectionAsync(); setTagFilter(tag); }}>
-            <Text style={[styles.tagText, selectedTag === tag && { color: colors.background }]}>{tag}</Text>
+            <Text style={[styles.tagText, selectedTag === tag && { color: colors.background }]}>{t(`diary.tag_${tag}`)}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {filtered.length === 0 ? (
-          <Card><Text style={styles.emptyText}>{t('diary.noEntries')}</Text></Card>
+          <View style={{ alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingTop: 60 }}>
+            <Text style={{ fontSize: 40, marginBottom: 16 }}>{'\uD83D\uDCD3'}</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, textAlign: 'center', marginBottom: 8 }}>Di{'\u00E1'}rio de Investimentos</Text>
+            <Text style={{ fontSize: 14, color: colors.text.secondary, textAlign: 'center', lineHeight: 20 }}>
+              Registre suas decis{'\u00F5'}es de investimento, o racioc{'\u00ED'}nio por tr{'\u00E1'}s delas, e como voc{'\u00EA'} se sentiu. Acompanhe padr{'\u00F5'}es ao longo do tempo.
+            </Text>
+          </View>
         ) : (
           filtered.map((entry) => (
             <Card key={entry.id}>
@@ -110,7 +116,7 @@ export default function DiaryScreen() {
               <View style={styles.entryTags}>
                 {entry.tags.map((tag) => (
                   <View key={tag} style={styles.entryTagPill}>
-                    <Text style={styles.entryTagText}>{tag}</Text>
+                    <Text style={styles.entryTagText}>{t(`diary.tag_${tag}`)}</Text>
                   </View>
                 ))}
               </View>
@@ -159,7 +165,7 @@ export default function DiaryScreen() {
               <View style={styles.moodRow}>
                 {ALL_TAGS.map((tag) => (
                   <TouchableOpacity key={tag} style={[styles.tagPill, tags.includes(tag) && { backgroundColor: accentColor, borderColor: accentColor }]} onPress={() => toggleTag(tag)}>
-                    <Text style={[styles.tagText, tags.includes(tag) && { color: colors.background }]}>{tag}</Text>
+                    <Text style={[styles.tagText, tags.includes(tag) && { color: colors.background }]}>{t(`diary.tag_${tag}`)}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -181,9 +187,9 @@ function createStyles(colors: ThemeColors) {
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.xl, paddingVertical: spacing.lg },
     headerTitle: { fontSize: 20, fontWeight: '700', color: colors.text.primary },
     content: { paddingHorizontal: spacing.xl, paddingBottom: 100, gap: spacing.md },
-    tagRow: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md, gap: spacing.sm, flexDirection: 'row' },
-    tagPill: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 2, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border },
-    tagText: { fontSize: 12, fontWeight: '600', color: colors.text.secondary },
+    tagRow: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md, gap: 8, flexDirection: 'row' },
+    tagPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: colors.border, minWidth: 60, alignItems: 'center' as const },
+    tagText: { fontSize: 13, fontWeight: '600', color: colors.text.secondary },
     emptyText: { color: colors.text.muted, textAlign: 'center', paddingVertical: spacing.xl },
     entryHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
     entryMood: { fontSize: 28, marginRight: spacing.md },

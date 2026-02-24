@@ -632,16 +632,50 @@ export default function FamilyScreen() {
                         ) : null}
                       </View>
 
-                      {/* Right: status + visibility */}
+                      {/* Right: actions + status */}
                       <View style={styles.memberRight}>
+                        {isAccepted && (
+                          <TouchableOpacity
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            onPress={() => Alert.alert('Em breve', 'Visualização da carteira do membro em desenvolvimento.')}
+                            style={{ marginRight: 8 }}
+                          >
+                            <AppIcon name="eye" size={16} color={colors.accent} />
+                          </TouchableOpacity>
+                        )}
+                        {isOwner && member?.role !== 'owner' && (
+                          <TouchableOpacity
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            onPress={() => {
+                              Alert.alert(
+                                t('family.removeMember') || 'Remover membro',
+                                `${t('family.removeMemberConfirm') || 'Tem certeza que deseja remover'} ${name}?`,
+                                [
+                                  { text: t('common.cancel') || 'Cancelar', style: 'cancel' },
+                                  {
+                                    text: t('common.delete') || 'Remover', style: 'destructive',
+                                    onPress: async () => {
+                                      try {
+                                        await removeFamilyMember(member.id);
+                                        loadData();
+                                      } catch (err: any) {
+                                        logger.log('[Family] removeMember error:', err);
+                                      }
+                                    },
+                                  },
+                                ],
+                              );
+                            }}
+                            style={{ marginRight: 8 }}
+                          >
+                            <AppIcon name="close" size={14} color={colors.negative} />
+                          </TouchableOpacity>
+                        )}
                         <View style={[styles.statusBadge, isPending ? styles.statusPending : styles.statusActive]}>
                           <Text style={[styles.statusText, isPending ? styles.statusTextPending : styles.statusTextActive]}>
                             {isPending ? t('family.pending') : t('family.active')}
                           </Text>
                         </View>
-                        {isAccepted && (
-                          <AppIcon name={visIconName} size={14} color={colors.text.muted} />
-                        )}
                       </View>
                     </View>
                   </TouchableOpacity>

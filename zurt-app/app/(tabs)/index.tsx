@@ -525,7 +525,6 @@ export default function HomeScreen() {
                       { emoji: '\u{23F0}', title: t('tools.backtest'), desc: t('tools.backtestDesc'), onPress: () => router.push('/backtest') },
                       { emoji: '\u{1F3B2}', title: t('tools.scenario'), desc: t('tools.scenarioDesc'), onPress: () => router.push('/scenario-planner') },
                       { emoji: '\u{1F514}', title: t('tools.priceAlerts'), desc: t('tools.priceAlertsDesc'), onPress: () => router.push('/price-alerts') },
-                      { emoji: '\u{1F501}', title: t('tools.recurring'), desc: t('tools.recurringDesc'), onPress: () => router.push('/recurring-investments') },
                       { emoji: '\u{1F4CA}', title: t('tools.netWorth'), desc: t('tools.netWorthDesc'), onPress: () => router.push('/net-worth') },
                       { emoji: '\u{1F4B3}', title: t('tools.debt'), desc: t('tools.debtDesc'), onPress: () => router.push('/debt-manager') },
                       { emoji: '\u{2602}\u{FE0F}', title: t('tools.retirement'), desc: t('tools.retirementDesc'), onPress: () => router.push('/retirement') },
@@ -542,9 +541,9 @@ export default function HomeScreen() {
                       { emoji: '\u{1F6E1}\u{FE0F}', title: t('tools.emergency'), desc: t('tools.emergencyDesc'), onPress: () => router.push('/emergency-fund') },
                       { emoji: '\u{1F5D3}\u{FE0F}', title: t('tools.finCalendar'), desc: t('tools.finCalendarDesc'), onPress: () => router.push('/financial-calendar') },
                     ];
-                    // Arrange as 2 rows x 20 columns (38 tools / 2 rows)
+                    // Arrange as 2 rows x 19 columns (37 tools / 2 rows)
                     const columns: Array<[typeof allTools[0], typeof allTools[0] | undefined]> = [];
-                    for (let c = 0; c < 20; c++) {
+                    for (let c = 0; c < 19; c++) {
                       columns.push([allTools[c * 2], allTools[c * 2 + 1]]);
                     }
                     return columns.map((col, ci) => (
@@ -553,8 +552,7 @@ export default function HomeScreen() {
                           tool ? (
                             <ToolCardAnimated key={ci * 2 + ri} index={ci * 2 + ri} onPress={tool.onPress} style={styles.toolCard}>
                               <Text style={styles.toolEmoji}>{tool.emoji}</Text>
-                              <Text style={styles.toolTitle}>{tool.title}</Text>
-                              <Text style={styles.toolDesc} numberOfLines={1}>{tool.desc}</Text>
+                              <Text style={styles.toolTitle} numberOfLines={1}>{tool.title}</Text>
                             </ToolCardAnimated>
                           ) : null,
                         )}
@@ -1013,26 +1011,25 @@ const createStyles = (colors: ThemeColors) =>
       gap: spacing.sm,
     },
     toolCard: {
-      width: (Dimensions.get('window').width - spacing.xl * 2 - spacing.sm * 2) / 3,
+      width: (Dimensions.get('window').width - spacing.xl * 2 - spacing.sm * 2) / 3.5,
+      aspectRatio: 1,
       backgroundColor: colors.card,
       borderRadius: radius.lg,
       borderWidth: 1,
       borderColor: colors.border,
-      padding: spacing.md,
+      padding: spacing.sm + 2,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     toolEmoji: {
-      fontSize: 22,
+      fontSize: 28,
       marginBottom: spacing.xs,
     },
     toolTitle: {
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: '700',
       color: colors.text.primary,
-      marginBottom: 1,
-    },
-    toolDesc: {
-      fontSize: 11,
-      color: colors.text.muted,
+      textAlign: 'center',
     },
 
     // -- Simulator CTA ----------------------------------------------------------

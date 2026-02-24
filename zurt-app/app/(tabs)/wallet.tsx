@@ -247,12 +247,12 @@ export default function WalletScreen() {
   );
 
   const renderClassView = () =>
-    allocations.map((allocation) => {
+    allocations.map((allocation, index) => {
       const isExpanded = expandedClasses.has(allocation.class);
       const groupAssets = assetsByClass[allocation.class] ?? [];
 
       return (
-        <View key={allocation.class}>
+        <View key={`${allocation.class}-${index}`}>
           <TouchableOpacity
             style={styles.groupHeader}
             onPress={() => handleToggleClass(allocation.class)}

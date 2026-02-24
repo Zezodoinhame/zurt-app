@@ -128,7 +128,7 @@ export default function BudgetScreen() {
   // Render
   // -------------------------------------------------------------------------
 
-  if (isLoading || !budget) {
+  if (isLoading) {
     return (
       <View style={[styles.screen, { paddingTop: insets.top }]}>
         <View style={styles.header}>
@@ -143,6 +143,30 @@ export default function BudgetScreen() {
         </View>
         <View style={styles.scrollContent}>
           <SkeletonList count={6} />
+        </View>
+      </View>
+    );
+  }
+
+  if (!budget) {
+    return (
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <AppIcon name="back" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('budget.title')}</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingTop: 60 }}>
+          <Text style={{ fontSize: 40, marginBottom: 16 }}>{'\uD83D\uDCCA'}</Text>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, textAlign: 'center', marginBottom: 8 }}>{t('budget.title')}</Text>
+          <Text style={{ fontSize: 14, color: colors.text.secondary, textAlign: 'center', lineHeight: 20 }}>
+            Nenhum or\u00e7amento configurado. Adicione categorias para come\u00e7ar.
+          </Text>
         </View>
       </View>
     );

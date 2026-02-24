@@ -54,7 +54,7 @@ export default function SpendingInsightsScreen() {
     [selectCategory],
   );
 
-  if (isLoading || !insights) {
+  if (isLoading) {
     return (
       <View style={[styles.screen, { paddingTop: insets.top }]}>
         <View style={styles.header}>
@@ -67,6 +67,27 @@ export default function SpendingInsightsScreen() {
         <View style={styles.scrollContent}>
           <SkeletonCard />
           <SkeletonList count={4} />
+        </View>
+      </View>
+    );
+  }
+
+  if (!insights) {
+    return (
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <AppIcon name="back" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('spendingInsights.title')}</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingTop: 60 }}>
+          <Text style={{ fontSize: 40, marginBottom: 16 }}>{'\uD83D\uDCA1'}</Text>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, textAlign: 'center', marginBottom: 8 }}>Insights de Gastos</Text>
+          <Text style={{ fontSize: 14, color: colors.text.secondary, textAlign: 'center', lineHeight: 20 }}>
+            Conecte seu banco para visualizar insights de gastos.
+          </Text>
         </View>
       </View>
     );

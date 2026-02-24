@@ -75,6 +75,31 @@ export default function CashFlowScreen() {
   }
 
   // ---------------------------------------------------------------------------
+  // Empty state
+  // ---------------------------------------------------------------------------
+
+  if (forecast.length === 0) {
+    return (
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <AppIcon name="back" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('cashFlow.title')}</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingTop: 60 }}>
+          <Text style={{ fontSize: 40, marginBottom: 16 }}>{'\uD83D\uDCB8'}</Text>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, textAlign: 'center', marginBottom: 8 }}>Fluxo de Caixa</Text>
+          <Text style={{ fontSize: 14, color: colors.text.secondary, textAlign: 'center', lineHeight: 20 }}>
+            Nenhuma transa\u00e7\u00e3o encontrada. Conecte seu banco para ver o fluxo de caixa mensal (receitas vs despesas).
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
 

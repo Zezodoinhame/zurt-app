@@ -111,7 +111,7 @@ export default function NetWorthScreen() {
   // Loading state
   // ---------------------------------------------------------------------------
 
-  if (isLoading || !summary) {
+  if (isLoading) {
     return (
       <View style={[styles.screen, { paddingTop: insets.top }]}>
         <View style={styles.header}>
@@ -127,6 +127,31 @@ export default function NetWorthScreen() {
         </View>
         <View style={styles.scrollContent}>
           <SkeletonList count={6} />
+        </View>
+      </View>
+    );
+  }
+
+  if (!summary) {
+    return (
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityLabel={t('common.back')}
+          >
+            <AppIcon name="back" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('netWorth.title')}</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingTop: 60 }}>
+          <Text style={{ fontSize: 40, marginBottom: 16 }}>{'\uD83C\uDFE6'}</Text>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, textAlign: 'center', marginBottom: 8 }}>{t('netWorth.title')}</Text>
+          <Text style={{ fontSize: 14, color: colors.text.secondary, textAlign: 'center', lineHeight: 20 }}>
+            O Patrim\u00f4nio L\u00edquido consolida seus ativos, investimentos e d\u00edvidas. Conecte seu banco ou adicione manualmente.
+          </Text>
         </View>
       </View>
     );

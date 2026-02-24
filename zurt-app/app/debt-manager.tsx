@@ -14,7 +14,7 @@ import { Input } from '../src/components/ui/Input';
 import { Button } from '../src/components/ui/Button';
 import { AppIcon } from '../src/hooks/useIcon';
 import { SkeletonList } from '../src/components/skeletons/Skeleton';
-import { formatCurrency, maskValue } from '../src/utils/formatters';
+import { formatCurrency, maskValue, formatCurrencyInput } from '../src/utils/formatters';
 import type { DebtType, PayoffStrategy } from '../src/types';
 
 const DEBT_TYPES: { key: DebtType; icon: string }[] = [
@@ -46,9 +46,12 @@ export default function DebtManagerScreen() {
   const [formName, setFormName] = useState('');
   const [formType, setFormType] = useState<DebtType>('loan');
   const [formTotal, setFormTotal] = useState('');
+  const [formTotalRaw, setFormTotalRaw] = useState(0);
   const [formRemaining, setFormRemaining] = useState('');
+  const [formRemainingRaw, setFormRemainingRaw] = useState(0);
   const [formRate, setFormRate] = useState('');
   const [formPayment, setFormPayment] = useState('');
+  const [formPaymentRaw, setFormPaymentRaw] = useState(0);
 
   useEffect(() => { loadDebts(); }, []);
 
@@ -61,14 +64,35 @@ export default function DebtManagerScreen() {
     [valuesHidden, currency],
   );
 
+  const handleTotalChange = useCallback((text: string) => {
+    const { display, raw } = formatCurrencyInput(text, currency);
+    setFormTotal(display);
+    setFormTotalRaw(raw);
+  }, [currency]);
+
+  const handleRemainingChange = useCallback((text: string) => {
+    const { display, raw } = formatCurrencyInput(text, currency);
+    setFormRemaining(display);
+    setFormRemainingRaw(raw);
+  }, [currency]);
+
+  const handlePaymentChange = useCallback((text: string) => {
+    const { display, raw } = formatCurrencyInput(text, currency);
+    setFormPayment(display);
+    setFormPaymentRaw(raw);
+  }, [currency]);
+
   const resetForm = useCallback(() => {
     setEditingId(null);
     setFormName('');
     setFormType('loan');
     setFormTotal('');
+    setFormTotalRaw(0);
     setFormRemaining('');
+    setFormRemainingRaw(0);
     setFormRate('');
     setFormPayment('');
+    setFormPaymentRaw(0);
   }, []);
 
   const handleOpenAdd = useCallback(() => {
@@ -84,12 +108,15 @@ export default function DebtManagerScreen() {
     setEditingId(id);
     setFormName(debt.name);
     setFormType(debt.type);
-    setFormTotal(String(debt.totalAmount));
-    setFormRemaining(String(debt.remainingAmount));
+    setFormTotal(formatCurrency(debt.totalAmount, currency));
+    setFormTotalRaw(debt.totalAmount);
+    setFormRemaining(formatCurrency(debt.remainingAmount, currency));
+    setFormRemainingRaw(debt.remainingAmount);
     setFormRate(String(debt.interestRate));
-    setFormPayment(String(debt.minimumPayment));
+    setFormPayment(formatCurrency(debt.minimumPayment, currency));
+    setFormPaymentRaw(debt.minimumPayment);
     setSheetVisible(true);
-  }, [debts]);
+  }, [debts, currency]);
 
   const handleSave = useCallback(() => {
     if (!formName.trim()) return;
@@ -97,10 +124,10 @@ export default function DebtManagerScreen() {
     const data = {
       name: formName.trim(),
       type: formType,
-      totalAmount: parseFloat(formTotal) || 0,
-      remainingAmount: parseFloat(formRemaining) || 0,
+      totalAmount: formTotalRaw || 0,
+      remainingAmount: formRemainingRaw || 0,
       interestRate: parseFloat(formRate) || 0,
-      minimumPayment: parseFloat(formPayment) || 0,
+      minimumPayment: formPaymentRaw || 0,
       dueDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
     };
     if (editingId) {
@@ -110,7 +137,7 @@ export default function DebtManagerScreen() {
     }
     setSheetVisible(false);
     resetForm();
-  }, [editingId, formName, formType, formTotal, formRemaining, formRate, formPayment, addDebt, editDebt, resetForm]);
+  }, [editingId, formName, formType, formTotalRaw, formRemainingRaw, formRate, formPaymentRaw, addDebt, editDebt, resetForm]);
 
   const handleDelete = useCallback((id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -135,6 +162,54 @@ export default function DebtManagerScreen() {
           <View style={{ width: 24 }} />
         </View>
         <SkeletonList />
+      </View>
+    );
+  }
+
+  if (debts.length === 0) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <AppIcon name="back" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('debt.title')}</Text>
+          <TouchableOpacity onPress={handleOpenAdd} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <AppIcon name="add" size={24} color={accentColor} />
+          </TouchableOpacity>
+        </View>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingTop: 60 }}>
+          <Text style={{ fontSize: 40, marginBottom: 16 }}>{'\uD83D\uDCB3'}</Text>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, textAlign: 'center', marginBottom: 8 }}>{t('debt.title')}</Text>
+          <Text style={{ fontSize: 14, color: colors.text.secondary, textAlign: 'center', lineHeight: 20 }}>
+            Nenhuma d{'\u00ED'}vida cadastrada. Adicione suas d{'\u00ED'}vidas para acompanhar e otimizar o pagamento.
+          </Text>
+        </View>
+
+        {/* Keep the BottomSheet accessible so user can add debts from empty state */}
+        <BottomSheet visible={sheetVisible} onClose={() => setSheetVisible(false)} title={editingId ? t('debt.editDebt') : t('debt.addDebt')}>
+          <View style={styles.sheetContent}>
+            <Input label={t('debt.name')} value={formName} onChangeText={setFormName} placeholder="Ex: Financiamento" />
+            <Text style={styles.formLabel}>{t('debt.type')}</Text>
+            <View style={styles.typeRow}>
+              {DEBT_TYPES.map((dt) => (
+                <TouchableOpacity
+                  key={dt.key}
+                  style={[styles.typePill, formType === dt.key && { backgroundColor: accentColor }]}
+                  onPress={() => setFormType(dt.key)}
+                >
+                  <Text style={styles.typeIcon}>{dt.icon}</Text>
+                  <Text style={[styles.typeLabel, formType === dt.key && { color: '#FFF' }]}>{t(`debt.${dt.key}`)}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Input label={t('debt.totalAmount')} value={formTotal} onChangeText={handleTotalChange} keyboardType="numeric" />
+            <Input label={t('debt.remainingAmount')} value={formRemaining} onChangeText={handleRemainingChange} keyboardType="numeric" />
+            <Input label={t('debt.interestRate')} value={formRate} onChangeText={setFormRate} keyboardType="numeric" />
+            <Input label={t('debt.minimumPayment')} value={formPayment} onChangeText={handlePaymentChange} keyboardType="numeric" />
+            <Button title={editingId ? t('debt.editDebt') : t('debt.addDebt')} onPress={handleSave} style={{ marginTop: spacing.md }} />
+          </View>
+        </BottomSheet>
       </View>
     );
   }
@@ -219,10 +294,8 @@ export default function DebtManagerScreen() {
                     <View style={styles.progressBarBg}>
                       <View style={[styles.progressBarFill, { width: `${Math.round(progress * 100)}%`, backgroundColor: accentColor }]} />
                     </View>
-                    <View style={styles.debtMeta}>
-                      <Text style={styles.debtMetaText}>{displayVal(debt.remainingAmount)} / {displayVal(debt.totalAmount)}</Text>
-                      <Text style={styles.debtMetaText}>{debt.interestRate}% a.a.</Text>
-                    </View>
+                    <Text style={styles.debtMetaText}>{displayVal(debt.remainingAmount)} / {displayVal(debt.totalAmount)}</Text>
+                    <Text style={styles.debtRateText}>{debt.interestRate}% a.a.</Text>
                   </View>
                   <Text style={styles.debtPayment}>{displayVal(debt.minimumPayment)}/m</Text>
                 </View>
@@ -251,10 +324,10 @@ export default function DebtManagerScreen() {
               </TouchableOpacity>
             ))}
           </View>
-          <Input label={t('debt.totalAmount')} value={formTotal} onChangeText={setFormTotal} keyboardType="numeric" />
-          <Input label={t('debt.remainingAmount')} value={formRemaining} onChangeText={setFormRemaining} keyboardType="numeric" />
+          <Input label={t('debt.totalAmount')} value={formTotal} onChangeText={handleTotalChange} keyboardType="numeric" />
+          <Input label={t('debt.remainingAmount')} value={formRemaining} onChangeText={handleRemainingChange} keyboardType="numeric" />
           <Input label={t('debt.interestRate')} value={formRate} onChangeText={setFormRate} keyboardType="numeric" />
-          <Input label={t('debt.minimumPayment')} value={formPayment} onChangeText={setFormPayment} keyboardType="numeric" />
+          <Input label={t('debt.minimumPayment')} value={formPayment} onChangeText={handlePaymentChange} keyboardType="numeric" />
           <Button title={editingId ? t('debt.editDebt') : t('debt.addDebt')} onPress={handleSave} style={{ marginTop: spacing.md }} />
           {editingId && (
             <Button title={t('debt.delete')} onPress={() => { handleDelete(editingId); setSheetVisible(false); }} variant="danger" style={{ marginTop: spacing.sm }} />
@@ -293,8 +366,8 @@ function createStyles(colors: ThemeColors) {
     debtName: { fontSize: 15, fontWeight: '600', color: colors.text.primary, marginBottom: 4 },
     progressBarBg: { height: 6, borderRadius: 3, backgroundColor: colors.border, overflow: 'hidden', marginBottom: 4 },
     progressBarFill: { height: 6, borderRadius: 3 },
-    debtMeta: { flexDirection: 'row', justifyContent: 'space-between' },
-    debtMetaText: { fontSize: 12, color: colors.text.muted },
+    debtMetaText: { fontSize: 12, color: colors.text.muted, marginBottom: 2 },
+    debtRateText: { fontSize: 11, color: colors.text.muted },
     debtPayment: { fontSize: 14, fontWeight: '600', color: colors.text.primary },
     sheetContent: { padding: spacing.md, gap: spacing.md },
     formLabel: { fontSize: 14, fontWeight: '600', color: colors.text.primary, marginBottom: 4 },

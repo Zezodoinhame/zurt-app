@@ -430,6 +430,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'family.delegationError': 'Erro ao salvar delegação.',
     'family.removeError': 'Erro ao remover membro.',
     'family.visibilityError': 'Erro ao alterar visibilidade.',
+    'family.removeMemberConfirm': 'Tem certeza que deseja remover',
 
     // Taxes
     'taxes.title': 'Tributação',
@@ -745,6 +746,10 @@ export const translations: Record<Language, Record<string, string>> = {
     'dividends.thisMonth': 'Este mês',
     'dividends.projectedIncome': 'Renda projetada',
     'dividends.quantity': 'Quantidade',
+    'dividends.calendar': 'Calendário',
+    'dividends.monthlyAverage': 'Média mensal',
+    'dividends.share': 'ação',
+    'dividends.event': 'evento',
 
     // Asset Comparison
     'comparison.compareTitle': 'Comparar Ativos',
@@ -1233,6 +1238,13 @@ export const translations: Record<Language, Record<string, string>> = {
     'realEstate.buyCost': 'Custo compra',
     'realEstate.rentCost': 'Custo aluguel',
     'realEstate.loanAmount': 'Valor financiado',
+    'realEstate.downPaymentPct': 'Entrada (%)',
+    'realEstate.annualRate': 'Taxa anual (%)',
+    'realEstate.termYears': 'Prazo (anos)',
+    'realEstate.annualRentIncrease': 'Reajuste aluguel anual (%)',
+    'realEstate.appreciationRate': 'Valorização imóvel (%)',
+    'realEstate.breakEvenYear': 'Ponto de equilíbrio',
+    'realEstate.buyVsRent': 'Comprar vs Alugar',
 
     // Savings Challenges
     'challenges.title': 'Desafios de Poupança',
@@ -1252,6 +1264,17 @@ export const translations: Record<Language, Record<string, string>> = {
     'challenges.target': 'Meta',
     'challenges.delete': 'Excluir',
     'challenges.checkIn': 'Marcar',
+    'challenges.items': 'Desafios',
+    'challenges.empty': 'Nenhum desafio ainda',
+    'challenges.type': 'Tipo',
+    'challenges.namePlaceholder': 'Nome do desafio',
+    'challenges.targetAmount': 'Valor alvo',
+    'challenges.save': 'Salvar',
+    'challenges.deleteTitle': 'Excluir desafio',
+    'challenges.deleteMessage': 'Tem certeza que deseja excluir este desafio?',
+    'challenges.status.active': 'Ativo',
+    'challenges.status.completed': 'Concluído',
+    'challenges.status.abandoned': 'Abandonado',
 
     // FIRE
     'fire.title': 'Independência Financeira',
@@ -1812,6 +1835,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'family.delegationError': 'Error saving delegation.',
     'family.removeError': 'Error removing member.',
     'family.visibilityError': 'Error changing visibility.',
+    'family.removeMemberConfirm': 'Are you sure you want to remove',
 
     // Taxes
     'taxes.title': 'Taxation',
@@ -2133,6 +2157,10 @@ export const translations: Record<Language, Record<string, string>> = {
     'dividends.thisMonth': 'This month',
     'dividends.projectedIncome': 'Projected income',
     'dividends.quantity': 'Quantity',
+    'dividends.calendar': 'Calendar',
+    'dividends.monthlyAverage': 'Monthly average',
+    'dividends.share': 'share',
+    'dividends.event': 'event',
 
     // Asset Comparison
     'comparison.compareTitle': 'Compare Assets',
@@ -2621,6 +2649,13 @@ export const translations: Record<Language, Record<string, string>> = {
     'realEstate.buyCost': 'Buy cost',
     'realEstate.rentCost': 'Rent cost',
     'realEstate.loanAmount': 'Loan amount',
+    'realEstate.downPaymentPct': 'Down payment (%)',
+    'realEstate.annualRate': 'Annual rate (%)',
+    'realEstate.termYears': 'Term (years)',
+    'realEstate.annualRentIncrease': 'Annual rent increase (%)',
+    'realEstate.appreciationRate': 'Property appreciation (%)',
+    'realEstate.breakEvenYear': 'Break-even year',
+    'realEstate.buyVsRent': 'Buy vs Rent',
 
     // Savings Challenges
     'challenges.title': 'Savings Challenges',
@@ -2640,6 +2675,17 @@ export const translations: Record<Language, Record<string, string>> = {
     'challenges.target': 'Target',
     'challenges.delete': 'Delete',
     'challenges.checkIn': 'Check in',
+    'challenges.items': 'Challenges',
+    'challenges.empty': 'No challenges yet',
+    'challenges.type': 'Type',
+    'challenges.namePlaceholder': 'Challenge name',
+    'challenges.targetAmount': 'Target amount',
+    'challenges.save': 'Save',
+    'challenges.deleteTitle': 'Delete challenge',
+    'challenges.deleteMessage': 'Are you sure you want to delete this challenge?',
+    'challenges.status.active': 'Active',
+    'challenges.status.completed': 'Completed',
+    'challenges.status.abandoned': 'Abandoned',
 
     // FIRE
     'fire.title': 'Financial Independence',
@@ -3200,6 +3246,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'family.delegationError': '保存委托时出错。',
     'family.removeError': '移除成员时出错。',
     'family.visibilityError': '更改可见性时出错。',
+    'family.removeMemberConfirm': '确定要移除',
 
     // Taxes
     'taxes.title': '税务',
@@ -3521,6 +3568,10 @@ export const translations: Record<Language, Record<string, string>> = {
     'dividends.thisMonth': '本月',
     'dividends.projectedIncome': '预计收入',
     'dividends.quantity': '数量',
+    'dividends.calendar': '日历',
+    'dividends.monthlyAverage': '月均',
+    'dividends.share': '股',
+    'dividends.event': '事件',
 
     // Asset Comparison
     'comparison.compareTitle': '资产对比',
@@ -4009,6 +4060,13 @@ export const translations: Record<Language, Record<string, string>> = {
     'realEstate.buyCost': '购买成本',
     'realEstate.rentCost': '租赁成本',
     'realEstate.loanAmount': '贷款金额',
+    'realEstate.downPaymentPct': '首付比例 (%)',
+    'realEstate.annualRate': '年利率 (%)',
+    'realEstate.termYears': '期限（年）',
+    'realEstate.annualRentIncrease': '年租金涨幅 (%)',
+    'realEstate.appreciationRate': '房产增值率 (%)',
+    'realEstate.breakEvenYear': '盈亏平衡年',
+    'realEstate.buyVsRent': '买房 vs 租房',
 
     // Savings Challenges
     'challenges.title': '储蓄挑战',
@@ -4028,6 +4086,17 @@ export const translations: Record<Language, Record<string, string>> = {
     'challenges.target': '目标',
     'challenges.delete': '删除',
     'challenges.checkIn': '打卡',
+    'challenges.items': '挑战',
+    'challenges.empty': '暂无挑战',
+    'challenges.type': '类型',
+    'challenges.namePlaceholder': '挑战名称',
+    'challenges.targetAmount': '目标金额',
+    'challenges.save': '保存',
+    'challenges.deleteTitle': '删除挑战',
+    'challenges.deleteMessage': '确定要删除此挑战吗？',
+    'challenges.status.active': '进行中',
+    'challenges.status.completed': '已完成',
+    'challenges.status.abandoned': '已放弃',
 
     // FIRE
     'fire.title': '财务自由',
@@ -4588,6 +4657,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'family.delegationError': 'خطأ في حفظ التفويض.',
     'family.removeError': 'خطأ في إزالة العضو.',
     'family.visibilityError': 'خطأ في تغيير الرؤية.',
+    'family.removeMemberConfirm': 'هل أنت متأكد من إزالة',
 
     // Taxes
     'taxes.title': 'الضرائب',
@@ -4909,6 +4979,10 @@ export const translations: Record<Language, Record<string, string>> = {
     'dividends.thisMonth': 'هذا الشهر',
     'dividends.projectedIncome': 'الدخل المتوقع',
     'dividends.quantity': 'الكمية',
+    'dividends.calendar': 'التقويم',
+    'dividends.monthlyAverage': 'المتوسط الشهري',
+    'dividends.share': 'سهم',
+    'dividends.event': 'حدث',
 
     // Asset Comparison
     'comparison.compareTitle': 'مقارنة الأصول',
@@ -5397,6 +5471,13 @@ export const translations: Record<Language, Record<string, string>> = {
     'realEstate.buyCost': 'تكلفة الشراء',
     'realEstate.rentCost': 'تكلفة الإيجار',
     'realEstate.loanAmount': 'مبلغ القرض',
+    'realEstate.downPaymentPct': 'الدفعة الأولى (%)',
+    'realEstate.annualRate': 'المعدل السنوي (%)',
+    'realEstate.termYears': 'المدة (سنوات)',
+    'realEstate.annualRentIncrease': 'زيادة الإيجار السنوية (%)',
+    'realEstate.appreciationRate': 'معدل ارتفاع قيمة العقار (%)',
+    'realEstate.breakEvenYear': 'سنة التعادل',
+    'realEstate.buyVsRent': 'شراء مقابل إيجار',
 
     // Savings Challenges
     'challenges.title': 'تحديات الادخار',
@@ -5416,6 +5497,17 @@ export const translations: Record<Language, Record<string, string>> = {
     'challenges.target': 'الهدف',
     'challenges.delete': 'حذف',
     'challenges.checkIn': 'تسجيل',
+    'challenges.items': 'التحديات',
+    'challenges.empty': 'لا توجد تحديات بعد',
+    'challenges.type': 'النوع',
+    'challenges.namePlaceholder': 'اسم التحدي',
+    'challenges.targetAmount': 'المبلغ المستهدف',
+    'challenges.save': 'حفظ',
+    'challenges.deleteTitle': 'حذف التحدي',
+    'challenges.deleteMessage': 'هل أنت متأكد من حذف هذا التحدي؟',
+    'challenges.status.active': 'نشط',
+    'challenges.status.completed': 'مكتمل',
+    'challenges.status.abandoned': 'مهجور',
 
     // FIRE
     'fire.title': 'الاستقلال المالي',

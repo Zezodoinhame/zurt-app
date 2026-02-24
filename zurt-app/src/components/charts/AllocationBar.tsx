@@ -26,7 +26,7 @@ export function AllocationBar({ allocations, onSelectClass }: AllocationBarProps
             style={[
               styles.segment,
               {
-                flex: alloc.percentage,
+                flex: Math.max(0, Math.min(100, typeof alloc.percentage === 'number' ? alloc.percentage : 0)),
                 backgroundColor: alloc.color,
               },
               index === 0 && styles.segmentFirst,
@@ -51,7 +51,7 @@ export function AllocationBar({ allocations, onSelectClass }: AllocationBarProps
                 {alloc.label}
               </Text>
               <Text style={styles.legendPct}>
-                {alloc.percentage.toFixed(1).replace('.', ',')}%
+                {(typeof alloc.percentage === 'number' ? alloc.percentage : parseFloat(String(alloc.percentage)) || 0).toFixed(1).replace('.', ',')}%
               </Text>
               <Text style={styles.legendValue}>
                 {formatBRL(alloc.value)}
