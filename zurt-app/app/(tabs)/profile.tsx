@@ -34,6 +34,7 @@ import { AVATAR_ICON_MAP } from '../../src/components/ui/AvatarIcons';
 import { formatDate, formatCurrency } from '../../src/utils/formatters';
 import { changePassword, updateUserProfile } from '../../src/services/api';
 import { AppIcon, type AppIconName } from '../../src/hooks/useIcon';
+import { BankLogo } from '../../src/components/icons/BankLogo';
 import * as ImagePicker from 'expo-image-picker';
 import { getAnalyticsOptOut, setAnalyticsOptOut } from '../../src/services/analytics';
 
@@ -1088,10 +1089,8 @@ export default function ProfileScreen() {
 
             return (
               <View key={inst.id} style={styles.settingRow}>
-                <View style={[styles.instIcon, { backgroundColor: inst.color }]}>
-                  <Text style={styles.instIconText}>
-                    {inst.name.charAt(0)}
-                  </Text>
+                <View style={{ marginRight: spacing.md }}>
+                  <BankLogo institutionName={inst.name} size={28} />
                 </View>
                 <Text style={styles.settingLabel}>{inst.name}</Text>
                 <View style={styles.statusBadge}>

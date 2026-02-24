@@ -4,6 +4,7 @@ import { type ThemeColors } from '../../theme/colors';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { spacing, radius } from '../../theme/spacing';
 import { formatCurrency } from '../../utils/formatters';
+import { BankLogo } from '../icons/BankLogo';
 import type { Institution } from '../../types';
 
 interface AccountCardProps {
@@ -39,16 +40,7 @@ export function AccountCard({ institution, index, onPress }: AccountCardProps) {
         activeOpacity={0.7}
         accessibilityLabel={`${institution.name}, ${formatCurrency(institution.totalValue, currency)}, ${statusLabel}`}
       >
-        <View
-          style={[
-            styles.iconContainer,
-            { backgroundColor: institution.color },
-          ]}
-        >
-          <Text style={[styles.iconText, { color: institution.secondaryColor ?? '#FFFFFF' }]}>
-            {institution.name.charAt(0)}
-          </Text>
-        </View>
+        <BankLogo institutionName={institution.name} size={42} />
 
         <View style={styles.info}>
           <Text style={styles.name}>{institution.name}</Text>

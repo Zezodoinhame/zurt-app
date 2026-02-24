@@ -21,6 +21,7 @@ import { type ThemeColors } from '../src/theme/colors';
 import { spacing, radius } from '../src/theme/spacing';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { AppIcon } from '../src/hooks/useIcon';
+import { BankLogo } from '../src/components/icons/BankLogo';
 import { logger } from '../src/utils/logger';
 
 // =============================================================================
@@ -420,15 +421,7 @@ export default function ConnectBankScreen() {
     return (
       <View style={styles.connectionCard}>
         <View style={styles.connectionRow}>
-          <View style={[styles.connectionLogo, { backgroundColor: accentColor + '15' }]}>
-            {logo ? (
-              <View style={styles.connectionLogoImg}>
-                <Text style={[styles.connectionInitials, { color: accentColor }]}>{getInitials(name)}</Text>
-              </View>
-            ) : (
-              <Text style={[styles.connectionInitials, { color: accentColor }]}>{getInitials(name)}</Text>
-            )}
-          </View>
+          <BankLogo institutionName={name} size={44} />
           <View style={styles.connectionInfo}>
             <Text style={styles.connectionName} numberOfLines={1}>{name}</Text>
             <View style={styles.connectionMeta}>

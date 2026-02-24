@@ -25,6 +25,7 @@ import { ErrorState } from '../../src/components/shared/ErrorState';
 import { formatPct, maskValue, formatCurrency } from '../../src/utils/formatters';
 import type { Asset, AssetClass, InstitutionId } from '../../src/types';
 import { AppIcon } from '../../src/hooks/useIcon';
+import { BankLogo } from '../../src/components/icons/BankLogo';
 import { logger } from '../../src/utils/logger';
 import { demoBenchmarks } from '../../src/data/demo';
 
@@ -321,15 +322,8 @@ export default function WalletScreen() {
             accessibilityLabel={`${institution.name}, ${groupAssets.length} ativos, ${formatCurrency(totalValue, currency)}`}
           >
             <View style={styles.groupHeaderLeft}>
-              <View
-                style={[
-                  styles.institutionIcon,
-                  { backgroundColor: institution.color },
-                ]}
-              >
-                <Text style={styles.institutionIconText}>
-                  {institution.name.charAt(0).toUpperCase()}
-                </Text>
+              <View style={{ marginRight: spacing.md }}>
+                <BankLogo institutionName={institution.name} size={36} />
               </View>
               <View style={styles.groupHeaderInfo}>
                 <View style={styles.groupHeaderTopRow}>
