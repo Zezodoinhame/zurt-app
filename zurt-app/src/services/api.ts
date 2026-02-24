@@ -848,10 +848,12 @@ export async function searchInstitutions(search: string): Promise<any[]> {
   }
 }
 
-export async function getConnectToken(institutionId: string): Promise<string> {
+export async function getConnectToken(institutionId?: string): Promise<string> {
+  const body: any = {};
+  if (institutionId) body.institutionId = institutionId;
   const data = await apiRequest<any>('/connections/connect-token', {
     method: 'POST',
-    body: JSON.stringify({ institutionId }),
+    body: JSON.stringify(body),
   });
   return data.connectToken ?? data.connect_token ?? '';
 }
