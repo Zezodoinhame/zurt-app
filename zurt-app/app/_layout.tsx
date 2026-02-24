@@ -135,167 +135,167 @@ export default function RootLayout() {
           />
           <Stack.Screen
             name="connect-bank"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="asset-detail"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="report"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="family"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="taxes"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="goals"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="simulator"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="rebalance"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="tax-dashboard"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="risk-metrics"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="badges"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="alert-preferences"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="consultant"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="watchlist"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="news"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="dividends"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="comparison"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="budget"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="cash-flow"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="spending-insights"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="bills"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="correlation-matrix"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="backtest"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="scenario-planner"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="price-alerts"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="recurring-investments"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="net-worth"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="debt-manager"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="retirement"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="monte-carlo"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="learn"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="crypto"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="subscriptions"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="real-estate"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="savings-challenges"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="fire"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="diary"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="compound"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="currency-converter"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="emergency-fund"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="financial-calendar"
-            options={{ animation: 'slide_from_right' }}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
         </Stack>
         <RateLimitToast />

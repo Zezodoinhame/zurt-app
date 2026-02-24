@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  RefreshControl,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -14,8 +16,6 @@ import { type ThemeColors } from '../src/theme/colors';
 import { spacing, radius } from '../src/theme/spacing';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { useNewsStore } from '../src/stores/newsStore';
-import { useAuthStore } from '../src/stores/authStore';
-import { Header } from '../src/components/shared/Header';
 import { Card } from '../src/components/ui/Card';
 import { Badge } from '../src/components/ui/Badge';
 import { AppIcon } from '../src/hooks/useIcon';
@@ -38,13 +38,17 @@ const CATEGORY_PILLS: { key: NewsCategory | 'all'; labelKey: string }[] = [
 function getRelativeTime(dateStr: string, t: (k: string) => string): string {
   const now = new Date();
   const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '';
   const diffMs = now.getTime() - date.getTime();
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  if (diffHours < 1) return t('news.today');
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return t('news.today');
+  if (diffMin < 60) return `${diffMin}min`;
+  const diffHours = Math.floor(diffMin / 60);
   if (diffHours < 24) return `${diffHours}${t('news.hoursAgo')}`;
+  const diffDays = Math.floor(diffHours / 24);
   if (diffDays === 1) return t('news.yesterday');
-  return `${diffDays}${t('news.daysAgo')}`;
+  if (diffDays < 7) return `${diffDays}${t('news.daysAgo')}`;
+  return date.toLocaleDateString('pt-BR');
 }
 
 // =============================================================================
@@ -56,13 +60,14 @@ export default function NewsScreen() {
   const router = useRouter();
   const { t } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
-  const { isDemoMode } = useAuthStore();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const {
     isLoading,
+    isRefreshing,
     selectedCategory,
     loadNews,
+    refreshNews,
     setCategory,
     getFilteredArticles,
   } = useNewsStore();
@@ -89,6 +94,17 @@ export default function NewsScreen() {
       router.replace('/(tabs)');
     }
   }, [router]);
+
+  const handleArticlePress = useCallback((url?: string) => {
+    if (url) {
+      Haptics.selectionAsync();
+      Linking.openURL(url);
+    }
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    refreshNews();
+  }, [refreshNews]);
 
   // ---- Render helpers ----
 
@@ -123,51 +139,58 @@ export default function NewsScreen() {
 
   const renderArticleCard = useCallback(
     ({ item, index }: { item: (typeof filteredArticles)[0]; index: number }) => (
-      <Card delay={index * 60} style={styles.articleCard}>
-        {/* Title */}
-        <Text style={styles.articleTitle} numberOfLines={2}>
-          {item.title}
-        </Text>
-
-        {/* Source + time row */}
-        <View style={styles.metaRow}>
-          <Text style={styles.metaSource}>{item.source}</Text>
-          <Text style={styles.metaDot}>{' \u00B7 '}</Text>
-          <Text style={styles.metaTime}>
-            {getRelativeTime(item.date, t)}
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={() => handleArticlePress(item.url)}
+      >
+        <Card delay={index * 60} style={styles.articleCard}>
+          {/* Title */}
+          <Text style={styles.articleTitle} numberOfLines={2}>
+            {item.title}
           </Text>
-        </View>
 
-        {/* Summary */}
-        <Text style={styles.articleSummary} numberOfLines={2}>
-          {item.summary}
-        </Text>
+          {/* Source + time row */}
+          <View style={styles.metaRow}>
+            <Text style={styles.metaSource}>{item.source}</Text>
+            <Text style={styles.metaDot}>{' \u00B7 '}</Text>
+            <Text style={styles.metaTime}>
+              {getRelativeTime(item.date, t)}
+            </Text>
+          </View>
 
-        {/* Bottom row: category badge + tickers */}
-        <View style={styles.bottomRow}>
-          <Badge value={t(`news.${item.category}`)} size="sm" variant="info" />
-          {item.relatedTickers && item.relatedTickers.length > 0 && (
-            <View style={styles.tickerRow}>
-              {item.relatedTickers.map((ticker) => (
-                <Badge
-                  key={ticker}
-                  value={ticker}
-                  size="sm"
-                  variant="neutral"
-                />
-              ))}
-            </View>
-          )}
-        </View>
-      </Card>
+          {/* Summary */}
+          <Text style={styles.articleSummary} numberOfLines={2}>
+            {item.summary}
+          </Text>
+
+          {/* Bottom row: category badge + tickers */}
+          <View style={styles.bottomRow}>
+            <Badge value={t(`news.${item.category}`)} size="sm" variant="info" />
+            {item.relatedTickers && item.relatedTickers.length > 0 && (
+              <View style={styles.tickerRow}>
+                {item.relatedTickers.map((ticker) => (
+                  <Badge
+                    key={ticker}
+                    value={ticker}
+                    size="sm"
+                    variant="neutral"
+                  />
+                ))}
+              </View>
+            )}
+          </View>
+        </Card>
+      </TouchableOpacity>
     ),
-    [colors, styles, t],
+    [colors, styles, t, handleArticlePress],
   );
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <AppIcon name="alert" size={40} color={colors.text.muted} />
-      <Text style={styles.emptyText}>{t('news.noArticles')}</Text>
+      <Text style={styles.emptyText}>
+        {t('news.noArticles')}
+      </Text>
     </View>
   );
 
@@ -190,14 +213,6 @@ export default function NewsScreen() {
       {/* Category Filter Pills */}
       {renderCategoryPills()}
 
-      {/* Demo disclaimer */}
-      {isDemoMode && (
-        <View style={styles.demoBanner}>
-          <AppIcon name="info" size={14} color={colors.warning} />
-          <Text style={styles.demoBannerText}>{t('news.demoDisclaimer')}</Text>
-        </View>
-      )}
-
       {/* Content */}
       {isLoading ? (
         <View style={styles.skeletonContainer}>
@@ -211,6 +226,14 @@ export default function NewsScreen() {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={renderEmpty}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.accent}
+              colors={[colors.accent]}
+            />
+          }
         />
       )}
     </View>
@@ -267,27 +290,6 @@ const createStyles = (colors: ThemeColors) =>
     },
     filterPillTextActive: {
       color: colors.background,
-    },
-
-    // Demo banner
-    demoBanner: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      marginHorizontal: spacing.xl,
-      marginBottom: spacing.md,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
-      backgroundColor: colors.warning + '15',
-      borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: colors.warning + '30',
-    },
-    demoBannerText: {
-      flex: 1,
-      fontSize: 12,
-      color: colors.warning,
-      lineHeight: 16,
     },
 
     // List

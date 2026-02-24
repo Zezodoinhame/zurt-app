@@ -400,6 +400,7 @@ export interface NewsArticle {
   category: NewsCategory;
   relatedTickers?: string[];
   imageUrl?: string;
+  url?: string;
 }
 
 // -----------------------------------------------------------------------------
