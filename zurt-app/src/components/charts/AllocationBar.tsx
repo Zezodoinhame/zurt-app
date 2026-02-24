@@ -22,7 +22,7 @@ export function AllocationBar({ allocations, onSelectClass }: AllocationBarProps
       <View style={styles.barContainer}>
         {allocations.map((alloc, index) => (
           <View
-            key={alloc.class}
+            key={`${alloc.class}-${index}`}
             style={[
               styles.segment,
               {
@@ -39,7 +39,7 @@ export function AllocationBar({ allocations, onSelectClass }: AllocationBarProps
       {/* Legend */}
       <View style={styles.legend}>
         {allocations.map((alloc, index) => (
-          <View key={alloc.class}>
+          <View key={`${alloc.class}-${index}`}>
             <TouchableOpacity
               style={styles.legendItem}
               onPress={() => onSelectClass?.(alloc)}

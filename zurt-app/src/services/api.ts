@@ -459,7 +459,7 @@ export async function fetchDashboardSummary(): Promise<{
       // Map breakdown → Allocation[]
       const rawBreakdown: any[] = data.breakdown ?? data.allocations ?? [];
       const allocations: Allocation[] = rawBreakdown.map((b: any) => ({
-        class: b.class ?? b.asset_class ?? b.category ?? 'stocks',
+        class: b.class ?? b.asset_class ?? b.type ?? b.category ?? 'stocks',
         label: b.label ?? b.name ?? b.category ?? '',
         value: b.value ?? b.amount ?? 0,
         percentage: b.percentage ?? b.percent ?? 0,
