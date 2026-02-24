@@ -34,12 +34,14 @@ import {
 // Helpers
 // =============================================================================
 
-const fmt = (v: number) =>
-  v.toLocaleString('pt-BR', {
+const fmt = (v: number) => {
+  const safe = typeof v === 'number' && isFinite(v) ? v : 0;
+  return safe.toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL',
     minimumFractionDigits: 2,
   });
+};
 
 const MONTH_NAMES_SHORT = [
   'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',

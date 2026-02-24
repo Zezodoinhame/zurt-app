@@ -18,7 +18,8 @@ interface ReportData {
 }
 
 function fmt(value: number): string {
-  return value.toLocaleString('pt-BR', {
+  const safe = typeof value === 'number' && isFinite(value) ? value : 0;
+  return safe.toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL',
     minimumFractionDigits: 2,
@@ -27,8 +28,9 @@ function fmt(value: number): string {
 }
 
 function fmtPct(value: number): string {
-  const formatted = Math.abs(value).toFixed(2).replace('.', ',');
-  return value >= 0 ? `+${formatted}%` : `-${formatted}%`;
+  const safe = typeof value === 'number' && isFinite(value) ? value : 0;
+  const formatted = Math.abs(safe).toFixed(2).replace('.', ',');
+  return safe >= 0 ? `+${formatted}%` : `-${formatted}%`;
 }
 
 function buildReportHTML(data: ReportData, user: User, accentColor: string): string {
@@ -128,7 +130,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
     }
     .cover-date {
       font-size: 12px;
-      color: #64748B;
+      color: #CBD5E1;
       margin-top: 6px;
     }
     .cover-value {
@@ -139,7 +141,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
     }
     .cover-value-label {
       font-size: 11px;
-      color: #64748B;
+      color: #CBD5E1;
       text-transform: uppercase;
       letter-spacing: 1px;
       margin-top: 4px;
@@ -167,7 +169,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
     }
     .page-header-info {
       font-size: 10px;
-      color: #64748B;
+      color: #CBD5E1;
     }
     .section {
       margin-bottom: 24px;
@@ -272,7 +274,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
     }
     .footer-date {
       font-size: 9px;
-      color: #64748B;
+      color: #CBD5E1;
       margin-top: 2px;
     }
     .kpi-row {
@@ -556,7 +558,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
 
     <div class="section" style="margin-top: 40px;">
       <div class="section-title">Aviso Legal</div>
-      <p style="font-size: 10px; color: #64748B; line-height: 1.8;">
+      <p style="font-size: 10px; color: #CBD5E1; line-height: 1.8;">
         Este relatorio foi gerado automaticamente pelo ZURT com base nos dados sincronizados
         das suas contas e instituicoes financeiras. Os valores apresentados sao meramente
         informativos e nao constituem recomendacao de investimento. Rentabilidade passada nao
@@ -569,7 +571,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
     <div class="footer" style="margin-top: auto;">
       <div class="footer-brand">ZURT — Wealth Intelligence</div>
       <div class="footer-date">Gerado em ${dateStr} as ${timeStr}</div>
-      <div style="font-size: 9px; color: #334155; margin-top: 8px;">
+      <div style="font-size: 9px; color: #94A3B8; margin-top: 8px;">
         Documento confidencial. Uso exclusivo do titular.
       </div>
     </div>

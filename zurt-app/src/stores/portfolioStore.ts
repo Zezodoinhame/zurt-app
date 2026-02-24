@@ -142,7 +142,11 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => {
   loadBenchmarks: async () => {
     try {
       const data = await fetchBenchmarks();
-      set({ benchmarks: data });
+      // Only set benchmarks if at least one value is non-zero (BRAPI actually returned data)
+      const ref = data['12M'];
+      if (ref.cdi !== 0 || ref.ipca !== 0 || ref.ibov !== 0) {
+        set({ benchmarks: data });
+      }
     } catch (err) {
       logger.log('[Portfolio] loadBenchmarks error:', err);
     }

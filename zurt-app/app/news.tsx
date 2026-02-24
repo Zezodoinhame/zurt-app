@@ -283,6 +283,7 @@ const createStyles = (colors: ThemeColors) =>
       minHeight: 34,
       justifyContent: 'center' as const,
       alignItems: 'center' as const,
+      flexShrink: 0,
     },
     filterPillActive: {
       backgroundColor: colors.accent,
@@ -294,6 +295,7 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.text.secondary,
       lineHeight: 18,
       includeFontPadding: false,
+      textAlign: 'center' as const,
     },
     filterPillTextActive: {
       color: colors.background,

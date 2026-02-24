@@ -80,6 +80,8 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
       const subscriptions = stored ? JSON.parse(stored) : [];
       set({ subscriptions, isLoading: false });
+      // Auto-detect subscriptions from credit card transactions
+      get().autoDetect();
     } catch {
       set({ isLoading: false });
     }

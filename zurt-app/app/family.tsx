@@ -17,6 +17,7 @@ import {
   RefreshControl,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -275,6 +276,15 @@ export default function FamilyScreen() {
       }
     }
   }, [inviteEmail, inviteRole, familyStore, loadFromLocalStore, t]);
+
+  const handleWhatsAppInvite = useCallback(() => {
+    const groupName = useFamilyStore.getState().groups?.[0]?.name || 'ZURT';
+    const message = `Convite para o grupo familiar "${groupName}" no ZURT! Baixe o app e entre na nossa família: https://zurt.com.br`;
+    const url = `whatsapp://send?text=${encodeURIComponent(message)}`;
+    Linking.openURL(url).catch(() => {
+      Alert.alert('', t('family.whatsAppNotInstalled') || 'WhatsApp não está instalado.');
+    });
+  }, [t]);
 
   const handleAcceptInvite = useCallback(async (token: string) => {
     setAcceptingToken(token);
@@ -571,7 +581,9 @@ export default function FamilyScreen() {
                 <Text style={styles.wealthLabel}>{t('family.totalWealth')}</Text>
                 <Text style={styles.wealthValue}>{formatCurrency(totalWealth, currency)}</Text>
                 <Text style={styles.wealthSub}>
-                  {(t('family.activeMembers') || '{n} membros ativos').replace('{n}', String(acceptedMembers.length))}
+                  {acceptedMembers.length === 1
+                    ? (t('family.activeMember') || '1 membro ativo')
+                    : (t('family.activeMembers') || '{n} membros ativos').replace('{n}', String(acceptedMembers.length))}
                 </Text>
 
                 {/* Bar chart */}
@@ -780,6 +792,15 @@ export default function FamilyScreen() {
                 {inviteFeedback !== '' && (
                   <Text style={styles.inviteFeedback}>{inviteFeedback}</Text>
                 )}
+
+                {/* WhatsApp invite */}
+                <TouchableOpacity
+                  style={[styles.inviteBtn, { backgroundColor: '#25D366', marginTop: spacing.sm }]}
+                  onPress={handleWhatsAppInvite}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.inviteBtnText}>{t('family.inviteWhatsApp') || 'Convidar via WhatsApp'}</Text>
+                </TouchableOpacity>
               </View>
 
               {/* ========================================================== */}

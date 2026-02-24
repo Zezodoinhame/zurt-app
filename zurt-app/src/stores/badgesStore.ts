@@ -13,6 +13,7 @@ const STORAGE_KEY = '@zurt:badges_earned';
 // -----------------------------------------------------------------------------
 
 const STARTER_BADGES: Omit<Badge, 'status' | 'earnedAt' | 'progress'>[] = [
+  // Milestones
   { id: 'app_installed', emoji: '\uD83D\uDCF1', title: 'App Instalado', description: 'Abriu o ZURT pela primeira vez', category: 'milestones' },
   { id: 'first_connection', emoji: '\uD83C\uDFE6', title: 'Primeira Conexão', description: 'Conectou a primeira conta bancária', category: 'milestones' },
   { id: 'investor', emoji: '\uD83D\uDCCA', title: 'Investidor', description: 'Possui pelo menos 1 investimento', category: 'milestones' },
@@ -22,6 +23,17 @@ const STARTER_BADGES: Omit<Badge, 'status' | 'earnedAt' | 'progress'>[] = [
   { id: 'diversified', emoji: '\uD83D\uDCC8', title: 'Diversificado', description: 'Possui 3 ou mais classes de ativos', category: 'milestones' },
   { id: 'alert_active', emoji: '\uD83D\uDD14', title: 'Alerta Ativo', description: 'Criou um alerta de preço', category: 'milestones' },
   { id: 'family_group', emoji: '\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67', title: 'Família', description: 'Criou um grupo familiar', category: 'milestones' },
+  // Consistency
+  { id: 'streak_7d', emoji: '\uD83D\uDD25', title: 'Semana Ativa', description: 'Acessou o ZURT 7 dias seguidos', category: 'consistency' },
+  { id: 'streak_30d', emoji: '\u26A1', title: 'Mês Consistente', description: 'Acessou o ZURT 30 dias seguidos', category: 'consistency' },
+  { id: 'budget_master', emoji: '\uD83D\uDCB5', title: 'Orçamento em Dia', description: 'Ficou dentro do orçamento por 3 meses', category: 'consistency' },
+  // Education
+  { id: 'agent_first', emoji: '\uD83E\uDD16', title: 'Primeira Consulta', description: 'Fez a primeira pergunta ao Agent', category: 'education' },
+  { id: 'news_reader', emoji: '\uD83D\uDCF0', title: 'Leitor Assíduo', description: 'Leu 10 notícias no ZURT', category: 'education' },
+  { id: 'simulator_used', emoji: '\uD83E\uDDEA', title: 'Simulador', description: 'Usou o simulador de investimentos', category: 'education' },
+  // Tax
+  { id: 'tax_checked', emoji: '\uD83E\uDDFE', title: 'IR Verificado', description: 'Consultou o painel de impostos', category: 'tax' },
+  { id: 'darf_generated', emoji: '\uD83D\uDCC4', title: 'DARF Gerado', description: 'Gerou um DARF pelo ZURT', category: 'tax' },
 ];
 
 interface BadgesState {
@@ -114,6 +126,21 @@ export const useBadgesStore = create<BadgesState>((set, get) => ({
           const state = familyData?.state;
           if (state?.groups?.length > 0) autoEarn.add('family_group');
         }
+      } catch { /* ignore */ }
+
+      // Agent first question
+      try {
+        const agentRaw = await AsyncStorage.getItem('@zurt:agent_history');
+        if (agentRaw) {
+          const messages = JSON.parse(agentRaw);
+          if (Array.isArray(messages) && messages.length > 0) autoEarn.add('agent_first');
+        }
+      } catch { /* ignore */ }
+
+      // Tax checked
+      try {
+        const taxVisited = await AsyncStorage.getItem('@zurt:tax_visited');
+        if (taxVisited) autoEarn.add('tax_checked');
       } catch { /* ignore */ }
 
       // Persist any newly earned badges

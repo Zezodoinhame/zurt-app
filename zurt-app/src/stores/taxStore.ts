@@ -44,18 +44,22 @@ function computeTaxFromPortfolio(): TaxSummary {
   const estimatedIR = netGains > 0 ? netGains * 0.15 : 0;
 
   // DARF calendar — monthly deadlines
+  // Brazilian law: DARF under R$10 is carried forward (not paid)
+  const DARF_MINIMUM = 10;
   const now = new Date();
   const year = now.getFullYear();
   const darfs: DarfEntry[] = [];
+  const monthlyDarf = Math.round(estimatedIR / 12);
   for (let m = 0; m < 12; m++) {
     const dueDate = new Date(year, m, 28);
     const isPast = m < now.getMonth();
     const isCurrent = m === now.getMonth();
+    const hasDarf = m <= now.getMonth() && monthlyDarf >= DARF_MINIMUM;
     darfs.push({
       month: m + 1,
       label: MONTH_LABELS[m],
-      amount: m <= now.getMonth() ? Math.round(estimatedIR / 12) : 0,
-      status: isPast ? 'paid' : isCurrent ? 'pending' : 'exempt',
+      amount: hasDarf ? monthlyDarf : 0,
+      status: isPast && hasDarf ? 'paid' : isCurrent && hasDarf ? 'pending' : 'exempt',
       dueDate: dueDate.toISOString().split('T')[0],
     });
   }

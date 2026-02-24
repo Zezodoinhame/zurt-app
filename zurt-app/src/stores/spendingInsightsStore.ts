@@ -176,7 +176,8 @@ export const useSpendingInsightsStore = create<SpendingInsightsState>((set) => (
       }
       // Compute insights from real credit card transactions
       const computed = computeInsightsFromTransactions();
-      set({ insights: computed, isLoading: false });
+      // If no transactions yet, fallback to demo data so screen isn't empty
+      set({ insights: computed ?? demoSpendingInsights, isLoading: false });
     } catch (err: any) {
       set({ isLoading: false, error: err?.message ?? 'Error loading insights' });
     }

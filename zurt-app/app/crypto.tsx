@@ -37,6 +37,7 @@ export default function CryptoScreen() {
   const {
     portfolio,
     isLoading,
+    marketData,
     loadCrypto,
     fetchMarketData,
     getDominance,
@@ -193,11 +194,14 @@ export default function CryptoScreen() {
           </View>
         </Card>
 
-        {/* Holdings List */}
-        <Text style={styles.sectionTitle}>{t('crypto.holdings')}</Text>
-        {portfolio.holdings.map((holding, index) => {
+        {/* Holdings List / Market Data */}
+        <Text style={styles.sectionTitle}>
+          {portfolio.holdings.length > 0 ? t('crypto.holdings') : t('crypto.market')}
+        </Text>
+        {(portfolio.holdings.length > 0 ? portfolio.holdings : marketData).map((holding, index) => {
           const isPositive = holding.change24h >= 0;
           const changeText = formatPct(holding.change24h);
+          const showPrice = portfolio.holdings.length === 0;
 
           return (
             <Card key={holding.id} delay={index * 60}>
@@ -221,9 +225,11 @@ export default function CryptoScreen() {
                   />
                 </View>
 
-                {/* Right: value + change badge */}
+                {/* Right: value/price + change badge */}
                 <View style={styles.holdingRight}>
-                  <Text style={styles.holdingValue}>{displayVal(holding.currentValue)}</Text>
+                  <Text style={styles.holdingValue}>
+                    {displayVal(showPrice ? holding.currentPrice : holding.currentValue)}
+                  </Text>
                   <Badge
                     value={changeText}
                     variant={isPositive ? 'positive' : 'negative'}

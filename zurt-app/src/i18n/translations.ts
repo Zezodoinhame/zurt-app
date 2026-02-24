@@ -373,6 +373,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'family.title': 'Grupo Familiar',
     'family.totalWealth': 'Patrimônio Familiar',
     'family.activeMembers': '{n} membros ativos',
+    'family.activeMember': '1 membro ativo',
+    'family.inviteWhatsApp': 'Convidar via WhatsApp',
+    'family.whatsAppNotInstalled': 'WhatsApp não está instalado.',
     'family.members': 'Membros',
     'family.owner': 'Titular',
     'family.spouse': 'Cônjuge',
@@ -793,6 +796,11 @@ export const translations: Record<Language, Record<string, string>> = {
     'budget.monthly': 'Mensal',
     'budget.leftToSpend': 'Disponível para gastar',
     'budget.percentUsed': 'utilizado',
+    'budget.summary': 'Resumo',
+    'budget.categories': 'Categorias',
+    'budget.currentLimit': 'Limite atual',
+    'budget.newLimit': 'Novo limite',
+    'budget.saveLimit': 'Salvar limite',
 
     // Cash Flow
     'cashFlow.title': 'Fluxo de Caixa',
@@ -1169,6 +1177,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'crypto.neutral': 'Neutro',
     'crypto.dominance': 'Dominância',
     'crypto.holdings': 'Posições',
+    'crypto.market': 'Mercado',
     'crypto.price': 'Preço',
     'crypto.quantity': 'Quantidade',
     'crypto.avgPrice': 'Preço médio',
@@ -1245,6 +1254,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'realEstate.appreciationRate': 'Valorização imóvel (%)',
     'realEstate.breakEvenYear': 'Ponto de equilíbrio',
     'realEstate.buyVsRent': 'Comprar vs Alugar',
+    'realEstate.buy': 'Comprar é mais vantajoso',
+    'realEstate.rent': 'Alugar é mais vantajoso',
+    'realEstate.neutral': 'Ambas opções são similares',
 
     // Savings Challenges
     'challenges.title': 'Desafios de Poupança',
@@ -1778,6 +1790,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'family.title': 'Family Group',
     'family.totalWealth': 'Family Wealth',
     'family.activeMembers': '{n} active members',
+    'family.activeMember': '1 active member',
+    'family.inviteWhatsApp': 'Invite via WhatsApp',
+    'family.whatsAppNotInstalled': 'WhatsApp is not installed.',
     'family.members': 'Members',
     'family.owner': 'Owner',
     'family.spouse': 'Spouse',
@@ -2204,6 +2219,11 @@ export const translations: Record<Language, Record<string, string>> = {
     'budget.monthly': 'Monthly',
     'budget.leftToSpend': 'Left to spend',
     'budget.percentUsed': 'used',
+    'budget.summary': 'Summary',
+    'budget.categories': 'Categories',
+    'budget.currentLimit': 'Current limit',
+    'budget.newLimit': 'New limit',
+    'budget.saveLimit': 'Save limit',
 
     // Cash Flow
     'cashFlow.title': 'Cash Flow',
@@ -2580,6 +2600,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'crypto.neutral': 'Neutral',
     'crypto.dominance': 'Dominance',
     'crypto.holdings': 'Holdings',
+    'crypto.market': 'Market',
     'crypto.price': 'Price',
     'crypto.quantity': 'Quantity',
     'crypto.avgPrice': 'Avg price',
@@ -2656,6 +2677,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'realEstate.appreciationRate': 'Property appreciation (%)',
     'realEstate.breakEvenYear': 'Break-even year',
     'realEstate.buyVsRent': 'Buy vs Rent',
+    'realEstate.buy': 'Buying is more advantageous',
+    'realEstate.rent': 'Renting is more advantageous',
+    'realEstate.neutral': 'Both options are similar',
 
     // Savings Challenges
     'challenges.title': 'Savings Challenges',
@@ -3189,6 +3213,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'family.title': '家庭组',
     'family.totalWealth': '家庭财产',
     'family.activeMembers': '{n}活跃成员',
+    'family.activeMember': '1位活跃成员',
+    'family.inviteWhatsApp': '通过WhatsApp邀请',
+    'family.whatsAppNotInstalled': 'WhatsApp未安装。',
     'family.members': '成员',
     'family.owner': '所有者',
     'family.spouse': '配偶',
@@ -3615,6 +3642,11 @@ export const translations: Record<Language, Record<string, string>> = {
     'budget.monthly': '每月',
     'budget.leftToSpend': '可用余额',
     'budget.percentUsed': '已使用',
+    'budget.summary': '摘要',
+    'budget.categories': '分类',
+    'budget.currentLimit': '当前限额',
+    'budget.newLimit': '新限额',
+    'budget.saveLimit': '保存限额',
 
     // Cash Flow
     'cashFlow.title': '现金流',
@@ -3991,6 +4023,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'crypto.neutral': '中性',
     'crypto.dominance': '占比',
     'crypto.holdings': '持仓',
+    'crypto.market': '市场',
     'crypto.price': '价格',
     'crypto.quantity': '数量',
     'crypto.avgPrice': '平均价格',
@@ -4067,6 +4100,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'realEstate.appreciationRate': '房产增值率 (%)',
     'realEstate.breakEvenYear': '盈亏平衡年',
     'realEstate.buyVsRent': '买房 vs 租房',
+    'realEstate.buy': '购买更有优势',
+    'realEstate.rent': '租赁更有优势',
+    'realEstate.neutral': '两种选择相似',
 
     // Savings Challenges
     'challenges.title': '储蓄挑战',
@@ -4600,6 +4636,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'family.title': 'مجموعة عائلية',
     'family.totalWealth': 'الثروة العائلية',
     'family.activeMembers': '{n} أعضاء نشطين',
+    'family.activeMember': 'عضو نشط واحد',
+    'family.inviteWhatsApp': 'دعوة عبر واتساب',
+    'family.whatsAppNotInstalled': 'واتساب غير مثبت.',
     'family.members': 'الأعضاء',
     'family.owner': 'المالك',
     'family.spouse': 'الزوج/ة',
@@ -5026,6 +5065,11 @@ export const translations: Record<Language, Record<string, string>> = {
     'budget.monthly': 'شهري',
     'budget.leftToSpend': 'المتاح للإنفاق',
     'budget.percentUsed': 'مستخدم',
+    'budget.summary': 'ملخص',
+    'budget.categories': 'الفئات',
+    'budget.currentLimit': 'الحد الحالي',
+    'budget.newLimit': 'حد جديد',
+    'budget.saveLimit': 'حفظ الحد',
 
     // Cash Flow
     'cashFlow.title': 'التدفق النقدي',
@@ -5402,6 +5446,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'crypto.neutral': 'محايد',
     'crypto.dominance': 'الهيمنة',
     'crypto.holdings': 'المقتنيات',
+    'crypto.market': 'السوق',
     'crypto.price': 'السعر',
     'crypto.quantity': 'الكمية',
     'crypto.avgPrice': 'متوسط السعر',
@@ -5478,6 +5523,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'realEstate.appreciationRate': 'معدل ارتفاع قيمة العقار (%)',
     'realEstate.breakEvenYear': 'سنة التعادل',
     'realEstate.buyVsRent': 'شراء مقابل إيجار',
+    'realEstate.buy': 'الشراء أكثر فائدة',
+    'realEstate.rent': 'الإيجار أكثر فائدة',
+    'realEstate.neutral': 'كلا الخيارين متشابهان',
 
     // Savings Challenges
     'challenges.title': 'تحديات الادخار',
