@@ -10,6 +10,7 @@ import type {
 import { fetchDashboardSummary } from '../services/api';
 import { useCardsStore } from './cardsStore';
 import { logger } from '../utils/logger';
+import { fetchBenchmarks, type BenchmarkData } from '../services/benchmarks';
 
 type TimeRange = '1M' | '3M' | '6M' | '1A' | 'MAX';
 
@@ -19,6 +20,7 @@ interface PortfolioState {
   assets: Asset[];
   allocations: Allocation[];
   insights: Insight[];
+  benchmarks: BenchmarkData | null;
   isLoading: boolean;
   isRefreshing: boolean;
   error: string | null;
@@ -27,6 +29,7 @@ interface PortfolioState {
 
   loadPortfolio: () => Promise<void>;
   refresh: () => Promise<void>;
+  loadBenchmarks: () => Promise<void>;
   setTimeRange: (range: TimeRange) => void;
   setSelectedAssetClass: (assetClass: AssetClass | null) => void;
   getAssetsByClass: (assetClass: AssetClass) => Asset[];
@@ -99,6 +102,7 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => {
   assets: [],
   allocations: [],
   insights: [],
+  benchmarks: null,
   isLoading: false,
   isRefreshing: false,
   error: null,
@@ -132,6 +136,15 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => {
         isRefreshing: false,
         error: err?.message ?? 'Erro ao atualizar portfolio',
       });
+    }
+  },
+
+  loadBenchmarks: async () => {
+    try {
+      const data = await fetchBenchmarks();
+      set({ benchmarks: data });
+    } catch (err) {
+      logger.log('[Portfolio] loadBenchmarks error:', err);
     }
   },
 

@@ -122,3 +122,19 @@ export function maskValue(value: string, curr?: Currency): string {
   return `${symbol} •••••`;
 }
 
+/**
+ * Format currency input while typing — returns display string and raw number value.
+ * Interprets all digits as cents (last 2 digits = decimal part).
+ */
+export function formatCurrencyInput(text: string, curr: Currency = 'BRL'): { display: string; raw: number } {
+  const numbers = text.replace(/\D/g, '');
+  const value = parseInt(numbers || '0', 10) / 100;
+  const locale = currencyLocales[curr];
+  const display = value.toLocaleString(locale, {
+    style: 'currency',
+    currency: curr,
+    minimumFractionDigits: 2,
+  });
+  return { display, raw: value };
+}
+

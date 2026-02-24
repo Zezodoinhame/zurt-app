@@ -28,6 +28,7 @@ import { AppIcon } from '../../src/hooks/useIcon';
 import { BankLogo } from '../../src/components/icons/BankLogo';
 import { logger } from '../../src/utils/logger';
 import { demoBenchmarks } from '../../src/data/demo';
+import type { BenchmarkData } from '../../src/services/benchmarks';
 
 // ---------------------------------------------------------------------------
 // Label Maps
@@ -538,7 +539,8 @@ export default function WalletScreen() {
 
               {/* Bars */}
               {(() => {
-                const bench = demoBenchmarks[benchmarkPeriod];
+                const storeBenchmarks = usePortfolioStore.getState().benchmarks;
+                const bench = storeBenchmarks?.[benchmarkPeriod] ?? demoBenchmarks[benchmarkPeriod];
                 const portfolioVar = benchmarkPeriod === '1M'
                   ? (summary.variation1m ?? 0)
                   : benchmarkPeriod === '12M'

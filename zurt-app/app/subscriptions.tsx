@@ -15,7 +15,7 @@ import { Input } from '../src/components/ui/Input';
 import { Button } from '../src/components/ui/Button';
 import { AppIcon } from '../src/hooks/useIcon';
 import { SkeletonList } from '../src/components/skeletons/Skeleton';
-import { formatCurrency, maskValue } from '../src/utils/formatters';
+import { formatCurrency, maskValue, formatCurrencyInput } from '../src/utils/formatters';
 import type { SubscriptionBilling, SubscriptionCategory } from '../src/types';
 
 // =============================================================================
@@ -75,6 +75,7 @@ export default function SubscriptionsScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formName, setFormName] = useState('');
   const [formAmount, setFormAmount] = useState('');
+  const [formAmountRaw, setFormAmountRaw] = useState(0);
   const [formBilling, setFormBilling] = useState<SubscriptionBilling>('monthly');
   const [formCategory, setFormCategory] = useState<SubscriptionCategory>('entertainment');
 
@@ -99,10 +100,17 @@ export default function SubscriptionsScreen() {
   // Form Handlers
   // =========================================================================
 
+  const handleAmountChange = useCallback((text: string) => {
+    const { display, raw } = formatCurrencyInput(text, currency);
+    setFormAmount(display);
+    setFormAmountRaw(raw);
+  }, [currency]);
+
   const resetForm = useCallback(() => {
     setEditingId(null);
     setFormName('');
     setFormAmount('');
+    setFormAmountRaw(0);
     setFormBilling('monthly');
     setFormCategory('entertainment');
   }, []);
@@ -119,18 +127,19 @@ export default function SubscriptionsScreen() {
     if (!sub) return;
     setEditingId(id);
     setFormName(sub.name);
-    setFormAmount(String(sub.amount));
+    setFormAmount(formatCurrency(sub.amount, currency));
+    setFormAmountRaw(sub.amount);
     setFormBilling(sub.billing);
     setFormCategory(sub.category);
     setSheetVisible(true);
-  }, [subscriptions]);
+  }, [subscriptions, currency]);
 
   const handleSave = useCallback(() => {
     if (!formName.trim()) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const data = {
       name: formName.trim(),
-      amount: parseFloat(formAmount) || 0,
+      amount: formAmountRaw || 0,
       billing: formBilling,
       category: formCategory,
       status: 'active' as const,
@@ -145,7 +154,7 @@ export default function SubscriptionsScreen() {
     }
     setSheetVisible(false);
     resetForm();
-  }, [editingId, formName, formAmount, formBilling, formCategory, addSubscription, editSubscription, resetForm]);
+  }, [editingId, formName, formAmountRaw, formBilling, formCategory, addSubscription, editSubscription, resetForm]);
 
   const handleDelete = useCallback((id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -291,7 +300,7 @@ export default function SubscriptionsScreen() {
       <BottomSheet visible={sheetVisible} onClose={() => setSheetVisible(false)} title={editingId ? t('subscriptions.editSubscription') : t('subscriptions.addSubscription')}>
         <View style={styles.sheetContent}>
           <Input label={t('subscriptions.name')} value={formName} onChangeText={setFormName} placeholder="Ex: Netflix" />
-          <Input label={t('subscriptions.amount')} value={formAmount} onChangeText={setFormAmount} keyboardType="numeric" placeholder="0.00" />
+          <Input label={t('subscriptions.amount')} value={formAmount} onChangeText={handleAmountChange} keyboardType="numeric" placeholder={formatCurrency(0, currency)} />
 
           {/* Billing Pills */}
           <Text style={styles.formLabel}>{t('subscriptions.billing')}</Text>

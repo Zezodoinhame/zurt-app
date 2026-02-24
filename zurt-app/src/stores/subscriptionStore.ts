@@ -6,11 +6,54 @@ import { demoSubscriptions } from '../data/demo';
 
 const STORAGE_KEY = '@zurt:subscriptions';
 
+// Known subscription service patterns for auto-detection
+const SUBSCRIPTION_PATTERNS: Array<{ pattern: RegExp; name: string; icon: string; category: SubscriptionCategory }> = [
+  { pattern: /netflix/i, name: 'Netflix', icon: '🎬', category: 'entertainment' },
+  { pattern: /spotify/i, name: 'Spotify', icon: '🎵', category: 'entertainment' },
+  { pattern: /amazon\s*prime|amzn.*prime|prime\s*video/i, name: 'Amazon Prime', icon: '📦', category: 'entertainment' },
+  { pattern: /disney\+|disney\s*plus/i, name: 'Disney+', icon: '🏰', category: 'entertainment' },
+  { pattern: /hbo|max/i, name: 'Max (HBO)', icon: '🎭', category: 'entertainment' },
+  { pattern: /youtube\s*prem/i, name: 'YouTube Premium', icon: '▶️', category: 'entertainment' },
+  { pattern: /apple\s*(tv|music|one|icloud)/i, name: 'Apple Services', icon: '🍎', category: 'cloud' },
+  { pattern: /google\s*(one|storage|workspace)/i, name: 'Google One', icon: '☁️', category: 'cloud' },
+  { pattern: /microsoft\s*365|office\s*365/i, name: 'Microsoft 365', icon: '💼', category: 'productivity' },
+  { pattern: /chatgpt|openai/i, name: 'ChatGPT Plus', icon: '🤖', category: 'productivity' },
+  { pattern: /claude|anthropic/i, name: 'Claude Pro', icon: '🧠', category: 'productivity' },
+  { pattern: /adobe/i, name: 'Adobe', icon: '🎨', category: 'productivity' },
+  { pattern: /uber\s*one|uber.*pass/i, name: 'Uber One', icon: '🚗', category: 'other' },
+  { pattern: /ifood/i, name: 'iFood', icon: '🍔', category: 'other' },
+  { pattern: /rappi/i, name: 'Rappi', icon: '🛒', category: 'other' },
+  { pattern: /gym|academia|smart\s*fit|bio\s*ritmo/i, name: 'Academia', icon: '💪', category: 'health' },
+  { pattern: /duolingo/i, name: 'Duolingo', icon: '🦉', category: 'education' },
+  { pattern: /xbox|game\s*pass/i, name: 'Xbox Game Pass', icon: '🎮', category: 'entertainment' },
+  { pattern: /playstation|ps\s*plus/i, name: 'PlayStation Plus', icon: '🎮', category: 'entertainment' },
+  { pattern: /deezer/i, name: 'Deezer', icon: '🎶', category: 'entertainment' },
+  { pattern: /globoplay|globo\s*play/i, name: 'Globoplay', icon: '📺', category: 'entertainment' },
+  { pattern: /paramount/i, name: 'Paramount+', icon: '⭐', category: 'entertainment' },
+  { pattern: /crunchyroll/i, name: 'Crunchyroll', icon: '🍥', category: 'entertainment' },
+  { pattern: /notion/i, name: 'Notion', icon: '📝', category: 'productivity' },
+  { pattern: /canva/i, name: 'Canva', icon: '🖼️', category: 'productivity' },
+];
+
+interface DetectedSubscription {
+  id: string;
+  name: string;
+  icon: string;
+  amount: number;
+  category: SubscriptionCategory;
+  lastCharge: string;
+  frequency: 'monthly' | 'yearly' | 'weekly';
+}
+
 interface SubscriptionState {
   subscriptions: Subscription[];
+  detectedSubscriptions: DetectedSubscription[];
   isLoading: boolean;
 
   loadSubscriptions: () => Promise<void>;
+  autoDetect: () => void;
+  confirmDetected: (detected: DetectedSubscription) => void;
+  dismissDetected: (id: string) => void;
   addSubscription: (input: Omit<Subscription, 'id' | 'createdAt'>) => void;
   editSubscription: (id: string, updates: Partial<Subscription>) => void;
   removeSubscription: (id: string) => void;
@@ -23,6 +66,7 @@ interface SubscriptionState {
 
 export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
   subscriptions: [],
+  detectedSubscriptions: [],
   isLoading: false,
 
   loadSubscriptions: async () => {
@@ -39,6 +83,70 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
     } catch {
       set({ isLoading: false });
     }
+  },
+
+  autoDetect: () => {
+    try {
+      const { useCardsStore } = require('./cardsStore');
+      const transactions = useCardsStore.getState().transactions || [];
+      const existing = get().subscriptions;
+      const detected: DetectedSubscription[] = [];
+
+      for (const pat of SUBSCRIPTION_PATTERNS) {
+        const matches = transactions.filter((t: any) =>
+          pat.pattern.test(t.description || '') || pat.pattern.test(t.merchant || ''),
+        );
+        if (matches.length > 0) {
+          const alreadyAdded = existing.some(
+            (s) => s.name.toLowerCase() === pat.name.toLowerCase(),
+          );
+          if (!alreadyAdded) {
+            const sorted = [...matches].sort(
+              (a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+            );
+            const last = sorted[0] as any;
+            detected.push({
+              id: `auto_${pat.name.toLowerCase().replace(/\s/g, '_')}`,
+              name: pat.name,
+              icon: pat.icon,
+              amount: Math.abs(last.amount ?? 0),
+              category: pat.category,
+              lastCharge: last.date,
+              frequency: 'monthly',
+            });
+          }
+        }
+      }
+
+      if (detected.length > 0) {
+        set({ detectedSubscriptions: detected });
+      }
+    } catch { /* cardsStore may not be loaded yet */ }
+  },
+
+  confirmDetected: (detected: DetectedSubscription) => {
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    const newSub: Subscription = {
+      id: `sub-${Date.now()}`,
+      name: detected.name,
+      amount: detected.amount,
+      billing: detected.frequency as any,
+      category: detected.category,
+      status: 'active',
+      nextBilling: nextMonth.toISOString().split('T')[0],
+      icon: detected.icon,
+      color: '#6366F1',
+      createdAt: new Date().toISOString(),
+    };
+    const subs = [...get().subscriptions, newSub];
+    const remaining = get().detectedSubscriptions.filter((d) => d.id !== detected.id);
+    set({ subscriptions: subs, detectedSubscriptions: remaining });
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(subs)).catch(() => {});
+  },
+
+  dismissDetected: (id: string) => {
+    set({ detectedSubscriptions: get().detectedSubscriptions.filter((d) => d.id !== id) });
   },
 
   addSubscription: (input) => {

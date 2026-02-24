@@ -34,7 +34,38 @@ interface CryptoState {
   getDominance: () => { symbol: string; percentage: number; color: string }[];
 }
 
-async function fetchMarketDataFromAPI(): Promise<CryptoHolding[]> {
+async function fetchFromBRAPI(): Promise<CryptoHolding[]> {
+  const response = await fetch(
+    'https://brapi.dev/api/v2/crypto?coin=BTC,ETH,SOL,ADA,DOT,AVAX,MATIC,LINK,UNI,DOGE,BNB,XRP,USDT,USDC,LTC,ATOM,XLM,SHIB,TON,TRX&currency=BRL'
+  );
+  if (!response.ok) throw new Error(`BRAPI error: ${response.status}`);
+  const data = await response.json();
+
+  if (!data.coins || data.coins.length === 0) throw new Error('No BRAPI data');
+
+  return data.coins.map((coin: any, index: number) => {
+    const symbol = (coin.coin || '').toUpperCase();
+    return {
+      id: `brapi-${symbol.toLowerCase()}`,
+      symbol,
+      name: coin.coinName || symbol,
+      quantity: 0,
+      avgPrice: 0,
+      currentPrice: coin.regularMarketPrice ?? 0,
+      currentValue: 0,
+      change24h: coin.regularMarketChangePercent ?? 0,
+      change7d: 0,
+      change30d: 0,
+      sparkline: [],
+      color: COIN_COLORS[symbol] || `hsl(${(index * 37) % 360}, 65%, 55%)`,
+      icon: COIN_ICONS[symbol] || symbol.charAt(0),
+      marketCap: coin.marketCap ?? 0,
+      image: coin.logoUrl ?? '',
+    } as CryptoHolding & { marketCap: number; image: string };
+  });
+}
+
+async function fetchFromCoinGecko(): Promise<CryptoHolding[]> {
   const response = await fetch(
     'https://api.coingecko.com/api/v3/coins/markets?vs_currency=brl&order=market_cap_desc&per_page=20&page=1'
   );
@@ -61,6 +92,15 @@ async function fetchMarketDataFromAPI(): Promise<CryptoHolding[]> {
       image: coin.image ?? '',
     } as CryptoHolding & { marketCap: number; image: string };
   });
+}
+
+async function fetchMarketDataFromAPI(): Promise<CryptoHolding[]> {
+  // Try BRAPI first, fall back to CoinGecko
+  try {
+    return await fetchFromBRAPI();
+  } catch {
+    return await fetchFromCoinGecko();
+  }
 }
 
 export const useCryptoStore = create<CryptoState>((set, get) => ({

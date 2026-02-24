@@ -84,18 +84,35 @@ export const useBadgesStore = create<BadgesState>((set, get) => ({
       // Investor
       if (assets.length > 0) autoEarn.add('investor');
 
+      // Cards mapped
+      try {
+        const { useCardsStore } = await import('./cardsStore');
+        const cards = useCardsStore.getState().cards;
+        if (cards && cards.length > 0) autoEarn.add('cards_mapped');
+      } catch { /* ignore */ }
+
+      // Goal created
+      try {
+        const goalsRaw = await AsyncStorage.getItem('@zurt:goals');
+        if (goalsRaw) {
+          const goals = JSON.parse(goalsRaw);
+          if (Array.isArray(goals) && goals.length > 0) autoEarn.add('goal_created');
+        }
+      } catch { /* ignore */ }
+
       // Net worth > 0
       if (summary && (summary.totalValue ?? 0) > 0) autoEarn.add('net_worth');
 
       // Diversified (3+ asset classes)
       if (uniqueClasses.size >= 3) autoEarn.add('diversified');
 
-      // Check family store
+      // Check family store (zustand persist key)
       try {
-        const familyRaw = await AsyncStorage.getItem('@zurt:family');
+        const familyRaw = await AsyncStorage.getItem('zurt-family-storage');
         if (familyRaw) {
           const familyData = JSON.parse(familyRaw);
-          if (familyData?.id) autoEarn.add('family_group');
+          const state = familyData?.state;
+          if (state?.groups?.length > 0) autoEarn.add('family_group');
         }
       } catch { /* ignore */ }
 

@@ -43,6 +43,7 @@ import {
   maskValue,
 } from '../../src/utils/formatters';
 import { demoBenchmarks } from '../../src/data/demo';
+import type { BenchmarkData } from '../../src/services/benchmarks';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { AppIcon } from '../../src/hooks/useIcon';
 
@@ -105,11 +106,13 @@ export default function HomeScreen() {
     institutions,
     allocations,
     insights,
+    benchmarks,
     isLoading,
     isRefreshing,
     error,
     loadPortfolio,
     refresh,
+    loadBenchmarks,
     selectedTimeRange,
     setTimeRange,
   } = usePortfolioStore();
@@ -138,6 +141,7 @@ export default function HomeScreen() {
     loadPortfolio();
     loadNotifications();
     loadGoals();
+    loadBenchmarks();
   }, []);
 
   // ---- Handlers -----------------------------------------------------------
@@ -457,13 +461,13 @@ export default function HomeScreen() {
                 <Text style={styles.compPeriod}>{t('comparison.period12m')}</Text>
 
                 {(() => {
-                  const benchmarks = demoBenchmarks['12M'];
+                  const benchmarkData = benchmarks?.['12M'] ?? demoBenchmarks['12M'];
                   const portfolioReturn = summary.variation12m ?? 0;
                   const items = [
                     { label: t('comparison.portfolio'), value: portfolioReturn, color: colors.accent },
-                    { label: t('comparison.cdi'), value: benchmarks.cdi, color: colors.info },
-                    { label: t('comparison.ipca'), value: benchmarks.ipca, color: colors.warning },
-                    { label: t('comparison.ibov'), value: benchmarks.ibov, color: '#A855F7' },
+                    { label: t('comparison.cdi'), value: benchmarkData.cdi, color: colors.info },
+                    { label: t('comparison.ipca'), value: benchmarkData.ipca, color: colors.warning },
+                    { label: t('comparison.ibov'), value: benchmarkData.ibov, color: '#A855F7' },
                   ];
                   const maxVal = Math.max(...items.map((i) => Math.abs(i.value)), 1);
 
