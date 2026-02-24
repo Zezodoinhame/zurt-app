@@ -1,6 +1,69 @@
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 
+// ---------------------------------------------------------------------------
+// Local SVG logos (loaded via react-native-svg-transformer)
+// ---------------------------------------------------------------------------
+import ItauLogo from '../../assets/bank-logos/itau.svg';
+import BtgLogo from '../../assets/bank-logos/btg.svg';
+import NubankLogo from '../../assets/bank-logos/nubank.svg';
+import SantanderLogo from '../../assets/bank-logos/santander.svg';
+import BradescoLogo from '../../assets/bank-logos/bradesco.svg';
+import BbLogo from '../../assets/bank-logos/bb.svg';
+import InterLogo from '../../assets/bank-logos/inter.svg';
+import CaixaLogo from '../../assets/bank-logos/caixa.svg';
+import C6Logo from '../../assets/bank-logos/c6.svg';
+import XpLogo from '../../assets/bank-logos/xp.svg';
+import SafraLogo from '../../assets/bank-logos/safra.svg';
+import OriginalLogo from '../../assets/bank-logos/original.svg';
+import BmgLogo from '../../assets/bank-logos/bmg.svg';
+import NeonLogo from '../../assets/bank-logos/neon.svg';
+import PicpayLogo from '../../assets/bank-logos/picpay.svg';
+import MercadoPagoLogo from '../../assets/bank-logos/mercadopago.svg';
+import StoneLogo from '../../assets/bank-logos/stone.svg';
+import SicoobLogo from '../../assets/bank-logos/sicoob.svg';
+import SicrediLogo from '../../assets/bank-logos/sicredi.svg';
+import BanrisulLogo from '../../assets/bank-logos/banrisul.svg';
+import PagbankLogo from '../../assets/bank-logos/pagbank.svg';
+import BrbLogo from '../../assets/bank-logos/brb.svg';
+import BvLogo from '../../assets/bank-logos/bv.svg';
+import DaycovalLogo from '../../assets/bank-logos/daycoval.svg';
+import SofisaLogo from '../../assets/bank-logos/sofisa.svg';
+
+// ---------------------------------------------------------------------------
+// Map institution name patterns → SVG component
+// ---------------------------------------------------------------------------
+const SVG_MAP: Array<[string[], React.FC<any>]> = [
+  [['itau', 'itaú'], ItauLogo],
+  [['btg'], BtgLogo],
+  [['nubank', 'nu pagamentos', 'nu '], NubankLogo],
+  [['santander'], SantanderLogo],
+  [['bradesco'], BradescoLogo],
+  [['banco do brasil', 'bb '], BbLogo],
+  [['inter'], InterLogo],
+  [['caixa', 'cef'], CaixaLogo],
+  [['c6'], C6Logo],
+  [['xp inv', 'xp '], XpLogo],
+  [['safra'], SafraLogo],
+  [['original'], OriginalLogo],
+  [['bmg'], BmgLogo],
+  [['neon'], NeonLogo],
+  [['picpay'], PicpayLogo],
+  [['mercado pago'], MercadoPagoLogo],
+  [['stone'], StoneLogo],
+  [['sicoob'], SicoobLogo],
+  [['sicredi'], SicrediLogo],
+  [['banrisul'], BanrisulLogo],
+  [['pagbank', 'pagseguro'], PagbankLogo],
+  [['brb', 'banco de brasilia'], BrbLogo],
+  [['votorantim', ' bv'], BvLogo],
+  [['daycoval'], DaycovalLogo],
+  [['sofisa'], SofisaLogo],
+];
+
+// ---------------------------------------------------------------------------
+// Brand colors (fallback)
+// ---------------------------------------------------------------------------
 const BRAND_COLORS: Record<string, string> = {
   'itau': '#FF6200',
   'itaú': '#FF6200',
@@ -31,8 +94,55 @@ const BRAND_COLORS: Record<string, string> = {
   'pagbank': '#FFC300',
   'neon': '#0098DA',
   'next': '#00E676',
+  'bmg': '#FF6600',
+  'sicoob': '#003641',
+  'sicredi': '#33A02C',
+  'banrisul': '#004B87',
+  'brb': '#003399',
+  'bv': '#0066CC',
+  'daycoval': '#1B3667',
+  'sofisa': '#00A551',
 };
 
+// Display abbreviations for fallback text
+const DISPLAY_ABBREVS: Array<[string[], string]> = [
+  [['itau', 'itaú'], 'Itaú'],
+  [['btg'], 'BTG'],
+  [['nubank', 'nu '], 'Nu'],
+  [['xp'], 'XP'],
+  [['c6'], 'C6'],
+  [['bb', 'banco do brasil'], 'BB'],
+  [['inter'], 'Inter'],
+  [['santander'], 'San'],
+  [['bradesco'], 'Brad'],
+  [['caixa', 'cef'], 'CEF'],
+  [['safra'], 'Safra'],
+  [['original'], 'Orig'],
+  [['binance'], 'BN'],
+  [['mercado bitcoin'], 'MB'],
+  [['rico'], 'Rico'],
+  [['clear'], 'Clear'],
+  [['genial'], 'Gen'],
+  [['toro'], 'Toro'],
+  [['modal'], 'Mod'],
+  [['guide'], 'Gui'],
+  [['agora', 'ágora'], 'Ág'],
+  [['bmg'], 'BMG'],
+  [['sicoob'], 'Sicoob'],
+  [['sicredi'], 'Sicredi'],
+  [['banrisul'], 'Banri'],
+  [['brb'], 'BRB'],
+  [['bv', 'votorantim'], 'BV'],
+  [['stone'], 'Stone'],
+  [['picpay'], 'PicPay'],
+  [['neon'], 'Neon'],
+  [['pagbank', 'pagseguro'], 'PagBank'],
+  [['mercado pago'], 'MP'],
+];
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 interface BankLogoProps {
   institutionName: string;
   imageUrl?: string | null;
@@ -41,8 +151,20 @@ interface BankLogoProps {
 
 export function BankLogo({ institutionName, imageUrl, size = 36 }: BankLogoProps) {
   const [imgError, setImgError] = useState(false);
+  const nameLower = institutionName.toLowerCase().trim();
 
-  // Try image URL first (from Pluggy connector data)
+  // 1. Try local SVG logo
+  for (const [patterns, SvgComponent] of SVG_MAP) {
+    if (patterns.some((p) => nameLower.includes(p))) {
+      return (
+        <View style={{ width: size, height: size, borderRadius: size * 0.22, overflow: 'hidden' }}>
+          <SvgComponent width={size} height={size} />
+        </View>
+      );
+    }
+  }
+
+  // 2. Try Pluggy imageUrl (PNG/JPG)
   if (imageUrl && !imgError) {
     return (
       <Image
@@ -58,50 +180,44 @@ export function BankLogo({ institutionName, imageUrl, size = 36 }: BankLogoProps
     );
   }
 
-  // Fallback: branded colored rounded square with abbreviation
-  const name = institutionName.toLowerCase().trim();
+  // 3. Branded fallback with abbreviation
   let bgColor = '#4A5568';
-
   for (const [key, color] of Object.entries(BRAND_COLORS)) {
-    if (name.includes(key)) {
+    if (nameLower.includes(key)) {
       bgColor = color;
       break;
     }
   }
 
-  // Special abbreviations for known banks
   let displayText = institutionName.charAt(0).toUpperCase();
-  if (name.includes('itau') || name.includes('itaú')) displayText = 'Itaú';
-  else if (name.includes('btg')) displayText = 'BTG';
-  else if (name.includes('nubank') || name.includes('nu ')) displayText = 'Nu';
-  else if (name.includes('xp')) displayText = 'XP';
-  else if (name.includes('c6')) displayText = 'C6';
-  else if (name.includes('bb') || name.includes('banco do brasil')) displayText = 'BB';
-  else if (name.includes('inter')) displayText = 'Inter';
-  else if (name.includes('santander')) displayText = 'San';
-  else if (name.includes('bradesco')) displayText = 'Brad';
-  else if (name.includes('caixa') || name.includes('cef')) displayText = 'CEF';
-  else if (name.includes('safra')) displayText = 'Safra';
-  else if (name.includes('original')) displayText = 'Orig';
-  else if (name.includes('binance')) displayText = 'BN';
-  else if (name.includes('mercado bitcoin')) displayText = 'MB';
-  else if (name.includes('rico')) displayText = 'Rico';
-  else if (name.includes('clear')) displayText = 'Clear';
-  else if (name.includes('genial')) displayText = 'Gen';
-  else if (name.includes('toro')) displayText = 'Toro';
-  else if (name.includes('modal')) displayText = 'Mod';
-  else if (name.includes('guide')) displayText = 'Gui';
-  else if (name.includes('agora') || name.includes('ágora')) displayText = 'Ág';
+  for (const [patterns, abbrev] of DISPLAY_ABBREVS) {
+    if (patterns.some((p) => nameLower.includes(p))) {
+      displayText = abbrev;
+      break;
+    }
+  }
 
-  const fontSize = displayText.length > 3 ? size * 0.2 : displayText.length > 2 ? size * 0.26 : size * 0.38;
+  const fontSize =
+    displayText.length > 3
+      ? size * 0.2
+      : displayText.length > 2
+        ? size * 0.26
+        : displayText.length > 1
+          ? size * 0.32
+          : size * 0.42;
 
   return (
-    <View style={[styles.container, {
-      width: size,
-      height: size,
-      borderRadius: size * 0.22,
-      backgroundColor: bgColor,
-    }]}>
+    <View
+      style={[
+        styles.container,
+        {
+          width: size,
+          height: size,
+          borderRadius: size * 0.22,
+          backgroundColor: bgColor,
+        },
+      ]}
+    >
       <Text style={[styles.text, { fontSize }]} numberOfLines={1}>
         {displayText}
       </Text>
