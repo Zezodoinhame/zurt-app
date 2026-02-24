@@ -30,8 +30,8 @@ export const useDividendStore = create<DividendState>((set) => ({
         set({ months: demoDividendMonths, totalAnnualIncome: total, isLoading: false });
         return;
       }
-      const total = demoDividendMonths.reduce((sum, m) => sum + m.totalIncome, 0);
-      set({ months: demoDividendMonths, totalAnnualIncome: total, isLoading: false });
+      // TODO: fetch from API when endpoint is ready
+      set({ months: [], totalAnnualIncome: 0, isLoading: false });
     } catch (err: any) {
       set({ isLoading: false, error: err?.message ?? 'Error loading dividends' });
     }

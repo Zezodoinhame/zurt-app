@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -41,7 +41,9 @@ export default function FinancialCalendarScreen() {
   const colors = useSettingsStore((s) => s.colors);
   const accentColor = useSettingsStore((s) => s.accentColor);
   const { valuesHidden } = useAuthStore();
-  const { selectedMonth, setMonth, getEventsForMonth, getMonthlyIncome, getMonthlyExpenses, getAvailableMonths, addEvent } = useFinancialCalendarStore();
+  const { selectedMonth, setMonth, getEventsForMonth, getMonthlyIncome, getMonthlyExpenses, getAvailableMonths, addEvent, loadEvents } = useFinancialCalendarStore();
+
+  useEffect(() => { loadEvents(); }, []);
   const [showSheet, setShowSheet] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newAmount, setNewAmount] = useState('');

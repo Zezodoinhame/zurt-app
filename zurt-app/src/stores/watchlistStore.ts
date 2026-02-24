@@ -67,7 +67,9 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
     const q = query.toLowerCase();
     const existing = get().items.map((i) => i.ticker);
     // In demo mode, filter from search results
-    const results = demoWatchlistSearchResults.filter(
+    const isDemoMode = useAuthStore.getState().isDemoMode;
+    const searchSource = isDemoMode ? demoWatchlistSearchResults : [];
+    const results = searchSource.filter(
       (a) =>
         !existing.includes(a.ticker) &&
         (a.ticker.toLowerCase().includes(q) || a.name.toLowerCase().includes(q)),

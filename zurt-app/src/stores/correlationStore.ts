@@ -20,9 +20,13 @@ export const useCorrelationStore = create<CorrelationState>((set, get) => ({
 
   loadMatrix: () => {
     set({ isLoading: true });
-    // Demo mode: use demo data; real mode would fetch from API
-    const m = demoCorrelationMatrix;
-    set({ matrix: m, isLoading: false });
+    const isDemoMode = useAuthStore.getState().isDemoMode;
+    if (isDemoMode) {
+      set({ matrix: demoCorrelationMatrix, isLoading: false });
+    } else {
+      // TODO: fetch from API when endpoint is ready
+      set({ matrix: null, isLoading: false });
+    }
   },
 
   selectPair: (a, b) => {

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { BacktestResult, BacktestAllocation } from '../types';
+import { useAuthStore } from './authStore';
 import { demoBacktestResult } from '../data/demo';
 
 type BacktestPeriod = '1y' | '3y' | '5y' | '10y';
@@ -45,16 +46,21 @@ export const useBacktestStore = create<BacktestState>((set, get) => ({
 
   runBacktest: () => {
     set({ isRunning: true });
-    // Simulate async delay, then return demo result
+    const isDemoMode = useAuthStore.getState().isDemoMode;
     setTimeout(() => {
-      const { period } = get();
-      const periodMonths: Record<BacktestPeriod, number> = { '1y': 12, '3y': 36, '5y': 60, '10y': 60 };
-      const months = periodMonths[period];
-      const sliced = {
-        ...demoBacktestResult,
-        periodReturns: demoBacktestResult.periodReturns.slice(-months),
-      };
-      set({ result: sliced, isRunning: false });
+      if (isDemoMode) {
+        const { period } = get();
+        const periodMonths: Record<BacktestPeriod, number> = { '1y': 12, '3y': 36, '5y': 60, '10y': 60 };
+        const months = periodMonths[period];
+        const sliced = {
+          ...demoBacktestResult,
+          periodReturns: demoBacktestResult.periodReturns.slice(-months),
+        };
+        set({ result: sliced, isRunning: false });
+      } else {
+        // TODO: call API when endpoint is ready
+        set({ result: null, isRunning: false });
+      }
     }, 800);
   },
 

@@ -31,7 +31,7 @@ export const useCryptoStore = create<CryptoState>((set, get) => ({
         return;
       }
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      const portfolio = stored ? JSON.parse(stored) : demoCryptoPortfolio;
+      const portfolio = stored ? JSON.parse(stored) : { holdings: [], totalValue: 0, totalInvested: 0, totalProfit: 0, dominance: [] };
       set({ portfolio, isLoading: false });
     } catch {
       set({ isLoading: false });

@@ -29,9 +29,8 @@ export const useConsultantStore = create<ConsultantState>((set, get) => ({
         set({ clients: demoConsultantClients, isLoading: false });
         return;
       }
-      // Real API call would go here
-      // const data = await apiRequest('/consultant/clients');
-      set({ clients: demoConsultantClients, isLoading: false });
+      // TODO: fetch from API when endpoint is ready
+      set({ clients: [], isLoading: false });
     } catch (err: any) {
       set({ isLoading: false, error: err?.message ?? 'Error loading clients' });
     }
@@ -45,9 +44,8 @@ export const useConsultantStore = create<ConsultantState>((set, get) => ({
         set({ clientPortfolio: demoClientPortfolios[id] ?? null, isLoading: false });
         return;
       }
-      // Real API call would go here
-      // const data = await apiRequest(`/consultant/clients/${id}/portfolio`);
-      set({ clientPortfolio: demoClientPortfolios[id] ?? null, isLoading: false });
+      // TODO: fetch from API when endpoint is ready
+      set({ clientPortfolio: null, isLoading: false });
     } catch (err: any) {
       set({ isLoading: false, error: err?.message ?? 'Error loading portfolio' });
     }

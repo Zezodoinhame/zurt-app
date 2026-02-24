@@ -41,10 +41,10 @@ export const useRecurringInvestmentStore = create<RecurringInvestmentState>((set
         return;
       }
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      const rules = stored ? JSON.parse(stored) : demoRecurringInvestments;
+      const rules = stored ? JSON.parse(stored) : [];
       set({ rules, isLoading: false });
     } catch {
-      set({ rules: demoRecurringInvestments, isLoading: false });
+      set({ rules: [], isLoading: false });
     }
   },
 

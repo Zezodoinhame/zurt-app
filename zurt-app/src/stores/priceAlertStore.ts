@@ -33,10 +33,10 @@ export const usePriceAlertStore = create<PriceAlertState>((set, get) => ({
         return;
       }
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      const alerts = stored ? JSON.parse(stored) : demoPriceAlerts;
+      const alerts = stored ? JSON.parse(stored) : [];
       set({ alerts, isLoading: false });
     } catch {
-      set({ alerts: demoPriceAlerts, isLoading: false });
+      set({ alerts: [], isLoading: false });
     }
   },
 

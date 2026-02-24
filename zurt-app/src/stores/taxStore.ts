@@ -29,10 +29,11 @@ export const useTaxStore = create<TaxState>((set) => ({
     }
 
     try {
-      set({ summary: demoTaxSummary, isLoading: false });
+      // TODO: fetch from API when endpoint is ready
+      set({ summary: null, isLoading: false });
     } catch (err: any) {
       logger.log('[TaxStore] loadTaxSummary error:', err?.message ?? err);
-      set({ summary: demoTaxSummary, isLoading: false });
+      set({ summary: null, isLoading: false });
     }
   },
 

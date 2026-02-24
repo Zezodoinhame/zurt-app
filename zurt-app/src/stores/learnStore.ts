@@ -38,7 +38,8 @@ export const useLearnStore = create<LearnState>((set, get) => ({
         return;
       }
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      const progress = stored ? JSON.parse(stored) : demoLearnProgress;
+      const progress = stored ? JSON.parse(stored) : { completedIds: [], streak: 0, lastCompletedDate: '' };
+      // Lessons and glossary are static educational content, not personal data
       set({ lessons: demoLessons, glossary: demoGlossary, progress, isLoading: false });
     } catch (err: any) {
       set({ isLoading: false, error: err?.message ?? 'Error loading learn data' });

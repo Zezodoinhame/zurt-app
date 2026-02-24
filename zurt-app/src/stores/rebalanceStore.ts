@@ -42,10 +42,11 @@ export const useRebalanceStore = create<RebalanceState>((set, get) => ({
     }
 
     try {
-      set({ targetAllocations: demoTargetAllocations, result: demoRebalanceResult, isLoading: false });
+      // TODO: fetch from API when endpoint is ready
+      set({ targetAllocations: [], result: null, isLoading: false });
     } catch (err: any) {
       logger.log('[RebalanceStore] loadTargets error:', err?.message ?? err);
-      set({ targetAllocations: demoTargetAllocations, result: demoRebalanceResult, isLoading: false });
+      set({ targetAllocations: [], result: null, isLoading: false });
     }
   },
 

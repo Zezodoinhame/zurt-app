@@ -26,12 +26,11 @@ export const useRiskStore = create<RiskState>((set) => ({
     }
 
     try {
-      // Production: fetch from API
-      // const data = await fetchRiskMetrics();
-      set({ metrics: demoRiskMetrics, isLoading: false });
+      // TODO: fetch from API when endpoint is ready
+      set({ metrics: null, isLoading: false });
     } catch (err: any) {
       logger.log('[RiskStore] loadMetrics error:', err?.message ?? err);
-      set({ metrics: demoRiskMetrics, isLoading: false });
+      set({ metrics: null, isLoading: false });
     }
   },
 }));

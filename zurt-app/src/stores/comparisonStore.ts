@@ -28,7 +28,8 @@ export const useComparisonStore = create<ComparisonState>((set, get) => ({
         set({ availableAssets: demoComparisonAssets, selectedAssets: demoComparisonAssets.slice(0, 2), isLoading: false });
         return;
       }
-      set({ availableAssets: demoComparisonAssets, selectedAssets: demoComparisonAssets.slice(0, 2), isLoading: false });
+      // TODO: fetch from API when endpoint is ready
+      set({ availableAssets: [], selectedAssets: [], isLoading: false });
     } catch {
       set({ isLoading: false });
     }

@@ -39,7 +39,7 @@ export const useDebtStore = create<DebtState>((set, get) => ({
         return;
       }
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      const debts = stored ? JSON.parse(stored) : demoDebts;
+      const debts = stored ? JSON.parse(stored) : [];
       set({ debts, isLoading: false });
     } catch (err: any) {
       set({ isLoading: false, error: err?.message ?? 'Error loading debts' });

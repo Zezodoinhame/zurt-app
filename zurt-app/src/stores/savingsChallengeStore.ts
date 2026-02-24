@@ -41,7 +41,7 @@ export const useSavingsChallengeStore = create<SavingsChallengeState>((set, get)
         return;
       }
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      const challenges = stored ? JSON.parse(stored) : demoSavingsChallenges;
+      const challenges = stored ? JSON.parse(stored) : [];
       set({ challenges, isLoading: false });
     } catch {
       set({ isLoading: false });

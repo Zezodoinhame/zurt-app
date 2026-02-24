@@ -27,8 +27,8 @@ export const useCashFlowStore = create<CashFlowState>((set) => ({
         set({ forecast: demoCashFlow, totalProjectedSavings: total, isLoading: false });
         return;
       }
-      const total = demoCashFlow.reduce((sum, m) => sum + m.savings, 0);
-      set({ forecast: demoCashFlow, totalProjectedSavings: total, isLoading: false });
+      // TODO: fetch from API when endpoint is ready
+      set({ forecast: [], totalProjectedSavings: 0, isLoading: false });
     } catch (err: any) {
       set({ isLoading: false, error: err?.message ?? 'Error loading forecast' });
     }

@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -14,7 +14,7 @@ import { FanChart } from '../src/components/charts/FanChart';
 import { Input } from '../src/components/ui/Input';
 import { Button } from '../src/components/ui/Button';
 import { AppIcon } from '../src/hooks/useIcon';
-import { formatCurrency, maskValue } from '../src/utils/formatters';
+import { formatCurrency, maskValue, formatCurrencyInput } from '../src/utils/formatters';
 import type { MonteCarloHorizon } from '../src/types';
 
 const HORIZONS: MonteCarloHorizon[] = [5, 10, 20, 30];
@@ -28,8 +28,11 @@ export default function MonteCarloScreen() {
   const accentColor = useSettingsStore((s) => s.accentColor);
   const { valuesHidden } = useAuthStore();
 
-  const { result, isRunning, horizon, targetValue, setHorizon, setTargetValue, runSimulation } = useMonteCarloStore();
-  const [targetInput, setTargetInput] = useState(String(targetValue));
+  const { result, isRunning, horizon, targetValue, setHorizon, setTargetValue, runSimulation, loadSimulation } = useMonteCarloStore();
+
+  useEffect(() => { loadSimulation(); }, []);
+  const [targetInput, setTargetInput] = useState(formatCurrency(targetValue, currency));
+  const [targetRaw, setTargetRaw] = useState(targetValue);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -43,14 +46,19 @@ export default function MonteCarloScreen() {
     setHorizon(h);
   }, [setHorizon]);
 
+  const handleTargetChange = useCallback((text: string) => {
+    const { display, raw } = formatCurrencyInput(text, currency);
+    setTargetInput(display);
+    setTargetRaw(raw);
+  }, [currency]);
+
   const handleRun = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const parsed = parseFloat(targetInput);
-    if (parsed > 0) setTargetValue(parsed);
+    if (targetRaw > 0) setTargetValue(targetRaw);
     await runSimulation();
-  }, [targetInput, setTargetValue, runSimulation]);
+  }, [targetRaw, setTargetValue, runSimulation]);
 
-  const successColor = result.successProbability >= 70 ? colors.positive : result.successProbability >= 40 ? colors.warning : colors.negative;
+  const successColor = result ? (result.successProbability >= 70 ? colors.positive : result.successProbability >= 40 ? colors.warning : colors.negative) : colors.text.muted;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -80,9 +88,9 @@ export default function MonteCarloScreen() {
         <Input
           label={t('monteCarlo.target')}
           value={targetInput}
-          onChangeText={setTargetInput}
+          onChangeText={handleTargetChange}
           keyboardType="numeric"
-          placeholder="3000000"
+          placeholder={formatCurrency(3000000, currency)}
         />
 
         {/* Run Button */}
@@ -100,7 +108,7 @@ export default function MonteCarloScreen() {
               <ActivityIndicator size="large" color={accentColor} />
               <Text style={styles.loadingText}>{t('monteCarlo.running')}</Text>
             </View>
-          ) : (
+          ) : result ? (
             <FanChart
               percentiles={result.percentiles}
               years={result.years}
@@ -108,9 +116,14 @@ export default function MonteCarloScreen() {
               height={240}
               accentColor={accentColor}
             />
+          ) : (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>{t('monteCarlo.run')}</Text>
+            </View>
           )}
         </Card>
 
+        {result && (<>
         {/* KPI Row */}
         <View style={styles.kpiRow}>
           <View style={styles.kpiItem}>
@@ -140,6 +153,7 @@ export default function MonteCarloScreen() {
             <Text style={styles.kpiLabel}>{t('monteCarlo.worstCase')}</Text>
           </View>
         </View>
+        </>)}
 
         {/* Explanation */}
         <Card style={styles.explCard}>

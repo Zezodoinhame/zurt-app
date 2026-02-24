@@ -37,7 +37,7 @@ export const useBillsStore = create<BillsState>((set, get) => ({
         return;
       }
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      const bills = stored ? JSON.parse(stored) : demoBills;
+      const bills = stored ? JSON.parse(stored) : [];
       set({ bills, isLoading: false });
     } catch (err: any) {
       set({ isLoading: false, error: err?.message ?? 'Error loading bills' });

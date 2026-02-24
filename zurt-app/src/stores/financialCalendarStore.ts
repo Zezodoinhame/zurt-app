@@ -1,12 +1,18 @@
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { FinancialEvent, FinancialEventType } from '../types';
+import { useAuthStore } from './authStore';
 import { demoFinancialEvents } from '../data/demo';
+
+const STORAGE_KEY = '@zurt:calendar';
 
 interface FinancialCalendarState {
   events: FinancialEvent[];
   selectedMonth: string; // 'YYYY-MM'
   customEvents: FinancialEvent[];
+  isLoaded: boolean;
 
+  loadEvents: () => Promise<void>;
   setMonth: (month: string) => void;
   addEvent: (event: Omit<FinancialEvent, 'id'>) => void;
   removeEvent: (id: string) => void;
@@ -20,9 +26,25 @@ const now = new Date();
 const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
 export const useFinancialCalendarStore = create<FinancialCalendarState>((set, get) => ({
-  events: demoFinancialEvents,
+  events: [],
   selectedMonth: currentMonth,
   customEvents: [],
+  isLoaded: false,
+
+  loadEvents: async () => {
+    const isDemoMode = useAuthStore.getState().isDemoMode;
+    if (isDemoMode) {
+      set({ events: demoFinancialEvents, isLoaded: true });
+      return;
+    }
+    try {
+      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      const customEvents = stored ? JSON.parse(stored) : [];
+      set({ events: [], customEvents, isLoaded: true });
+    } catch {
+      set({ events: [], isLoaded: true });
+    }
+  },
 
   setMonth: (month) => set({ selectedMonth: month }),
 
@@ -30,11 +52,19 @@ export const useFinancialCalendarStore = create<FinancialCalendarState>((set, ge
     const newEvent: FinancialEvent = { ...input, id: `fe-${Date.now()}` };
     const customEvents = [...get().customEvents, newEvent];
     set({ customEvents });
+    const isDemoMode = useAuthStore.getState().isDemoMode;
+    if (!isDemoMode) {
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(customEvents)).catch(() => {});
+    }
   },
 
   removeEvent: (id) => {
     const customEvents = get().customEvents.filter((e) => e.id !== id);
     set({ customEvents });
+    const isDemoMode = useAuthStore.getState().isDemoMode;
+    if (!isDemoMode) {
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(customEvents)).catch(() => {});
+    }
   },
 
   getEventsForMonth: () => {

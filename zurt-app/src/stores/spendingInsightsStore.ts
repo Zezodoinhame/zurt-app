@@ -27,7 +27,8 @@ export const useSpendingInsightsStore = create<SpendingInsightsState>((set) => (
         set({ insights: demoSpendingInsights, isLoading: false });
         return;
       }
-      set({ insights: demoSpendingInsights, isLoading: false });
+      // TODO: fetch from API when endpoint is ready
+      set({ insights: null, isLoading: false });
     } catch (err: any) {
       set({ isLoading: false, error: err?.message ?? 'Error loading insights' });
     }

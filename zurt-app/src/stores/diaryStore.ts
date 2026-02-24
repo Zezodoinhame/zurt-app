@@ -33,7 +33,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
         return;
       }
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      const entries = stored ? JSON.parse(stored) : demoDiaryEntries;
+      const entries = stored ? JSON.parse(stored) : [];
       set({ entries, isLoading: false });
     } catch {
       set({ isLoading: false });

@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -35,7 +35,9 @@ export default function FIREScreen() {
   const colors = useSettingsStore((s) => s.colors);
   const accentColor = useSettingsStore((s) => s.accentColor);
   const { valuesHidden } = useAuthStore();
-  const { params, result, setParam } = useFireStore();
+  const { params, result, setParam, loadParams } = useFireStore();
+
+  useEffect(() => { loadParams(); }, []);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 

@@ -33,7 +33,7 @@ export const useEmergencyFundStore = create<EmergencyFundState>((set, get) => ({
         return;
       }
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      const data = stored ? JSON.parse(stored) : demoEmergencyFund;
+      const data = stored ? JSON.parse(stored) : { currentAmount: 0, monthlyExpenses: 0, targetMonths: 6, contributions: [] };
       set({ data, isLoading: false });
     } catch {
       set({ isLoading: false });

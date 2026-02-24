@@ -1,13 +1,15 @@
 import { create } from 'zustand';
 import type { MonteCarloHorizon, MonteCarloResult, MonteCarloPercentile } from '../types';
+import { useAuthStore } from './authStore';
 import { demoMonteCarloResult } from '../data/demo';
 
 interface MonteCarloState {
-  result: MonteCarloResult;
+  result: MonteCarloResult | null;
   isRunning: boolean;
   horizon: MonteCarloHorizon;
   targetValue: number;
 
+  loadSimulation: () => void;
   setHorizon: (h: MonteCarloHorizon) => void;
   setTargetValue: (v: number) => void;
   runSimulation: () => Promise<void>;
@@ -43,10 +45,18 @@ function generateResult(horizon: MonteCarloHorizon, initial: number, target: num
 }
 
 export const useMonteCarloStore = create<MonteCarloState>((set, get) => ({
-  result: demoMonteCarloResult,
+  result: null,
   isRunning: false,
   horizon: 20,
   targetValue: 3000000,
+
+  loadSimulation: () => {
+    const isDemoMode = useAuthStore.getState().isDemoMode;
+    if (isDemoMode) {
+      set({ result: demoMonteCarloResult });
+    }
+    // Real users start with null result until they run a simulation
+  },
 
   setHorizon: (h) => set({ horizon: h }),
   setTargetValue: (v) => set({ targetValue: v }),
@@ -55,7 +65,8 @@ export const useMonteCarloStore = create<MonteCarloState>((set, get) => ({
     set({ isRunning: true });
     await new Promise((r) => setTimeout(r, 800));
     const { horizon, targetValue, result } = get();
-    const newResult = generateResult(horizon, result.initialValue, targetValue);
+    const initial = result?.initialValue ?? 100000;
+    const newResult = generateResult(horizon, initial, targetValue);
     set({ result: newResult, isRunning: false });
   },
 }));

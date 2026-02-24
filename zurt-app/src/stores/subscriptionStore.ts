@@ -34,7 +34,7 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
         return;
       }
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      const subscriptions = stored ? JSON.parse(stored) : demoSubscriptions;
+      const subscriptions = stored ? JSON.parse(stored) : [];
       set({ subscriptions, isLoading: false });
     } catch {
       set({ isLoading: false });

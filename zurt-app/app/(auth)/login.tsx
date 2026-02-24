@@ -25,7 +25,7 @@ import { useSettingsStore } from '../../src/stores/settingsStore';
 import { Input } from '../../src/components/ui/Input';
 import { saveToken } from '../../src/services/api';
 import { logger } from '../../src/utils/logger';
-import Constants from 'expo-constants';
+
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -57,7 +57,6 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
-  const isExpoGo = Constants.appOwnership === 'expo';
   const [googleAvailable] = useState(true);
 
   const displayError = error || storeError || '';
@@ -113,20 +112,20 @@ export default function LoginScreen() {
 
       logger.log('[ZURT Auth] idToken:', idToken ? 'YES' : 'NO', 'accessToken:', accessToken ? 'YES' : 'NO');
 
-      // Step 1: Try POST /api/auth/google/mobile with id_token
+      // Step 1: Try POST /api/auth/google with idToken
       if (idToken) {
         try {
-          logger.log('[ZURT Auth] Trying POST /auth/google/mobile...');
-          const res = await fetch(`${API_BASE}/auth/google/mobile`, {
+          logger.log('[ZURT Auth] Trying POST /auth/google...');
+          const res = await fetch(`${API_BASE}/auth/google`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-            body: JSON.stringify({ id_token: idToken }),
+            body: JSON.stringify({ idToken }),
           });
           if (res.ok) {
             const data = await res.json();
             const jwt = data.token ?? data.access_token ?? data.jwt;
             if (jwt) {
-              logger.log('[ZURT Auth] /auth/google/mobile success');
+              logger.log('[ZURT Auth] /auth/google success');
               await saveToken(jwt);
               const restored = await restoreSession();
               if (restored) {
@@ -136,9 +135,9 @@ export default function LoginScreen() {
               }
             }
           }
-          logger.log('[ZURT Auth] /auth/google/mobile status:', res.status);
+          logger.log('[ZURT Auth] /auth/google status:', res.status);
         } catch (err: any) {
-          logger.log('[ZURT Auth] /auth/google/mobile error:', err?.message);
+          logger.log('[ZURT Auth] /auth/google error:', err?.message);
         }
       }
 

@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -32,7 +32,9 @@ export default function CompoundScreen() {
   const colors = useSettingsStore((s) => s.colors);
   const accentColor = useSettingsStore((s) => s.accentColor);
   const { valuesHidden } = useAuthStore();
-  const { params, result, setParam } = useCompoundStore();
+  const { params, result, setParam, loadParams } = useCompoundStore();
+
+  useEffect(() => { loadParams(); }, []);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 

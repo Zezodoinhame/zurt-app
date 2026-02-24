@@ -99,9 +99,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         set({ smartAlerts: demoSmartAlerts });
         return;
       }
-      // Real API call would go here:
-      // const data = await apiRequest('/notifications/smart-alerts');
-      set({ smartAlerts: demoSmartAlerts });
+      // TODO: fetch from API when endpoint is ready
+      set({ smartAlerts: [] });
     } catch {
       // Silently fail
     }

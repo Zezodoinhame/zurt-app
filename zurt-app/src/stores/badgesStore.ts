@@ -28,11 +28,11 @@ export const useBadgesStore = create<BadgesState>((set, get) => ({
     }
 
     try {
-      // Production: fetch from API
-      set({ badges: demoBadges, isLoading: false });
+      // TODO: fetch from API when endpoint is ready
+      set({ badges: [], isLoading: false });
     } catch (err: any) {
       logger.log('[BadgesStore] loadBadges error:', err?.message ?? err);
-      set({ badges: demoBadges, isLoading: false });
+      set({ badges: [], isLoading: false });
     }
   },
 

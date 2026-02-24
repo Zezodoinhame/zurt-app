@@ -31,11 +31,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
         return;
       }
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        set({ budget: JSON.parse(stored), isLoading: false });
-      } else {
-        set({ budget: demoBudget, isLoading: false });
-      }
+      set({ budget: stored ? JSON.parse(stored) : null, isLoading: false });
     } catch (err: any) {
       set({ isLoading: false, error: err?.message ?? 'Error loading budget' });
     }
