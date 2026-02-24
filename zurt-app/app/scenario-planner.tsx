@@ -202,28 +202,31 @@ export default function ScenarioPlannerScreen() {
               <Text style={styles.sectionTitle}>{t('scenario.perClass')}</Text>
               {result.perClass.map((cls) => (
                 <View key={cls.class} style={styles.classRow}>
-                  <View style={[styles.classDot, { backgroundColor: cls.color }]} />
-                  <Text style={styles.classLabel}>{cls.label}</Text>
+                  <View style={styles.classHeader}>
+                    <View style={[styles.classDot, { backgroundColor: cls.color }]} />
+                    <Text style={styles.classLabel} numberOfLines={1}>{cls.label}</Text>
+                    <Text
+                      style={[
+                        styles.classPct,
+                        { color: cls.changePct >= 0 ? colors.positive : colors.negative },
+                      ]}
+                    >
+                      {cls.changePct >= 0 ? '+' : ''}{cls.changePct}%
+                    </Text>
+                  </View>
                   <View style={styles.classValues}>
-                    <Text style={styles.classCurrentValue}>{displayValue(cls.currentValue)}</Text>
+                    <Text style={styles.classCurrentValue} numberOfLines={1}>{displayValue(cls.currentValue)}</Text>
                     <Text style={styles.classArrow}>→</Text>
                     <Text
                       style={[
                         styles.classProjectedValue,
                         { color: cls.changePct >= 0 ? colors.positive : colors.negative },
                       ]}
+                      numberOfLines={1}
                     >
                       {displayValue(cls.projectedValue)}
                     </Text>
                   </View>
-                  <Text
-                    style={[
-                      styles.classPct,
-                      { color: cls.changePct >= 0 ? colors.positive : colors.negative },
-                    ]}
-                  >
-                    {cls.changePct >= 0 ? '+' : ''}{cls.changePct}%
-                  </Text>
                 </View>
               ))}
             </Card>
@@ -297,14 +300,15 @@ const createStyles = (colors: ThemeColors) =>
     changeLabel: { fontSize: 13, fontWeight: '600', color: colors.text.secondary },
 
     // Per class
-    classRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
+    classRow: { marginBottom: spacing.md },
+    classHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
     classDot: { width: 10, height: 10, borderRadius: 5, marginRight: spacing.sm },
-    classLabel: { width: 80, fontSize: 12, fontWeight: '600', color: colors.text.secondary },
-    classValues: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
+    classLabel: { flex: 1, fontSize: 12, fontWeight: '600', color: colors.text.secondary },
+    classValues: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 10 + spacing.sm },
     classCurrentValue: { fontSize: 12, color: colors.text.muted, fontVariant: ['tabular-nums'] },
     classArrow: { fontSize: 10, color: colors.text.muted },
     classProjectedValue: { fontSize: 12, fontWeight: '600', fontVariant: ['tabular-nums'] },
-    classPct: { width: 50, fontSize: 12, fontWeight: '700', textAlign: 'right', fontVariant: ['tabular-nums'] },
+    classPct: { fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'], marginLeft: 'auto' },
 
     // Empty
     emptyState: { alignItems: 'center', paddingVertical: spacing.xxxl },

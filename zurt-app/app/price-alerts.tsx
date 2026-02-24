@@ -301,7 +301,7 @@ export default function PriceAlertsScreen() {
             autoCapitalize="characters"
           />
           <Input
-            label={t('priceAlerts.ticker') + ' (' + t('recurring.ticker') + ')'}
+            label={t('priceAlerts.assetName')}
             value={formName}
             onChangeText={setFormName}
             placeholder="Petrobras PN"

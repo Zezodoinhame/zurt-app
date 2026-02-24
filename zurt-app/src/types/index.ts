@@ -905,3 +905,84 @@ export interface FIREResult {
   projectionByYear: { year: number; age: number; netWorth: number }[];
   isCoastFIReached: boolean;
 }
+
+// -----------------------------------------------------------------------------
+// Investment Diary
+// -----------------------------------------------------------------------------
+
+export type DiaryMood = 'confident' | 'anxious' | 'uncertain' | 'calm' | 'focused';
+export type DiaryTag = 'stock' | 'crypto' | 'fund' | 'rebalance' | 'macro' | 'custom';
+export type DiaryDecision = 'buy' | 'sell' | 'hold';
+
+export interface DiaryEntry {
+  id: string;
+  title: string;
+  content: string;
+  mood: DiaryMood;
+  tags: DiaryTag[];
+  ticker?: string;
+  decision?: DiaryDecision;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// -----------------------------------------------------------------------------
+// Compound Interest Calculator
+// -----------------------------------------------------------------------------
+
+export interface CompoundParams {
+  initialAmount: number;
+  monthlyContribution: number;
+  annualRate: number;
+  years: number;
+  inflationAdjust: boolean;
+  inflationRate: number;
+}
+
+export interface CompoundResult {
+  finalValue: number;
+  totalInvested: number;
+  totalInterest: number;
+  finalValueInflationAdj: number;
+  totalInterestInflationAdj: number;
+  projectionByMonth: { month: number; balance: number; balanceAdj: number }[];
+}
+
+// -----------------------------------------------------------------------------
+// Currency Converter
+// -----------------------------------------------------------------------------
+
+export type CurrencyCode = 'BRL' | 'USD' | 'EUR' | 'GBP' | 'JPY' | 'CNY';
+
+export interface CurrencyRate {
+  from: CurrencyCode;
+  to: CurrencyCode;
+  rate: number;
+  history: number[]; // 30-day history
+}
+
+// -----------------------------------------------------------------------------
+// Emergency Fund
+// -----------------------------------------------------------------------------
+
+export interface EmergencyFundData {
+  currentAmount: number;
+  monthlyExpenses: number;
+  targetMonths: number;
+  contributions: { date: string; amount: number }[];
+}
+
+// -----------------------------------------------------------------------------
+// Financial Calendar
+// -----------------------------------------------------------------------------
+
+export type FinancialEventType = 'dividend' | 'bill' | 'tax_deadline' | 'goal_deadline' | 'custom';
+
+export interface FinancialEvent {
+  id: string;
+  title: string;
+  date: string;
+  amount: number;
+  type: FinancialEventType;
+  color: string;
+}

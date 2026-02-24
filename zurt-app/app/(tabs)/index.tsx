@@ -227,7 +227,7 @@ export default function HomeScreen() {
         '1A': 52,
         'MAX': history.length,
       };
-      const count = Math.min(history.length, fallbackCount[selectedTimeRange] ?? history.length);
+      const count = Math.max(2, Math.min(history.length, fallbackCount[selectedTimeRange] ?? history.length));
       return history.slice(-count).map((h) => ({ label: h.month, value: h.value }));
     }
 
@@ -394,7 +394,7 @@ export default function HomeScreen() {
             {/* -------------------------------------------------------------- */}
             {/* Chart Section - Evolucao patrimonial                            */}
             {/* -------------------------------------------------------------- */}
-            {summary && chartData.length > 1 && (
+            {summary && chartData.length > 0 && (
               <Card delay={200}>
                 <Text style={styles.sectionTitleInCard}>
                   {t('home.evolution')}
@@ -536,10 +536,15 @@ export default function HomeScreen() {
                       { emoji: '\u{1F3E0}', title: t('tools.realEstate'), desc: t('tools.realEstateDesc'), onPress: () => router.push('/real-estate') },
                       { emoji: '\u{1F3C5}', title: t('tools.challenges'), desc: t('tools.challengesDesc'), onPress: () => router.push('/savings-challenges') },
                       { emoji: '\u{1F525}', title: t('tools.fire'), desc: t('tools.fireDesc'), onPress: () => router.push('/fire') },
+                      { emoji: '\u{1F4D4}', title: t('tools.diary'), desc: t('tools.diaryDesc'), onPress: () => router.push('/diary') },
+                      { emoji: '\u{1F9EE}', title: t('tools.compound'), desc: t('tools.compoundDesc'), onPress: () => router.push('/compound') },
+                      { emoji: '\u{1F4B1}', title: t('tools.converter'), desc: t('tools.converterDesc'), onPress: () => router.push('/currency-converter') },
+                      { emoji: '\u{1F6E1}\u{FE0F}', title: t('tools.emergency'), desc: t('tools.emergencyDesc'), onPress: () => router.push('/emergency-fund') },
+                      { emoji: '\u{1F5D3}\u{FE0F}', title: t('tools.finCalendar'), desc: t('tools.finCalendarDesc'), onPress: () => router.push('/financial-calendar') },
                     ];
-                    // Arrange as 2 rows x 17 columns (33 tools + 1 empty)
+                    // Arrange as 2 rows x 20 columns (38 tools / 2 rows)
                     const columns: Array<[typeof allTools[0], typeof allTools[0] | undefined]> = [];
-                    for (let c = 0; c < 17; c++) {
+                    for (let c = 0; c < 20; c++) {
                       columns.push([allTools[c * 2], allTools[c * 2 + 1]]);
                     }
                     return columns.map((col, ci) => (

@@ -14,6 +14,7 @@ import { type ThemeColors } from '../src/theme/colors';
 import { spacing, radius } from '../src/theme/spacing';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { useNewsStore } from '../src/stores/newsStore';
+import { useAuthStore } from '../src/stores/authStore';
 import { Header } from '../src/components/shared/Header';
 import { Card } from '../src/components/ui/Card';
 import { Badge } from '../src/components/ui/Badge';
@@ -55,6 +56,7 @@ export default function NewsScreen() {
   const router = useRouter();
   const { t } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
+  const { isDemoMode } = useAuthStore();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const {
@@ -188,6 +190,14 @@ export default function NewsScreen() {
       {/* Category Filter Pills */}
       {renderCategoryPills()}
 
+      {/* Demo disclaimer */}
+      {isDemoMode && (
+        <View style={styles.demoBanner}>
+          <AppIcon name="info" size={14} color={colors.warning} />
+          <Text style={styles.demoBannerText}>{t('news.demoDisclaimer')}</Text>
+        </View>
+      )}
+
       {/* Content */}
       {isLoading ? (
         <View style={styles.skeletonContainer}>
@@ -257,6 +267,27 @@ const createStyles = (colors: ThemeColors) =>
     },
     filterPillTextActive: {
       color: colors.background,
+    },
+
+    // Demo banner
+    demoBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginHorizontal: spacing.xl,
+      marginBottom: spacing.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      backgroundColor: colors.warning + '15',
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.warning + '30',
+    },
+    demoBannerText: {
+      flex: 1,
+      fontSize: 12,
+      color: colors.warning,
+      lineHeight: 16,
     },
 
     // List

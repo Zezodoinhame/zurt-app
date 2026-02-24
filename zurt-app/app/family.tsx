@@ -208,7 +208,7 @@ export default function FamilyScreen() {
       if (msg.includes('400') || msg.includes('já possui') || msg.includes('ja possui') || msg.includes('already')) {
         await loadData();
       } else {
-        Alert.alert('Erro', err?.message || 'Não foi possível criar o grupo.');
+        Alert.alert(t('common.error'), err?.message || t('family.createError'));
       }
     } finally {
       setCreating(false);
@@ -220,7 +220,7 @@ export default function FamilyScreen() {
     if (!email) return;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert('Erro', t('family.alreadyInvited') || 'Email inválido');
+      Alert.alert(t('common.error'), t('family.invalidEmail'));
       return;
     }
     setInviting(true);
@@ -237,7 +237,7 @@ export default function FamilyScreen() {
       if (msg.includes('already') || msg.includes('já') || msg.includes('ja ')) {
         Alert.alert('', t('family.alreadyInvited'));
       } else {
-        Alert.alert('Erro', err?.message || 'Não foi possível enviar o convite.');
+        Alert.alert(t('common.error'), err?.message || t('family.inviteError'));
       }
     } finally {
       setInviting(false);
@@ -251,7 +251,7 @@ export default function FamilyScreen() {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await loadData();
     } catch (err: any) {
-      Alert.alert('Erro', err?.message || 'Erro ao aceitar convite.');
+      Alert.alert(t('common.error'), err?.message || t('family.acceptError'));
     } finally {
       setAcceptingToken(null);
     }
@@ -264,7 +264,7 @@ export default function FamilyScreen() {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await loadData();
     } catch (err: any) {
-      Alert.alert('Erro', err?.message || 'Erro ao recusar convite.');
+      Alert.alert(t('common.error'), err?.message || t('family.rejectError'));
     } finally {
       setRejectingToken(null);
     }
@@ -302,7 +302,7 @@ export default function FamilyScreen() {
       setDelegationMember(null);
       await loadData();
     } catch (err: any) {
-      Alert.alert('Erro', err?.message || 'Erro ao salvar delegação.');
+      Alert.alert(t('common.error'), err?.message || t('family.delegationError'));
     } finally {
       setSavingDelegation(false);
     }
@@ -351,7 +351,7 @@ export default function FamilyScreen() {
                         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
                         await loadData();
                       } catch (err: any) {
-                        Alert.alert('Erro', err?.message || 'Erro ao remover membro.');
+                        Alert.alert(t('common.error'), err?.message || t('family.removeError'));
                       }
                     },
                   },
@@ -383,7 +383,7 @@ export default function FamilyScreen() {
       setVisModalMember(null);
       await loadData();
     } catch (err: any) {
-      Alert.alert('Erro', err?.message || 'Erro ao alterar visibilidade.');
+      Alert.alert(t('common.error'), err?.message || t('family.visibilityError'));
     } finally {
       setSavingVisibility(false);
     }

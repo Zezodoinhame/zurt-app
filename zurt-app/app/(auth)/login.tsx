@@ -58,7 +58,7 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
   const isExpoGo = Constants.appOwnership === 'expo';
-  const [googleAvailable, setGoogleAvailable] = useState(true);
+  const [googleAvailable] = useState(true);
 
   const displayError = error || storeError || '';
 
@@ -93,7 +93,7 @@ export default function LoginScreen() {
     } else if (googleResponse.type === 'error') {
       logger.log('[ZURT Auth] Google OAuth error');
       setGoogleLoading(false);
-      setGoogleAvailable(false);
+
     } else {
       // cancel / dismiss
       logger.log('[ZURT Auth] Google OAuth:', googleResponse.type);
@@ -210,8 +210,8 @@ export default function LoginScreen() {
     clearError();
 
     if (!googleRequest) {
-      // Hook didn't initialize — disable button
-      setGoogleAvailable(false);
+      // Hook didn't initialize — try demo mode or show error
+      setError(t('login.googleUnavailable'));
       return;
     }
 
@@ -220,7 +220,7 @@ export default function LoginScreen() {
       await googlePromptAsync();
     } catch (err: any) {
       logger.log('[ZURT Auth] googlePromptAsync error:', err?.message ?? err);
-      setGoogleAvailable(false);
+
       setGoogleLoading(false);
     }
   }, [googleRequest, googlePromptAsync, clearError]);
@@ -322,18 +322,18 @@ export default function LoginScreen() {
           <View style={styles.form}>
             {/* Google login button */}
             <TouchableOpacity
-              style={[styles.googleButton, (!googleAvailable || googleLoading) && styles.googleButtonDisabled]}
+              style={[styles.googleButton, googleLoading && styles.googleButtonDisabled]}
               onPress={handleGoogleLogin}
               activeOpacity={0.7}
-              disabled={!googleAvailable || googleLoading || isLoading}
+              disabled={googleLoading || isLoading}
             >
               {googleLoading ? (
                 <ActivityIndicator size="small" color="#4285F4" style={{ marginRight: spacing.sm }} />
               ) : (
-                <Text style={[styles.googleIcon, !googleAvailable && { color: '#999' }]}>G</Text>
+                <Text style={styles.googleIcon}>G</Text>
               )}
-              <Text style={[styles.googleButtonText, !googleAvailable && { color: '#999' }]}>
-                {googleAvailable ? t('login.googleLogin') : t('login.googleFinalVersion')}
+              <Text style={styles.googleButtonText}>
+                {t('login.googleLogin')}
               </Text>
             </TouchableOpacity>
 
@@ -416,7 +416,7 @@ export default function LoginScreen() {
               <TouchableOpacity
                 style={styles.biometricButton}
                 activeOpacity={0.7}
-                accessibilityLabel="Autenticar com biometria"
+                accessibilityLabel={t('biometric.authenticate')}
                 onPress={() => router.push('/(auth)/biometric')}
               >
                 <View style={styles.biometricCircle}>

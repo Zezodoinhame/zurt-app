@@ -1165,11 +1165,6 @@ export default function ProfileScreen() {
             label={t('taxes.title')}
             onPress={() => router.push('/taxes')}
           />
-          <SettingRow
-            iconName="trophy"
-            label={t('badges.title')}
-            onPress={() => router.push('/badges')}
-          />
           <TouchableOpacity
             style={styles.settingRow}
             onPress={handleGenerateReport}
@@ -1356,8 +1351,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   settingIcon: {
     marginRight: spacing.md,
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },
@@ -1503,6 +1498,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   accentColorRow: {
     flexDirection: 'row',
     padding: spacing.md,
+    paddingVertical: spacing.lg,
     gap: spacing.sm,
     justifyContent: 'center',
   },

@@ -67,6 +67,10 @@ import type {
   SavingsChallenge,
   FIREParams,
   FIREResult,
+  DiaryEntry,
+  CompoundParams,
+  EmergencyFundData,
+  FinancialEvent,
 } from '../types';
 
 // =============================================================================
@@ -2254,3 +2258,108 @@ export const demoFIREParams: FIREParams = {
   inflation: 5,
   safeWithdrawalRate: 4,
 };
+
+// =============================================================================
+// Investment Diary
+// =============================================================================
+
+export const demoDiaryEntries: DiaryEntry[] = [
+  {
+    id: 'diary-1',
+    title: 'Aumentei posição em PETR4',
+    content: 'Petrobras apresentou resultados trimestrais fortes. Dividend yield atrativo acima de 12%. Comprei mais 100 ações a R$38.50.',
+    mood: 'confident',
+    tags: ['stock'],
+    ticker: 'PETR4',
+    decision: 'buy',
+    createdAt: '2026-02-20T10:30:00',
+    updatedAt: '2026-02-20T10:30:00',
+  },
+  {
+    id: 'diary-2',
+    title: 'Reduzindo exposição em cripto',
+    content: 'Mercado cripto muito volátil. Realizei lucro de 15% em Solana. Manter apenas BTC e ETH por enquanto.',
+    mood: 'anxious',
+    tags: ['crypto'],
+    ticker: 'SOL',
+    decision: 'sell',
+    createdAt: '2026-02-18T14:20:00',
+    updatedAt: '2026-02-18T14:20:00',
+  },
+  {
+    id: 'diary-3',
+    title: 'Análise macro - Selic em queda',
+    content: 'COPOM sinalizou corte de 0.5pp na próxima reunião. Bom momento para pré-fixados e ações de crescimento. Monitorar FIIs também.',
+    mood: 'focused',
+    tags: ['macro'],
+    createdAt: '2026-02-15T09:00:00',
+    updatedAt: '2026-02-15T09:00:00',
+  },
+  {
+    id: 'diary-4',
+    title: 'Rebalanceamento trimestral',
+    content: 'Carteira desbalanceou: ações subiram para 45% (meta 35%). Vendendo parte para alocar em renda fixa e internacional.',
+    mood: 'calm',
+    tags: ['rebalance'],
+    decision: 'sell',
+    createdAt: '2026-02-10T16:00:00',
+    updatedAt: '2026-02-10T16:00:00',
+  },
+  {
+    id: 'diary-5',
+    title: 'Novo fundo multimercado',
+    content: 'Comecei a investir no fundo Verde FIC FIM. Gestão reconhecida, bom track record de longo prazo. Aporte inicial de R$10.000.',
+    mood: 'uncertain',
+    tags: ['fund'],
+    decision: 'buy',
+    createdAt: '2026-02-05T11:45:00',
+    updatedAt: '2026-02-05T11:45:00',
+  },
+];
+
+// =============================================================================
+// Compound Interest
+// =============================================================================
+
+export const demoCompoundParams: CompoundParams = {
+  initialAmount: 10000,
+  monthlyContribution: 2000,
+  annualRate: 12,
+  years: 20,
+  inflationAdjust: true,
+  inflationRate: 5,
+};
+
+// =============================================================================
+// Emergency Fund
+// =============================================================================
+
+export const demoEmergencyFund: EmergencyFundData = {
+  currentAmount: 42000,
+  monthlyExpenses: 8500,
+  targetMonths: 6,
+  contributions: [
+    { date: '2026-01-15', amount: 5000 },
+    { date: '2026-01-30', amount: 3000 },
+    { date: '2026-02-15', amount: 4000 },
+  ],
+};
+
+// =============================================================================
+// Financial Calendar
+// =============================================================================
+
+export const demoFinancialEvents: FinancialEvent[] = [
+  { id: 'fe-1', title: 'PETR4 - Dividendo', date: '2026-02-25', amount: 1250, type: 'dividend', color: '#00D4AA' },
+  { id: 'fe-2', title: 'HGLG11 - Rendimento', date: '2026-02-15', amount: 890, type: 'dividend', color: '#00D4AA' },
+  { id: 'fe-3', title: 'Aluguel', date: '2026-02-05', amount: 2800, type: 'bill', color: '#FF6B6B' },
+  { id: 'fe-4', title: 'Internet + TV', date: '2026-02-10', amount: 249, type: 'bill', color: '#FF6B6B' },
+  { id: 'fe-5', title: 'DARF - Ganho de Capital', date: '2026-02-28', amount: 1430, type: 'tax_deadline', color: '#FFB347' },
+  { id: 'fe-6', title: 'Meta Viagem - Prazo', date: '2026-03-15', amount: 15000, type: 'goal_deadline', color: '#3A86FF' },
+  { id: 'fe-7', title: 'VALE3 - Dividendo', date: '2026-03-10', amount: 2100, type: 'dividend', color: '#00D4AA' },
+  { id: 'fe-8', title: 'IPTU Parcela 3', date: '2026-03-05', amount: 450, type: 'tax_deadline', color: '#FFB347' },
+  { id: 'fe-9', title: 'Seguro do Carro', date: '2026-03-20', amount: 3200, type: 'bill', color: '#FF6B6B' },
+  { id: 'fe-10', title: 'IRPF - Prazo Final', date: '2026-04-30', amount: 0, type: 'tax_deadline', color: '#FFB347' },
+  { id: 'fe-11', title: 'Aniversário Casamento', date: '2026-03-25', amount: 2000, type: 'custom', color: '#A855F7' },
+  { id: 'fe-12', title: 'Condomínio', date: '2026-02-07', amount: 980, type: 'bill', color: '#FF6B6B' },
+];

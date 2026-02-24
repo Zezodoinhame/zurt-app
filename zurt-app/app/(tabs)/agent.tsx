@@ -297,7 +297,7 @@ export default function AgentScreen() {
   const tabBarHeight = 60 + (insets.bottom || 0);
   const kavOffset = Platform.OS === 'ios'
     ? insets.top + tabBarHeight
-    : insets.top + tabBarHeight;
+    : 0;
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -321,7 +321,7 @@ export default function AgentScreen() {
 
       <KeyboardAvoidingView
         style={styles.flex1}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
         keyboardVerticalOffset={kavOffset}
       >
         {/* Messages */}

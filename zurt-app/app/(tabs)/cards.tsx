@@ -278,14 +278,14 @@ export default function CardsScreen() {
 
     try {
       await sendMessage(
-        `Analise meus gastos deste mês: ${spendingSummary}. Me dê 3 sugestões de economia.`,
+        `${t('cards.aiAnalyzePrompt')}: ${spendingSummary}`,
       );
       // Get the latest assistant message
       const msgs = useAgentStore.getState().messages;
       const lastAssistant = [...msgs].reverse().find((m) => m.role === 'assistant');
-      setAiResponse(lastAssistant?.content ?? 'Sem resposta disponível.');
+      setAiResponse(lastAssistant?.content ?? t('cards.aiNoResponse'));
     } catch {
-      setAiResponse('Erro ao analisar gastos. Tente novamente.');
+      setAiResponse(t('cards.aiError'));
     } finally {
       setAiLoading(false);
     }
