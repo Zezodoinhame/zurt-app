@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useCallback } from 'react';
+import React, { useEffect, useMemo, useCallback, useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -14,6 +15,7 @@ import { spacing, radius } from '../src/theme/spacing';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { useAuthStore } from '../src/stores/authStore';
 import { useSpendingInsightsStore } from '../src/stores/spendingInsightsStore';
+import { sendAIChat } from '../src/services/api';
 import { Header } from '../src/components/shared/Header';
 import { Card } from '../src/components/ui/Card';
 import { Badge } from '../src/components/ui/Badge';
@@ -37,9 +39,52 @@ export default function SpendingInsightsScreen() {
     useSpendingInsightsStore();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
+  // AI analysis state
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
   useEffect(() => {
     loadInsights();
   }, []);
+
+  const runAiAnalysis = useCallback(async () => {
+    if (!insights) return;
+    setAiLoading(true);
+    try {
+      const summaryData = {
+        avgDailySpend: insights.avgDailySpend,
+        totalThisMonth: insights.totalThisMonth,
+        totalLastMonth: insights.totalLastMonth,
+        savingsRate: insights.savingsRate,
+        categories: insights.categoryTrends.map((ct) => ({
+          name: ct.label,
+          latestAmount: ct.months[ct.months.length - 1]?.amount ?? 0,
+        })),
+        topMerchants: insights.topMerchants.slice(0, 5).map((m) => ({
+          name: m.name,
+          total: m.total,
+          count: m.count,
+        })),
+      };
+      const { language } = useSettingsStore.getState();
+      const prompt = language === 'pt'
+        ? `Analise meus gastos dos últimos 30 dias e me dê insights sobre onde posso economizar. Dados: ${JSON.stringify(summaryData)}`
+        : `Analyze my spending from the last 30 days and give me insights on where I can save. Data: ${JSON.stringify(summaryData)}`;
+      const response = await sendAIChat(prompt, undefined, language);
+      setAiAnalysis(response.message);
+    } catch (err: any) {
+      setAiAnalysis(null);
+    } finally {
+      setAiLoading(false);
+    }
+  }, [insights]);
+
+  // Auto-run AI analysis when insights load
+  useEffect(() => {
+    if (insights && !aiAnalysis && !aiLoading) {
+      runAiAnalysis();
+    }
+  }, [insights]);
 
   const displayVal = useCallback(
     (v: number) => (valuesHidden ? maskValue('') : formatCurrency(v, currency)),
@@ -86,7 +131,7 @@ export default function SpendingInsightsScreen() {
           <Text style={{ fontSize: 40, marginBottom: 16 }}>{'\uD83D\uDCA1'}</Text>
           <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, textAlign: 'center', marginBottom: 8 }}>Insights de Gastos</Text>
           <Text style={{ fontSize: 14, color: colors.text.secondary, textAlign: 'center', lineHeight: 20 }}>
-            Conecte seu banco para visualizar insights de gastos.
+            Conecte seu banco para receber insights inteligentes sobre seus gastos.
           </Text>
         </View>
       </View>
@@ -188,6 +233,37 @@ export default function SpendingInsightsScreen() {
             </Text>
           </View>
         </ScrollView>
+
+        {/* AI Analysis */}
+        <Card delay={50}>
+          <View style={styles.aiHeader}>
+            <Text style={styles.sectionTitle}>{'\uD83E\uDD16'} Análise ZURT AI</Text>
+            <TouchableOpacity
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); runAiAnalysis(); }}
+              disabled={aiLoading}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              {aiLoading ? (
+                <ActivityIndicator size="small" color={colors.accent} />
+              ) : (
+                <AppIcon name="refresh" size={18} color={colors.accent} />
+              )}
+            </TouchableOpacity>
+          </View>
+          {aiLoading && !aiAnalysis ? (
+            <View style={styles.aiLoadingContainer}>
+              <ActivityIndicator size="small" color={colors.accent} />
+              <Text style={styles.aiLoadingText}>Analisando seus gastos...</Text>
+            </View>
+          ) : aiAnalysis ? (
+            <Text style={styles.aiText}>{aiAnalysis}</Text>
+          ) : (
+            <Text style={styles.aiPlaceholder}>
+              Toque no botão de atualizar para gerar uma análise inteligente dos seus gastos.
+            </Text>
+          )}
+        </Card>
 
         {/* Month Comparison */}
         <Card delay={100}>
@@ -303,6 +379,34 @@ const createStyles = (colors: ThemeColors) =>
     scrollContent: {
       paddingHorizontal: spacing.xl,
       paddingBottom: 100,
+    },
+
+    // AI Analysis
+    aiHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    aiLoadingContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingVertical: spacing.md,
+    },
+    aiLoadingText: {
+      fontSize: 13,
+      color: colors.text.secondary,
+    },
+    aiText: {
+      fontSize: 13,
+      color: colors.text.secondary,
+      lineHeight: 20,
+    },
+    aiPlaceholder: {
+      fontSize: 13,
+      color: colors.text.muted,
+      lineHeight: 18,
+      fontStyle: 'italic',
     },
 
     // KPI Cards

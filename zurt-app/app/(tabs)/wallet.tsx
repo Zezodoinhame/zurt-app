@@ -323,7 +323,7 @@ export default function WalletScreen() {
           >
             <View style={styles.groupHeaderLeft}>
               <View style={{ marginRight: spacing.md }}>
-                <BankLogo institutionName={institution.name} size={36} />
+                <BankLogo institutionName={institution.name} imageUrl={institution.imageUrl} size={36} />
               </View>
               <View style={styles.groupHeaderInfo}>
                 <View style={styles.groupHeaderTopRow}>

@@ -518,8 +518,6 @@ export default function HomeScreen() {
                       { emoji: '\u{1F967}', title: t('tools.budget'), desc: t('tools.budgetDesc'), onPress: () => router.push('/budget') },
                       { emoji: '\u{1F4C9}', title: t('tools.insights'), desc: t('tools.insightsDesc'), onPress: () => router.push('/spending-insights') },
                       { emoji: '\u{1F9FE}', title: t('tools.bills'), desc: t('tools.billsDesc'), onPress: () => router.push('/bills') },
-                      { emoji: '\u{23F0}', title: t('tools.backtest'), desc: t('tools.backtestDesc'), onPress: () => router.push('/backtest') },
-                      { emoji: '\u{1F3B2}', title: t('tools.scenario'), desc: t('tools.scenarioDesc'), onPress: () => router.push('/scenario-planner') },
                       { emoji: '\u{1F514}', title: t('tools.priceAlerts'), desc: t('tools.priceAlertsDesc'), onPress: () => router.push('/price-alerts') },
                       { emoji: '\u{1F4B3}', title: t('tools.debt'), desc: t('tools.debtDesc'), onPress: () => router.push('/debt-manager') },
                       { emoji: '\u{2602}\u{FE0F}', title: t('tools.retirement'), desc: t('tools.retirementDesc'), onPress: () => router.push('/retirement') },
@@ -530,9 +528,9 @@ export default function HomeScreen() {
                       { emoji: '\u{1F3C5}', title: t('tools.challenges'), desc: t('tools.challengesDesc'), onPress: () => router.push('/savings-challenges') },
                       { emoji: '\u{1F525}', title: t('tools.fire'), desc: t('tools.fireDesc'), onPress: () => router.push('/fire') },
                     ];
-                    // Arrange as 2 rows x 13 columns (26 tools / 2 rows)
+                    // Arrange as 2 rows x N columns
                     const columns: Array<[typeof allTools[0], typeof allTools[0] | undefined]> = [];
-                    for (let c = 0; c < 13; c++) {
+                    for (let c = 0; c < Math.ceil(allTools.length / 2); c++) {
                       columns.push([allTools[c * 2], allTools[c * 2 + 1]]);
                     }
                     return columns.map((col, ci) => (

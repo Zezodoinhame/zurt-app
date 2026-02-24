@@ -27,6 +27,7 @@ export interface Institution {
   name: string;
   color: string;
   secondaryColor?: string;
+  imageUrl?: string;
   assetCount: number;
   totalValue: number;
   status: ConnectionStatus;

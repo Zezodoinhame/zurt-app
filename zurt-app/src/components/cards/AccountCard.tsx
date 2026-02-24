@@ -40,7 +40,7 @@ export function AccountCard({ institution, index, onPress }: AccountCardProps) {
         activeOpacity={0.7}
         accessibilityLabel={`${institution.name}, ${formatCurrency(institution.totalValue, currency)}, ${statusLabel}`}
       >
-        <BankLogo institutionName={institution.name} size={42} />
+        <BankLogo institutionName={institution.name} imageUrl={institution.imageUrl} size={42} />
 
         <View style={styles.info}>
           <Text style={styles.name}>{institution.name}</Text>

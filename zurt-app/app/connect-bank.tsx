@@ -421,7 +421,7 @@ export default function ConnectBankScreen() {
     return (
       <View style={styles.connectionCard}>
         <View style={styles.connectionRow}>
-          <BankLogo institutionName={name} size={44} />
+          <BankLogo institutionName={name} imageUrl={logo} size={44} />
           <View style={styles.connectionInfo}>
             <Text style={styles.connectionName} numberOfLines={1}>{name}</Text>
             <View style={styles.connectionMeta}>

@@ -28,18 +28,19 @@ import { useAuthStore } from '../src/stores/authStore';
 import { AppIcon } from '../src/hooks/useIcon';
 import {
   fetchFamilyGroup,
-  createFamilyGroup,
-  inviteFamilyMember,
+  createFamilyGroup as apiCreateFamilyGroup,
+  inviteFamilyMember as apiInviteFamilyMember,
   fetchFamilySummary,
   fetchPendingInvites,
   acceptFamilyInvite,
   rejectFamilyInvite,
   updateMemberVisibility,
-  removeFamilyMember,
+  removeFamilyMember as apiRemoveFamilyMember,
   fetchMemberProfile,
   updateMemberDelegation,
   isDemoMode,
 } from '../src/services/api';
+import { useFamilyStore } from '../src/stores/familyStore';
 import { logger } from '../src/utils/logger';
 import { formatCurrency } from '../src/utils/formatters';
 
@@ -129,25 +130,70 @@ export default function FamilyScreen() {
   const [rejectingToken, setRejectingToken] = useState<string | null>(null);
 
   // ---------------------------------------------------------------------------
-  // Data loading
+  // Data loading — try API first, fall back to local store
   // ---------------------------------------------------------------------------
+  const { group: localGroup, loadFamily, createGroup: localCreateGroup, addMember: localAddMember, removeMember: localRemoveMember, deleteGroup: localDeleteGroup } = useFamilyStore();
+
   const loadData = useCallback(async () => {
     try {
-      const [familyData, summaryData, pendingData] = await Promise.all([
-        fetchFamilyGroup(),
-        fetchFamilySummary(),
-        fetchPendingInvites(),
-      ]);
-      setGroup(familyData?.group ?? null);
-      setMembers(familyData?.members ?? []);
-      setSummary(summaryData);
-      setPendingInvites(pendingData?.invites ?? []);
+      if (isDemo) {
+        // Demo mode — use API demo data
+        const [familyData, summaryData, pendingData] = await Promise.all([
+          fetchFamilyGroup(),
+          fetchFamilySummary(),
+          fetchPendingInvites(),
+        ]);
+        setGroup(familyData?.group ?? null);
+        setMembers(familyData?.members ?? []);
+        setSummary(summaryData);
+        setPendingInvites(pendingData?.invites ?? []);
+        return;
+      }
+
+      // Production — try API first, fall back to local store
+      try {
+        const [familyData, summaryData, pendingData] = await Promise.all([
+          fetchFamilyGroup(),
+          fetchFamilySummary(),
+          fetchPendingInvites(),
+        ]);
+        if (familyData?.group) {
+          setGroup(familyData.group);
+          setMembers(familyData.members ?? []);
+          setSummary(summaryData);
+          setPendingInvites(pendingData?.invites ?? []);
+          return;
+        }
+      } catch (apiErr: any) {
+        logger.log('[Family] API failed, using local store:', apiErr?.message);
+      }
+
+      // Fall back to local store
+      await loadFamily();
+      const local = useFamilyStore.getState().group;
+      if (local) {
+        setGroup({ id: local.id, name: local.name, owner_id: local.ownerId, created_at: local.createdAt });
+        setMembers(local.members.map((m) => ({
+          id: m.id,
+          user_id: m.id,
+          full_name: m.name,
+          invited_email: m.email,
+          role: m.role,
+          status: m.status === 'active' ? 'accepted' : 'pending',
+          visibility: 'full',
+        })));
+        setSummary(null);
+        setPendingInvites([]);
+      } else {
+        setGroup(null);
+        setMembers([]);
+      }
     } catch (err: any) {
       logger.log('[Family] Error loading:', err?.message);
       setGroup(null);
       setMembers([]);
     }
-  }, []);
+  }, [isDemo, loadFamily]);
 
   useEffect(() => {
     (async () => {
@@ -199,21 +245,24 @@ export default function FamilyScreen() {
     if (!name) return;
     setCreating(true);
     try {
-      await createFamilyGroup(name);
+      // Try API first
+      try {
+        await apiCreateFamilyGroup(name);
+      } catch (apiErr: any) {
+        logger.log('[Family] API create failed, saving locally:', apiErr?.message);
+        // Fall back to local store
+        const email = currentUser?.email ?? 'user@zurt.com.br';
+        await localCreateGroup(name, email);
+      }
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setGroupName('');
       await loadData();
     } catch (err: any) {
-      const msg = (err?.message ?? '').toLowerCase();
-      if (msg.includes('400') || msg.includes('já possui') || msg.includes('ja possui') || msg.includes('already')) {
-        await loadData();
-      } else {
-        Alert.alert(t('common.error'), err?.message || t('family.createError'));
-      }
+      Alert.alert(t('common.error'), err?.message || t('family.createError'));
     } finally {
       setCreating(false);
     }
-  }, [groupName, loadData]);
+  }, [groupName, loadData, currentUser, localCreateGroup, t]);
 
   const handleInvite = useCallback(async () => {
     const email = inviteEmail.trim();
@@ -226,7 +275,14 @@ export default function FamilyScreen() {
     setInviting(true);
     setInviteFeedback('');
     try {
-      await inviteFamilyMember(email, inviteRole);
+      // Try API first, fall back to local store
+      try {
+        await apiInviteFamilyMember(email, inviteRole);
+      } catch (apiErr: any) {
+        logger.log('[Family] API invite failed, saving locally:', apiErr?.message);
+        const memberName = email.split('@')[0];
+        await localAddMember(email, memberName, inviteRole as any);
+      }
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setInviteFeedback(t('family.inviteEmailSent'));
       setInviteEmail('');
@@ -234,7 +290,7 @@ export default function FamilyScreen() {
       await loadData();
     } catch (err: any) {
       const msg = (err?.message ?? '').toLowerCase();
-      if (msg.includes('already') || msg.includes('já') || msg.includes('ja ')) {
+      if (msg.includes('already') || msg.includes('já') || msg.includes('ja ') || msg.includes('j\u00e1 foi adicionado')) {
         Alert.alert('', t('family.alreadyInvited'));
       } else {
         Alert.alert(t('common.error'), err?.message || t('family.inviteError'));
@@ -242,7 +298,7 @@ export default function FamilyScreen() {
     } finally {
       setInviting(false);
     }
-  }, [inviteEmail, inviteRole, loadData, t]);
+  }, [inviteEmail, inviteRole, loadData, localAddMember, t]);
 
   const handleAcceptInvite = useCallback(async (token: string) => {
     setAcceptingToken(token);
@@ -347,7 +403,7 @@ export default function FamilyScreen() {
                     style: 'destructive',
                     onPress: async () => {
                       try {
-                        await removeFamilyMember(member.id);
+                        await apiRemoveFamilyMember(member.id).catch(() => localRemoveMember(member.id));
                         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
                         await loadData();
                       } catch (err: any) {
@@ -656,7 +712,7 @@ export default function FamilyScreen() {
                                     text: t('common.delete') || 'Remover', style: 'destructive',
                                     onPress: async () => {
                                       try {
-                                        await removeFamilyMember(member.id);
+                                        await apiRemoveFamilyMember(member.id).catch(() => localRemoveMember(member.id));
                                         loadData();
                                       } catch (err: any) {
                                         logger.log('[Family] removeMember error:', err);

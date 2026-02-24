@@ -1090,7 +1090,7 @@ export default function ProfileScreen() {
             return (
               <View key={inst.id} style={styles.settingRow}>
                 <View style={{ marginRight: spacing.md }}>
-                  <BankLogo institutionName={inst.name} size={28} />
+                  <BankLogo institutionName={inst.name} imageUrl={inst.imageUrl} size={28} />
                 </View>
                 <Text style={styles.settingLabel}>{inst.name}</Text>
                 <View style={styles.statusBadge}>
