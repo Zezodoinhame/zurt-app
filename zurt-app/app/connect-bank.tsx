@@ -6,7 +6,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
-  ActivityIndicator, Alert, RefreshControl,
+  ActivityIndicator, Alert, RefreshControl, Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -205,6 +205,17 @@ export default function ConnectBankScreen() {
         logger.log('[ConnectBank] WebView msg:', JSON.stringify(data).substring(0, 200));
 
         if (completedRef.current) return;
+
+        // Handle OAuth redirect - bank needs user authentication in system browser
+        if (data?.type === 'OAUTH_OPEN' && data?.message) {
+          const oauthUrl = data.message;
+          logger.log('[ConnectBank] Opening bank OAuth URL:', oauthUrl.substring(0, 80));
+          Linking.openURL(oauthUrl).catch((err) => {
+            logger.log('[ConnectBank] Failed to open OAuth URL:', err);
+            Alert.alert(t('connect.error'), t('connect.oauthOpenError'));
+          });
+          return;
+        }
 
         // Check for explicit success events from Pluggy
         const eventType = data?.event ?? data?.type ?? '';

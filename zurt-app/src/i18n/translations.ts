@@ -213,6 +213,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'connect.deleteMessage': 'Tem certeza que deseja remover a conexão com',
     'connect.lastSync': 'Última sync:',
     'connect.justNow': 'agora',
+    'connect.oauthOpenError': 'Não foi possível abrir a página de autenticação do banco.',
 
     // Common
     'common.loading': 'Carregando...',
@@ -1598,6 +1599,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'connect.deleteMessage': 'Are you sure you want to remove the connection with',
     'connect.lastSync': 'Last sync:',
     'connect.justNow': 'just now',
+    'connect.oauthOpenError': 'Could not open the bank authentication page.',
 
     // Common
     'common.loading': 'Loading...',
@@ -2985,6 +2987,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'connect.deleteMessage': '确定要删除与以下银行的连接吗',
     'connect.lastSync': '上次同步:',
     'connect.justNow': '刚刚',
+    'connect.oauthOpenError': '无法打开银行认证页面。',
 
     // Common
     'common.loading': '加载中...',
@@ -4372,6 +4375,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'connect.deleteMessage': 'هل أنت متأكد من حذف الاتصال مع',
     'connect.lastSync': 'آخر مزامنة:',
     'connect.justNow': 'الآن',
+    'connect.oauthOpenError': 'تعذر فتح صفحة مصادقة البنك.',
 
     // Common
     'common.loading': 'جارٍ التحميل...',
