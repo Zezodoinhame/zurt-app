@@ -481,6 +481,29 @@ export default function ConnectBankScreen() {
           javaScriptEnabled
           domStorageEnabled
           startInLoadingState
+          setSupportMultipleWindows={false}
+          originWhitelist={['*']}
+          javaScriptCanOpenWindowsAutomatically={true}
+          thirdPartyCookiesEnabled={true}
+          sharedCookiesEnabled={true}
+          allowsInlineMediaPlayback={true}
+          mediaPlaybackRequiresUserAction={false}
+          mixedContentMode="compatibility"
+          allowsFullscreenVideo={true}
+          cacheEnabled={true}
+          onOpenWindow={(syntheticEvent) => {
+            const { nativeEvent } = syntheticEvent;
+            logger.log('[ConnectBank] onOpenWindow:', nativeEvent.targetUrl);
+            if (webViewRef.current && nativeEvent.targetUrl) {
+              webViewRef.current.injectJavaScript(
+                `window.location.href = '${nativeEvent.targetUrl}'; true;`
+              );
+            }
+          }}
+          onShouldStartLoadWithRequest={(request) => {
+            logger.log('[ConnectBank] Load request:', request.url.substring(0, 100));
+            return true;
+          }}
           renderLoading={() => (
             <View style={styles.webViewLoading}>
               <ActivityIndicator size="large" color={accentColor} />
