@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import * as Haptics from 'expo-haptics';
+import * as WebBrowser from 'expo-web-browser';
 import {
   fetchConnections, getConnectToken, createConnection,
   syncConnection, deleteConnection, syncAllFinance,
@@ -206,14 +207,25 @@ export default function ConnectBankScreen() {
 
         if (completedRef.current) return;
 
-        // Handle OAuth redirect - bank needs user authentication in system browser
+        // Handle OAuth redirect - bank needs user authentication
+        // Use WebBrowser for better Universal Links / App Links handling (e.g. Santander)
         if (data?.type === 'OAUTH_OPEN' && data?.message) {
           const oauthUrl = data.message;
           logger.log('[ConnectBank] Opening bank OAuth URL:', oauthUrl.substring(0, 80));
-          Linking.openURL(oauthUrl).catch((err) => {
-            logger.log('[ConnectBank] Failed to open OAuth URL:', err);
-            Alert.alert(t('connect.error'), t('connect.oauthOpenError'));
-          });
+          (async () => {
+            try {
+              await WebBrowser.openBrowserAsync(oauthUrl, {
+                showInRecents: true,
+                createTask: false,
+              });
+            } catch (err) {
+              logger.log('[ConnectBank] WebBrowser failed, falling back to Linking:', err);
+              Linking.openURL(oauthUrl).catch((linkErr) => {
+                logger.log('[ConnectBank] Failed to open OAuth URL:', linkErr);
+                Alert.alert(t('connect.error'), t('connect.oauthOpenError'));
+              });
+            }
+          })();
           return;
         }
 

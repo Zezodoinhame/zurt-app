@@ -2,6 +2,7 @@
   "expo": {
     "name": "ZURT",
     "slug": "zurt-app",
+    "owner": "zurt",
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "zurt",
@@ -36,6 +37,17 @@
         "android.permission.USE_BIOMETRIC",
         "android.permission.USE_FINGERPRINT",
         "android.permission.RECORD_AUDIO"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            { "scheme": "santanderbr" },
+            { "scheme": "itau" },
+            { "scheme": "bradesco" }
+          ],
+          "category": ["DEFAULT", "BROWSABLE"]
+        }
       ]
     },
     "web": {

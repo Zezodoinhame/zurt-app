@@ -437,12 +437,12 @@ export default function HomeScreen() {
             {/* -------------------------------------------------------------- */}
             {/* Allocation Section                                              */}
             {/* -------------------------------------------------------------- */}
-            {allocations.length > 0 && (
+            {allocations.filter(a => a.value > 0).length > 0 && (
               <Card delay={300}>
                 <Text style={styles.sectionTitleInCard}>
                   {t('home.allocation')}
                 </Text>
-                <AllocationBar allocations={allocations} />
+                <AllocationBar allocations={allocations.filter(a => a.value > 0)} />
               </Card>
             )}
 
@@ -513,37 +513,26 @@ export default function HomeScreen() {
                       { emoji: '\u{1F9FE}', title: t('tools.taxDashboard'), desc: t('tools.taxDashboardDesc'), onPress: () => router.push('/tax-dashboard') },
                       { emoji: '\u{1F49A}', title: t('tools.health'), desc: t('tools.healthDesc'), onPress: () => router.push('/risk-metrics') },
                       { emoji: '\u{1F3C6}', title: t('tools.badges'), desc: t('tools.badgesDesc'), onPress: () => router.push('/badges') },
-                      { emoji: '\u{1F4CB}', title: t('tools.watchlist'), desc: t('tools.watchlistDesc'), onPress: () => router.push('/watchlist') },
                       { emoji: '\u{1F4F0}', title: t('tools.news'), desc: t('tools.newsDesc'), onPress: () => router.push('/news') },
                       { emoji: '\u{1F4B8}', title: t('tools.dividends'), desc: t('tools.dividendsDesc'), onPress: () => router.push('/dividends') },
-                      { emoji: '\u{1F504}', title: t('tools.comparison'), desc: t('tools.comparisonDesc'), onPress: () => router.push('/comparison') },
                       { emoji: '\u{1F967}', title: t('tools.budget'), desc: t('tools.budgetDesc'), onPress: () => router.push('/budget') },
-                      { emoji: '\u{1F4C8}', title: t('tools.cashFlow'), desc: t('tools.cashFlowDesc'), onPress: () => router.push('/cash-flow') },
                       { emoji: '\u{1F4C9}', title: t('tools.insights'), desc: t('tools.insightsDesc'), onPress: () => router.push('/spending-insights') },
                       { emoji: '\u{1F9FE}', title: t('tools.bills'), desc: t('tools.billsDesc'), onPress: () => router.push('/bills') },
-                      { emoji: '\u{1F536}', title: t('tools.correlation'), desc: t('tools.correlationDesc'), onPress: () => router.push('/correlation-matrix') },
                       { emoji: '\u{23F0}', title: t('tools.backtest'), desc: t('tools.backtestDesc'), onPress: () => router.push('/backtest') },
                       { emoji: '\u{1F3B2}', title: t('tools.scenario'), desc: t('tools.scenarioDesc'), onPress: () => router.push('/scenario-planner') },
                       { emoji: '\u{1F514}', title: t('tools.priceAlerts'), desc: t('tools.priceAlertsDesc'), onPress: () => router.push('/price-alerts') },
-                      { emoji: '\u{1F4CA}', title: t('tools.netWorth'), desc: t('tools.netWorthDesc'), onPress: () => router.push('/net-worth') },
                       { emoji: '\u{1F4B3}', title: t('tools.debt'), desc: t('tools.debtDesc'), onPress: () => router.push('/debt-manager') },
                       { emoji: '\u{2602}\u{FE0F}', title: t('tools.retirement'), desc: t('tools.retirementDesc'), onPress: () => router.push('/retirement') },
-                      { emoji: '\u{1F3B2}', title: t('tools.monteCarlo'), desc: t('tools.monteCarloDesc'), onPress: () => router.push('/monte-carlo') },
                       { emoji: '\u{1F4DA}', title: t('tools.learnHub'), desc: t('tools.learnHubDesc'), onPress: () => router.push('/learn') },
                       { emoji: '\u{20BF}', title: t('tools.crypto'), desc: t('tools.cryptoDesc'), onPress: () => router.push('/crypto') },
                       { emoji: '\u{1F4E6}', title: t('tools.subscriptions'), desc: t('tools.subscriptionsDesc'), onPress: () => router.push('/subscriptions') },
                       { emoji: '\u{1F3E0}', title: t('tools.realEstate'), desc: t('tools.realEstateDesc'), onPress: () => router.push('/real-estate') },
                       { emoji: '\u{1F3C5}', title: t('tools.challenges'), desc: t('tools.challengesDesc'), onPress: () => router.push('/savings-challenges') },
                       { emoji: '\u{1F525}', title: t('tools.fire'), desc: t('tools.fireDesc'), onPress: () => router.push('/fire') },
-                      { emoji: '\u{1F4D4}', title: t('tools.diary'), desc: t('tools.diaryDesc'), onPress: () => router.push('/diary') },
-                      { emoji: '\u{1F9EE}', title: t('tools.compound'), desc: t('tools.compoundDesc'), onPress: () => router.push('/compound') },
-                      { emoji: '\u{1F4B1}', title: t('tools.converter'), desc: t('tools.converterDesc'), onPress: () => router.push('/currency-converter') },
-                      { emoji: '\u{1F6E1}\u{FE0F}', title: t('tools.emergency'), desc: t('tools.emergencyDesc'), onPress: () => router.push('/emergency-fund') },
-                      { emoji: '\u{1F5D3}\u{FE0F}', title: t('tools.finCalendar'), desc: t('tools.finCalendarDesc'), onPress: () => router.push('/financial-calendar') },
                     ];
-                    // Arrange as 2 rows x 19 columns (37 tools / 2 rows)
+                    // Arrange as 2 rows x 13 columns (26 tools / 2 rows)
                     const columns: Array<[typeof allTools[0], typeof allTools[0] | undefined]> = [];
-                    for (let c = 0; c < 19; c++) {
+                    for (let c = 0; c < 13; c++) {
                       columns.push([allTools[c * 2], allTools[c * 2 + 1]]);
                     }
                     return columns.map((col, ci) => (

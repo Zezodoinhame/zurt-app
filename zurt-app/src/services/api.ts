@@ -459,13 +459,15 @@ export async function fetchDashboardSummary(): Promise<{
       // Map breakdown → Allocation[]
       const rawBreakdown: any[] = data.breakdown ?? data.allocations ?? [];
       const breakdownTotal = rawBreakdown.reduce((s: number, b: any) => s + (b.total ?? b.value ?? b.amount ?? 0), 0) || 1;
-      const allocations: Allocation[] = rawBreakdown.map((b: any) => ({
-        class: b.class ?? b.asset_class ?? b.type ?? b.category ?? 'stocks',
-        label: b.label ?? b.name ?? b.type ?? b.category ?? '',
-        value: b.value ?? b.amount ?? 0,
-        percentage: b.percentage != null ? (b.percentage > 1 ? b.percentage : b.percentage * 100) : (breakdownTotal > 0 ? ((b.total ?? b.value ?? b.amount ?? 0) / breakdownTotal * 100) : 0),
-        color: b.color ?? '#888888',
-      }));
+      const allocations: Allocation[] = rawBreakdown
+        .filter((b: any) => (b.total ?? b.value ?? b.amount ?? 0) > 0)
+        .map((b: any) => ({
+          class: b.class ?? b.asset_class ?? b.type ?? b.category ?? 'stocks',
+          label: b.label ?? b.name ?? b.type ?? b.category ?? '',
+          value: b.value ?? b.amount ?? 0,
+          percentage: b.percentage != null ? (b.percentage > 1 ? b.percentage : b.percentage * 100) : (breakdownTotal > 0 ? ((b.total ?? b.value ?? b.amount ?? 0) / breakdownTotal * 100) : 0),
+          color: b.color ?? '#888888',
+        }));
 
       // Map cards → CreditCard[]
       const rawCards: any[] = data.cards ?? [];
