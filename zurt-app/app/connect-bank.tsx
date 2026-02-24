@@ -71,20 +71,37 @@ const getInitials = (name: string): string =>
 
 const INJECTED_JS = `
 (function() {
+  // Bridge ALL postMessage calls to React Native
   var origPostMessage = window.postMessage;
   window.postMessage = function(data) {
     try {
-      window.ReactNativeWebView.postMessage(typeof data === 'string' ? data : JSON.stringify(data));
+      var str = typeof data === 'string' ? data : JSON.stringify(data);
+      window.ReactNativeWebView.postMessage(str);
     } catch(e) {}
     return origPostMessage.apply(window, arguments);
   };
 
+  // Listen for messages from Pluggy iframes
   window.addEventListener('message', function(event) {
     try {
-      var d = typeof event.data === 'string' ? event.data : JSON.stringify(event.data);
-      window.ReactNativeWebView.postMessage(d);
+      var d = event.data;
+      var str = typeof d === 'string' ? d : JSON.stringify(d);
+      window.ReactNativeWebView.postMessage(str);
     } catch(e) {}
   });
+
+  // Also observe URL changes (some Pluggy flows use hash changes)
+  var lastUrl = location.href;
+  var observer = new MutationObserver(function() {
+    if (location.href !== lastUrl) {
+      lastUrl = location.href;
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        event: 'URL_CHANGED',
+        url: location.href
+      }));
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
 })();
 true;
 `;
@@ -185,31 +202,51 @@ export default function ConnectBankScreen() {
         const raw = event.nativeEvent.data;
         let data: any;
         try { data = JSON.parse(raw); } catch { data = { message: raw }; }
-        logger.log('[ConnectBank] WebView message:', data?.event ?? data);
+        logger.log('[ConnectBank] WebView msg:', JSON.stringify(data).substring(0, 200));
 
         if (completedRef.current) return;
 
-        // Extract itemId from various Pluggy message formats
-        let itemId: string | null =
-          data?.itemId ?? data?.item_id ?? data?.item?.id ?? null;
+        // Check for explicit success events from Pluggy
+        const eventType = data?.event ?? data?.type ?? '';
 
-        // Check message/url params format
-        if (!itemId && data?.message && typeof data.message === 'string') {
-          const params = new URLSearchParams(data.message.replace(/^\?/, ''));
-          itemId = params.get('item_id') ?? params.get('itemId') ?? null;
-          const itemStatus = params.get('item_status');
-          const execStatus = params.get('execution_status');
-          if (itemStatus === 'UPDATING' || execStatus === 'LOGIN_IN_PROGRESS') return;
+        // These events mean the user completed everything
+        if (eventType === 'ITEM_CREATED' || eventType === 'CONNECT_SUCCESS' ||
+            eventType === 'item/created' || eventType === 'ITEM_UPDATED') {
+          const itemId = data?.item?.id ?? data?.itemId ?? data?.item_id;
+          logger.log('[ConnectBank] Success event:', eventType, 'itemId:', itemId);
+          if (itemId) {
+            handlePluggySuccess(String(itemId));
+            return;
+          }
         }
 
-        if (itemId) {
-          handlePluggySuccess(String(itemId));
-          return;
+        // Parse URL-style params from message
+        if (data?.message && typeof data.message === 'string') {
+          const params = new URLSearchParams(data.message.replace(/^\?/, ''));
+          const itemId = params.get('item_id') ?? params.get('itemId');
+          const itemStatus = params.get('item_status');
+          const execStatus = params.get('execution_status');
+
+          logger.log('[ConnectBank] Parsed - itemId:', itemId, 'status:', itemStatus, 'exec:', execStatus);
+
+          // ONLY consider success if the status is FINAL
+          if (itemId && (itemStatus === 'UPDATED' || execStatus === 'SUCCESS')) {
+            handlePluggySuccess(String(itemId));
+            return;
+          }
+
+          // Log intermediate states but DO NOT close the WebView
+          if (itemStatus === 'UPDATING' || itemStatus === 'LOGIN_IN_PROGRESS' ||
+              itemStatus === 'WAITING_USER_INPUT' || itemStatus === 'WAITING_USER_ACTION' ||
+              execStatus === 'LOGIN_IN_PROGRESS' || execStatus === 'PARTIAL_SUCCESS') {
+            logger.log('[ConnectBank] Auth in progress, waiting...');
+            return; // Do nothing, let the user complete
+          }
         }
 
         // Handle close/cancel
-        if (data?.event === 'close' || data?.event === 'cancel' ||
-            data?.event === 'EXIT' || data?.event === 'CLOSE') {
+        if (eventType === 'close' || eventType === 'cancel' ||
+            eventType === 'EXIT' || eventType === 'CLOSE') {
           setScreenState('list');
           setConnectToken(null);
         }
@@ -224,28 +261,18 @@ export default function ConnectBankScreen() {
   const handleWebViewNavigation = useCallback(
     (navState: { url: string }) => {
       const { url } = navState;
-      if (completedRef.current) return;
+      logger.log('[ConnectBank] WebView nav:', url.substring(0, 100));
 
-      const hasItemId = url.includes('item_id=') || url.includes('itemId=');
-      const isUpdating = url.includes('item_status=UPDATING') || url.includes('execution_status=LOGIN_IN_PROGRESS');
+      // DO NOT intercept item_id here - let the widget complete the full flow
+      // The Pluggy widget will send postMessage when it's REALLY done
 
-      if (hasItemId && !isUpdating) {
-        let itemId: string | null = null;
-        try {
-          const urlObj = new URL(url);
-          itemId = urlObj.searchParams.get('item_id') ?? urlObj.searchParams.get('itemId') ?? null;
-        } catch {
-          const match = url.match(/(?:item_id|itemId)=([^&]+)/);
-          itemId = match?.[1] ?? null;
-        }
-        if (itemId) handlePluggySuccess(itemId);
-      }
-
-      if (!completedRef.current && (url.includes('/close') || url.includes('/cancel'))) {
+      // Only detect explicit close/cancel
+      if (!completedRef.current &&
+          (url.endsWith('/close') || url.endsWith('/cancel') || url.includes('pluggy.ai/close'))) {
         setScreenState('list');
         setConnectToken(null);
       }
-    }, [handlePluggySuccess],
+    }, [],
   );
 
   // ---------------------------------------------------------------------------
