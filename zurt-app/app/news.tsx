@@ -20,6 +20,7 @@ import { Card } from '../src/components/ui/Card';
 import { Badge } from '../src/components/ui/Badge';
 import { AppIcon } from '../src/hooks/useIcon';
 import { SkeletonList } from '../src/components/skeletons/Skeleton';
+import { ErrorState } from '../src/components/shared/ErrorState';
 import type { NewsCategory } from '../src/types';
 
 // =============================================================================
@@ -34,6 +35,30 @@ const CATEGORY_PILLS: { key: NewsCategory | 'all'; labelKey: string }[] = [
   { key: 'crypto', labelKey: 'news.crypto' },
   { key: 'funds', labelKey: 'news.funds' },
 ];
+
+const HTML_NAMED_ENTITIES: Record<string, string> = {
+  '&amp;': '&', '&quot;': '"', '&lt;': '<', '&gt;': '>',
+  '&apos;': "'", '&#39;': "'", '&nbsp;': ' ',
+  '&ndash;': '\u2013', '&mdash;': '\u2014',
+  '&lsquo;': '\u2018', '&rsquo;': '\u2019',
+  '&ldquo;': '\u201C', '&rdquo;': '\u201D',
+  '&hellip;': '\u2026', '&copy;': '\u00A9',
+  '&reg;': '\u00AE', '&trade;': '\u2122',
+};
+
+function decodeHtmlEntities(text: string): string {
+  if (!text) return '';
+  let result = text
+    .replace(/<!\[CDATA\[/g, '')
+    .replace(/\]\]>/g, '');
+  // Named entities
+  result = result.replace(/&[a-zA-Z]+;/g, (match) => HTML_NAMED_ENTITIES[match] ?? match);
+  // Numeric decimal entities: &#8216;
+  result = result.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)));
+  // Numeric hex entities: &#x2018;
+  result = result.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  return result;
+}
 
 function getRelativeTime(dateStr: string, t: (k: string) => string): string {
   const now = new Date();
@@ -65,6 +90,7 @@ export default function NewsScreen() {
   const {
     isLoading,
     isRefreshing,
+    error,
     selectedCategory,
     loadNews,
     refreshNews,
@@ -146,7 +172,7 @@ export default function NewsScreen() {
         <Card delay={index * 60} style={styles.articleCard}>
           {/* Title */}
           <Text style={styles.articleTitle} numberOfLines={2}>
-            {item.title}
+            {decodeHtmlEntities(item.title)}
           </Text>
 
           {/* Source + time row */}
@@ -160,7 +186,7 @@ export default function NewsScreen() {
 
           {/* Summary */}
           <Text style={styles.articleSummary} numberOfLines={2}>
-            {item.summary}
+            {decodeHtmlEntities(item.summary)}
           </Text>
 
           {/* Bottom row: category badge + tickers */}
@@ -187,7 +213,7 @@ export default function NewsScreen() {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <AppIcon name="alert" size={40} color={colors.text.muted} />
+      <AppIcon name="news" size={40} color={colors.text.muted} />
       <Text style={styles.emptyText}>
         {t('news.noArticles')}
       </Text>
@@ -218,6 +244,8 @@ export default function NewsScreen() {
         <View style={styles.skeletonContainer}>
           <SkeletonList count={5} />
         </View>
+      ) : error && filteredArticles.length === 0 ? (
+        <ErrorState message={error} onRetry={loadNews} />
       ) : (
         <FlatList
           data={filteredArticles}
@@ -267,7 +295,8 @@ const createStyles = (colors: ThemeColors) =>
 
     // Filter pills
     filterRow: {
-      paddingHorizontal: spacing.xl,
+      paddingLeft: spacing.xl,
+      paddingRight: spacing.xl * 3,
       paddingBottom: spacing.md,
       gap: spacing.sm,
       flexDirection: 'row' as const,
