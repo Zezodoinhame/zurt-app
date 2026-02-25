@@ -1074,7 +1074,8 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: radius.md,
       borderWidth: 1,
       borderColor: colors.border,
-      padding: spacing.md,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.xs,
       alignItems: 'center',
       gap: spacing.xs,
     },
@@ -1083,7 +1084,7 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: '500',
       color: colors.text.primary,
       textAlign: 'center',
-      lineHeight: 14,
+      lineHeight: 15,
       alignSelf: 'stretch',
     },
     toolBadge: {

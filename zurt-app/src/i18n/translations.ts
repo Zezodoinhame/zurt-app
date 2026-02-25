@@ -765,7 +765,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'tools.comparisonDesc': 'Compare ativos',
     'tools.budget': 'Orçamento',
     'tools.budgetDesc': 'Limites por categoria',
-    'tools.cashFlow': 'Fluxo de Caixa',
+    'tools.cashFlow': 'Fluxo Caixa',
     'tools.cashFlowDesc': 'Projeção 6 meses',
     'tools.insights': 'Insights',
     'tools.insightsDesc': 'Análise de gastos',
@@ -1486,7 +1486,7 @@ export const translations: Record<Language, Record<string, string>> = {
     // Tools - Wave 8
     'tools.diary': 'Diário',
     'tools.diaryDesc': 'Registre decisões',
-    'tools.compound': 'Juros Compostos',
+    'tools.compound': 'Juros Comp.',
     'tools.compoundDesc': 'Simule rendimentos',
     'tools.converter': 'Câmbio',
     'tools.converterDesc': 'Converta moedas',
