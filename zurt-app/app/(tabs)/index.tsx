@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   Share,
+  Linking,
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -48,6 +49,7 @@ import {
   maskValue,
 } from '../../src/utils/formatters';
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import { useNewsStore } from '../../src/stores/newsStore';
 import { AppIcon } from '../../src/hooks/useIcon';
 
 // ---------------------------------------------------------------------------
@@ -119,6 +121,7 @@ export default function HomeScreen() {
   const { goals, loadGoals } = useGoalsStore();
   const { cards, dashboardTransactions, loadTransactions } = useCardsStore();
   const { loadInitialInsights } = useAgentStore();
+  const { articles: newsArticles, loadNews } = useNewsStore();
   const { t, currency } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
   const accentColor = useSettingsStore((s) => s.accentColor);
@@ -136,6 +139,7 @@ export default function HomeScreen() {
     loadBenchmarks();
     loadTransactions();
     loadInitialInsights();
+    loadNews();
   }, []);
 
   // ---- Handlers -------------------------------------------------------------
@@ -573,7 +577,57 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* 9. Premium Banner                                              */}
+            {/* 9. Not\u00EDcias do Mercado                                         */}
+            {/* -------------------------------------------------------------- */}
+            {newsArticles.length > 0 && (
+              <View style={styles.section}>
+                <SectionHeader
+                  title={t('news.title')}
+                  onAction={() => router.push('/news')}
+                />
+                <Card animated={false}>
+                  {newsArticles.slice(0, 3).map((article, idx) => {
+                    const timeAgo = (() => {
+                      const d = new Date(article.date);
+                      if (isNaN(d.getTime())) return '';
+                      const mins = Math.floor((Date.now() - d.getTime()) / 60000);
+                      if (mins < 60) return `${mins}min`;
+                      const hrs = Math.floor(mins / 60);
+                      if (hrs < 24) return `${hrs}h`;
+                      const days = Math.floor(hrs / 24);
+                      return `${days}d`;
+                    })();
+                    return (
+                      <TouchableOpacity
+                        key={article.id}
+                        style={styles.newsItem}
+                        activeOpacity={0.7}
+                        onPress={() => article.url && Linking.openURL(article.url)}
+                      >
+                        <View style={styles.newsContent}>
+                          <Text style={styles.newsTitle} numberOfLines={2}>
+                            {article.title}
+                          </Text>
+                          <View style={styles.newsMeta}>
+                            <Text style={styles.newsSource}>{article.source}</Text>
+                            {timeAgo ? (
+                              <>
+                                <Text style={styles.newsDot}>{' \u00B7 '}</Text>
+                                <Text style={styles.newsTime}>{timeAgo}</Text>
+                              </>
+                            ) : null}
+                          </View>
+                        </View>
+                        <AppIcon name="chevron" size={14} color={colors.text.muted} />
+                      </TouchableOpacity>
+                    );
+                  })}
+                </Card>
+              </View>
+            )}
+
+            {/* -------------------------------------------------------------- */}
+            {/* 10. Premium Banner                                             */}
             {/* -------------------------------------------------------------- */}
             <TouchableOpacity
               style={styles.premiumBanner}
@@ -730,6 +784,7 @@ const createStyles = (colors: ThemeColors) =>
     quickActions: {
       flexDirection: 'row',
       justifyContent: 'space-between',
+      gap: spacing.sm,
       marginBottom: spacing.xl,
     },
 
@@ -804,6 +859,43 @@ const createStyles = (colors: ThemeColors) =>
     txDivider: {
       height: 1,
       backgroundColor: colors.border,
+    },
+
+    // -- News section ---------------------------------------------------------
+    newsItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      borderBottomWidth: 0.5,
+      borderBottomColor: colors.border + '50',
+    },
+    newsContent: {
+      flex: 1,
+      marginRight: spacing.sm,
+    },
+    newsTitle: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.text.primary,
+      lineHeight: 18,
+      marginBottom: 4,
+    },
+    newsMeta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    newsSource: {
+      fontSize: 11,
+      color: colors.text.secondary,
+    },
+    newsDot: {
+      fontSize: 11,
+      color: colors.text.muted,
+    },
+    newsTime: {
+      fontSize: 11,
+      color: colors.text.secondary,
     },
 
     // -- Premium Banner -------------------------------------------------------

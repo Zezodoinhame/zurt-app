@@ -24,7 +24,7 @@ export function QuickActionButton({ icon, label, onPress }: QuickActionButtonPro
       <View style={styles.iconWrap}>
         <AppIcon name={icon} size={22} color={colors.accent} />
       </View>
-      <Text style={styles.label} numberOfLines={1}>
+      <Text style={styles.label} numberOfLines={2}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -34,13 +34,13 @@ export function QuickActionButton({ icon, label, onPress }: QuickActionButtonPro
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
+      flex: 1,
       alignItems: 'center',
-      gap: spacing.sm,
-      width: 72,
+      gap: spacing.xs,
     },
     iconWrap: {
-      width: 48,
-      height: 48,
+      width: 40,
+      height: 40,
       borderRadius: radius.md,
       backgroundColor: colors.accentLight,
       alignItems: 'center',
@@ -51,5 +51,6 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: '500',
       color: colors.text.secondary,
       textAlign: 'center',
+      lineHeight: 14,
     },
   });

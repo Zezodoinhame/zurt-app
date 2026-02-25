@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
+import { makeRedirectUri } from 'expo-auth-session';
 import { type ThemeColors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -35,6 +36,9 @@ const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://zurt.com.br/api';
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
 
 const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/userinfo/v2/me';
+
+// Dynamic redirect URI — replaces deprecated auth.expo.io proxy
+const GOOGLE_REDIRECT_URI = makeRedirectUri({ scheme: 'zurt', path: 'auth' });
 
 type Mode = 'login' | 'register';
 
@@ -62,10 +66,12 @@ export default function LoginScreen() {
   const displayError = error || storeError || '';
 
   // -------------------------------------------------------------------------
-  // Google Auth via expo-auth-session — uses useIdTokenAuthRequest which
-  // works in Expo Go without iosClientId. We pass the webClientId as both
-  // clientId (fallback for all platforms) and webClientId.
+  // Google Auth via expo-auth-session — uses useIdTokenAuthRequest.
+  // We use makeRedirectUri({ scheme: 'zurt' }) instead of the deprecated
+  // auth.expo.io proxy which caused "Something went wrong" errors.
   // -------------------------------------------------------------------------
+  logger.log('[ZURT Auth] Google redirectUri:', GOOGLE_REDIRECT_URI);
+
   let googleRequest: ReturnType<typeof Google.useIdTokenAuthRequest>[0] = null;
   let googleResponse: ReturnType<typeof Google.useIdTokenAuthRequest>[1] = null;
   let googlePromptAsync: ReturnType<typeof Google.useIdTokenAuthRequest>[2] = async () => ({ type: 'dismiss' as const, url: '' });
@@ -74,28 +80,38 @@ export default function LoginScreen() {
     const [req, res, prompt] = Google.useIdTokenAuthRequest({
       clientId: GOOGLE_WEB_CLIENT_ID,
       webClientId: GOOGLE_WEB_CLIENT_ID,
-      redirectUri: 'https://auth.expo.io/@zurt/zurt-app',
+      redirectUri: GOOGLE_REDIRECT_URI,
     });
     googleRequest = req;
     googleResponse = res;
     googlePromptAsync = prompt;
   } catch (err: any) {
     logger.log('[ZURT Auth] Google hook init error:', err?.message ?? err);
-    // Will be caught — googleAvailable stays true but googleRequest stays null
   }
 
   // Handle Google OAuth response
   useEffect(() => {
     if (!googleResponse) return;
+    logger.log('[ZURT Auth] Google OAuth response type:', googleResponse.type);
+
     if (googleResponse.type === 'success') {
       handleGoogleAuth(googleResponse);
     } else if (googleResponse.type === 'error') {
-      logger.log('[ZURT Auth] Google OAuth error');
+      const errMsg = (googleResponse as any).error?.message
+        || (googleResponse as any).params?.error_description
+        || (googleResponse as any).params?.error
+        || 'Unknown';
+      console.error('Google auth error:', errMsg);
+      logger.log('[ZURT Auth] Google OAuth error details:', errMsg);
       setGoogleLoading(false);
-
+      Alert.alert(
+        t('common.error'),
+        t('login.googleAuthError'),
+        [{ text: 'OK' }],
+      );
     } else {
       // cancel / dismiss
-      logger.log('[ZURT Auth] Google OAuth:', googleResponse.type);
+      logger.log('[ZURT Auth] Google OAuth dismissed:', googleResponse.type);
       setGoogleLoading(false);
     }
   }, [googleResponse]);
@@ -209,22 +225,26 @@ export default function LoginScreen() {
     clearError();
 
     if (!googleRequest) {
-      // Hook didn't initialize — try demo mode or show error
       setError(t('login.googleUnavailable'));
       return;
     }
 
     setGoogleLoading(true);
     try {
-      logger.log('[ZURT Google Auth] redirectUri:', 'https://auth.expo.io/@zurt/zurt-app');
-      logger.log('[ZURT Google Auth] request?.url:', googleRequest?.url);
+      logger.log('[ZURT Google Auth] redirectUri:', GOOGLE_REDIRECT_URI);
+      logger.log('[ZURT Google Auth] request URL:', googleRequest?.url?.substring(0, 120));
       await googlePromptAsync();
     } catch (err: any) {
+      console.error('Google auth error:', err);
       logger.log('[ZURT Auth] googlePromptAsync error:', err?.message ?? err);
-
       setGoogleLoading(false);
+      Alert.alert(
+        t('common.error'),
+        t('login.googleAuthError'),
+        [{ text: 'OK' }],
+      );
     }
-  }, [googleRequest, googlePromptAsync, clearError]);
+  }, [googleRequest, googlePromptAsync, clearError, t]);
 
   // -------------------------------------------------------------------------
   // Email/password auth

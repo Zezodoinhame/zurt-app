@@ -318,6 +318,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'login.googleCreateAccount': 'Crie sua conta primeiro em zurt.com.br',
     'login.googleFinalVersion': 'Disponível na versão final',
     'login.googleExpoGo': 'Disponível na versão instalada',
+    'login.googleAuthError': 'Erro ao entrar com Google. Tente novamente ou use email e senha.',
     'login.or': 'ou',
 
     // Biometric
@@ -1829,6 +1830,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'login.googleCreateAccount': 'Create your account first at zurt.com.br',
     'login.googleFinalVersion': 'Available in final version',
     'login.googleExpoGo': 'Available in installed version',
+    'login.googleAuthError': 'Error signing in with Google. Please try again or use email and password.',
     'login.or': 'or',
 
     // Biometric
@@ -3342,6 +3344,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'login.googleCreateAccount': '请先在 zurt.com.br 创建您的账户',
     'login.googleFinalVersion': '将在正式版中提供',
     'login.googleExpoGo': '在安装版中可用',
+    'login.googleAuthError': '使用Google登录时出错。请重试或使用电子邮件和密码。',
     'login.or': '或',
 
     // Biometric
@@ -4855,6 +4858,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'login.googleCreateAccount': 'أنشئ حسابك أولاً على zurt.com.br',
     'login.googleFinalVersion': 'متاح في النسخة النهائية',
     'login.googleExpoGo': 'متاح في النسخة المثبتة',
+    'login.googleAuthError': 'خطأ في تسجيل الدخول بـ Google. يرجى المحاولة مرة أخرى أو استخدام البريد الإلكتروني وكلمة المرور.',
     'login.or': 'أو',
 
     // Biometric
