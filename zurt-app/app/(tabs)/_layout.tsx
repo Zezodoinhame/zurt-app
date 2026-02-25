@@ -7,6 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotificationStore } from '../../src/stores/notificationStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import { usePlanStore } from '../../src/stores/planStore';
 import type { ThemeColors } from '../../src/theme/colors';
 
 // ---------------------------------------------------------------------------
@@ -51,7 +52,7 @@ function TabIcon({ iconFocused, iconDefault, label, focused, badge, colors }: Ta
 // Agent tab icon (gradient highlight)
 // ---------------------------------------------------------------------------
 
-function AgentTabIcon({ focused, label, colors }: { focused: boolean; label: string; colors: ThemeColors }) {
+function AgentTabIcon({ focused, label, colors, showProBadge }: { focused: boolean; label: string; colors: ThemeColors; showProBadge?: boolean }) {
   return (
     <View style={tabStyles.tabItem}>
       <View style={tabStyles.agentIconOuter}>
@@ -67,6 +68,11 @@ function AgentTabIcon({ focused, label, colors }: { focused: boolean; label: str
             color={focused ? colors.background : colors.text.muted}
           />
         </LinearGradient>
+        {showProBadge && (
+          <View style={tabStyles.proBadge}>
+            <Text style={tabStyles.proBadgeText}>PRO</Text>
+          </View>
+        )}
       </View>
       <Text style={[tabStyles.label, { color: colors.text.muted }, focused && { color: colors.accent, fontWeight: '600' as const }]}>
         {label}
@@ -83,6 +89,7 @@ export default function TabLayout() {
   const getUnreadCount = useNotificationStore((s) => s.getUnreadCount);
   const t = useSettingsStore((s) => s.t);
   const colors = useSettingsStore((s) => s.colors);
+  const plan = usePlanStore((s) => s.plan);
   const insets = useSafeAreaInsets();
 
   return (
@@ -133,7 +140,7 @@ export default function TabLayout() {
         name="agent"
         options={{
           tabBarIcon: ({ focused }) => (
-            <AgentTabIcon focused={focused} label={t('tab.agent')} colors={colors} />
+            <AgentTabIcon focused={focused} label={t('tab.agent')} colors={colors} showProBadge={plan === 'free'} />
           ),
         }}
       />
@@ -232,5 +239,20 @@ const tabStyles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  proBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -6,
+    backgroundColor: '#FF6B6B',
+    borderRadius: 4,
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+  },
+  proBadgeText: {
+    fontSize: 7,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
 });

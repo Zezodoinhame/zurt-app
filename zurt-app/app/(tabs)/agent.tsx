@@ -19,6 +19,9 @@ import { type ThemeColors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useAgentStore, type ChatMessage } from '../../src/stores/agentStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import { usePlanStore } from '../../src/stores/planStore';
+import { UpgradeModal } from '../../src/components/shared/UpgradeGate';
+import { UsageBadge } from '../../src/components/shared/UsageBadge';
 import { AIMarkdown } from '../../src/components/shared/AIMarkdown';
 import { AppIcon } from '../../src/hooks/useIcon';
 
@@ -263,6 +266,10 @@ export default function AgentScreen() {
     clearHistory,
   } = useAgentStore();
 
+  const checkLimit = usePlanStore((s) => s.checkLimit);
+  const incrementUsage = usePlanStore((s) => s.incrementUsage);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
   useEffect(() => {
     loadInitialInsights();
   }, []);
@@ -298,14 +305,24 @@ export default function AgentScreen() {
   const handleSend = useCallback(() => {
     const text = inputText.trim();
     if (!text || isLoading) return;
+    if (!checkLimit('aiQueries')) {
+      setShowUpgradeModal(true);
+      return;
+    }
     setInputText('');
     sendMessage(text);
-  }, [inputText, isLoading, sendMessage]);
+    incrementUsage('aiQueries');
+  }, [inputText, isLoading, sendMessage, checkLimit, incrementUsage]);
 
   const handleSuggestionPress = useCallback((text: string) => {
     if (isLoading) return;
+    if (!checkLimit('aiQueries')) {
+      setShowUpgradeModal(true);
+      return;
+    }
     sendMessage(text);
-  }, [isLoading, sendMessage]);
+    incrementUsage('aiQueries');
+  }, [isLoading, sendMessage, checkLimit, incrementUsage]);
 
   const handleClearHistory = useCallback(() => {
     Alert.alert(
@@ -347,6 +364,7 @@ export default function AgentScreen() {
             <Text style={styles.headerOnlineText}>{t('agent.online')}</Text>
           </View>
         </View>
+        <UsageBadge feature="aiQueries" compact />
         {messages.length > 0 && (
           <TouchableOpacity
             style={styles.clearButton}
@@ -474,6 +492,12 @@ export default function AgentScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      <UpgradeModal
+        feature="aiQueries"
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+      />
     </View>
   );
 }

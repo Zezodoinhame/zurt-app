@@ -12,6 +12,7 @@ import { useSettingsStore } from '../src/stores/settingsStore';
 import { usePushStore } from '../src/stores/pushStore';
 import { useNotificationStore } from '../src/stores/notificationStore';
 import { useNetworkStore } from '../src/stores/networkStore';
+import { usePlanStore } from '../src/stores/planStore';
 import { ONBOARDING_KEY } from './onboarding';
 import { logger } from '../src/utils/logger';
 import { initAnalytics, startSession, stopAnalytics } from '../src/services/analytics';
@@ -32,6 +33,7 @@ export default function RootLayout() {
   const initializePush = usePushStore((s) => s.initializePush);
   const markAsRead = useNotificationStore((s) => s.markAsRead);
   const initNetworkListener = useNetworkStore((s) => s.initNetworkListener);
+  const loadSubscription = usePlanStore((s) => s.loadSubscription);
   const { isLocked, unlock } = useAppLock();
   const router = useRouter();
   const [ready, setReady] = useState(false);
@@ -79,12 +81,15 @@ export default function RootLayout() {
     }
   }, [ready, onboardingDone]);
 
-  // Initialize push notifications when authenticated
+  // Initialize push notifications & load subscription when authenticated
   useEffect(() => {
-    if (ready && isAuthenticated && !isDemoMode) {
-      initializePush().catch((err: any) => {
-        logger.log('[ZURT App] Push init error:', err?.message ?? err);
-      });
+    if (ready && isAuthenticated) {
+      loadSubscription();
+      if (!isDemoMode) {
+        initializePush().catch((err: any) => {
+          logger.log('[ZURT App] Push init error:', err?.message ?? err);
+        });
+      }
     }
   }, [ready, isAuthenticated, isDemoMode]);
 

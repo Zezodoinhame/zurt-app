@@ -39,6 +39,7 @@ const USER_DATA_STORAGE_KEYS = [
   '@zurt:recurringInvestments',
   '@zurt:subscriptions',
   '@zurt:watchlist',
+  '@zurt_plan_usage',
   // Zustand persist
   'zurt-family-storage',
   // API response cache
@@ -76,6 +77,8 @@ function resetDataStores() {
     useGoalsStore.setState({ goals: [], isLoading: false, error: null });
     useAgentStore.setState({ messages: [], conversationId: null, isLoading: false, error: null, rateLimited: false, _initialized: false });
     useNotificationStore.setState({ notifications: [], smartAlerts: [], isLoading: false, isRefreshing: false, error: null, filter: 'all' });
+    const { usePlanStore } = require('./planStore');
+    usePlanStore.getState().reset();
   } catch {
     // Stores may not be loaded yet
   }

@@ -33,6 +33,8 @@ import { UserAvatar, AVATAR_CHARACTER_LIST, useAvatarState, type AvatarPresetId 
 import { AVATAR_ICON_MAP } from '../../src/components/ui/AvatarIcons';
 import { formatDate, formatCurrency } from '../../src/utils/formatters';
 import { changePassword, updateUserProfile } from '../../src/services/api';
+import { usePlanStore } from '../../src/stores/planStore';
+import { UsageBadge } from '../../src/components/shared/UsageBadge';
 import { AppIcon, type AppIconName } from '../../src/hooks/useIcon';
 import { BankLogo } from '../../src/components/icons/BankLogo';
 import * as ImagePicker from 'expo-image-picker';
@@ -589,6 +591,7 @@ export default function ProfileScreen() {
   const setAccentColor = useSettingsStore((s) => s.setAccentColor);
   const avatarState = useAvatarState();
   const { cards } = useCardsStore();
+  const planTier = usePlanStore((s) => s.plan);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [analyticsOptOut, setAnalyticsOptOutState] = useState(false);
 
@@ -834,7 +837,7 @@ export default function ProfileScreen() {
         <Text style={styles.headerEmail}>{user.email}</Text>
         <View style={[styles.planBadge, { backgroundColor: colors.accent + '20', borderColor: colors.accent + '40' }]}>
           <Text style={[styles.planBadgeText, { color: colors.accent }]}>
-            {isDemoMode ? t('profile.demoMode') : t('profile.freePlan')}
+            {isDemoMode ? t('profile.demoMode') : t(`plan.${planTier}` as any)}
           </Text>
         </View>
       </View>
@@ -1027,13 +1030,13 @@ export default function ProfileScreen() {
           <View>
             <Text style={styles.subscriptionPlanLabel}>{t('profile.currentPlan')}</Text>
             <Text style={styles.subscriptionPlanName}>
-              {isDemoMode ? t('profile.demoMode') : t('profile.freePlan')}
+              {isDemoMode ? t('profile.demoMode') : t(`plan.${planTier}` as any)}
             </Text>
           </View>
-          {!isDemoMode && (
+          {!isDemoMode && planTier !== 'enterprise' && (
             <TouchableOpacity
               style={[styles.upgradeButton, { backgroundColor: colors.accent }]}
-              onPress={() => router.push('/plans')}
+              onPress={() => router.push('/plans' as any)}
               activeOpacity={0.7}
             >
               <Text style={[styles.upgradeButtonText, { color: colors.background }]}>
@@ -1041,6 +1044,16 @@ export default function ProfileScreen() {
               </Text>
             </TouchableOpacity>
           )}
+        </View>
+        {/* Usage badges */}
+        <View style={styles.tokenDivider} />
+        <View style={styles.usageBadgesRow}>
+          <UsageBadge feature="aiQueries" />
+          <UsageBadge feature="connections" />
+        </View>
+        <View style={[styles.usageBadgesRow, { marginTop: spacing.sm }]}>
+          <UsageBadge feature="reports" />
+          <UsageBadge feature="alerts" />
         </View>
         <View style={styles.tokenDivider} />
         <View style={styles.tokenRow}>
@@ -1388,6 +1401,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 14,
     color: colors.accent,
     fontWeight: '600',
+  },
+  usageBadgesRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
   tokenRow: {
     flexDirection: 'row',

@@ -20,6 +20,8 @@ import {
 import { type ThemeColors } from '../src/theme/colors';
 import { spacing, radius } from '../src/theme/spacing';
 import { useSettingsStore } from '../src/stores/settingsStore';
+import { usePlanStore } from '../src/stores/planStore';
+import { UpgradeModal } from '../src/components/shared/UpgradeGate';
 import { AppIcon } from '../src/hooks/useIcon';
 import { BankLogo } from '../src/components/icons/BankLogo';
 import { logger } from '../src/utils/logger';
@@ -237,6 +239,9 @@ export default function ConnectBankScreen() {
   const [connectToken, setConnectToken] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
 
+  const checkLimit = usePlanStore((s) => s.checkLimit);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
   const completedRef = useRef(false);
   const webViewRef = useRef<WebView>(null);
 
@@ -269,6 +274,10 @@ export default function ConnectBankScreen() {
   // ---------------------------------------------------------------------------
 
   const handleConnectNew = useCallback(async () => {
+    if (!checkLimit('connections')) {
+      setShowUpgradeModal(true);
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setScreenState('connecting');
     completedRef.current = false;
@@ -282,7 +291,7 @@ export default function ConnectBankScreen() {
       Alert.alert(t('connect.connectionFailed'), err?.message ?? t('connect.initiateError'));
       setScreenState('list');
     }
-  }, [t]);
+  }, [t, checkLimit]);
 
   // ---------------------------------------------------------------------------
   // Pluggy success handler
@@ -768,6 +777,12 @@ export default function ConnectBankScreen() {
           <Text style={styles.syncSubtext}>{t('connect.mayTakeAMoment')}</Text>
         </View>
       )}
+
+      <UpgradeModal
+        feature="connections"
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+      />
     </View>
   );
 }
