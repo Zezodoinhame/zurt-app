@@ -248,6 +248,7 @@ export default function AgentScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const [inputText, setInputText] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const { t } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -266,17 +267,33 @@ export default function AgentScreen() {
     loadInitialInsights();
   }, []);
 
-  useEffect(() => {
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
-  }, [messages, isLoading]);
-
-  // Auto-scroll when keyboard shows
-  useEffect(() => {
-    const sub = Keyboard.addListener('keyboardDidShow', () => {
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-    });
-    return () => sub.remove();
+  // Auto-scroll to end when messages change
+  const scrollToEnd = useCallback(() => {
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   }, []);
+
+  useEffect(() => {
+    scrollToEnd();
+  }, [messages, isLoading, scrollToEnd]);
+
+  // Track keyboard visibility for dynamic padding
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, () => {
+      setKeyboardVisible(true);
+      scrollToEnd();
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [scrollToEnd]);
 
   const handleSend = useCallback(() => {
     const text = inputText.trim();
@@ -315,9 +332,8 @@ export default function AgentScreen() {
   const lastAiIndex = messages.reduce((acc, m, i) => (m.role === 'assistant' ? i : acc), -1);
   const lastAiSuggestions = lastAiIndex >= 0 ? messages[lastAiIndex]?.suggestions ?? [] : [];
 
-  // Tab bar height = 60 + bottom inset
-  const tabBarHeight = 60 + (insets.bottom || 0);
-  const kavOffset = Platform.OS === 'ios' ? tabBarHeight : 0;
+  // Input bottom padding: small when keyboard open, safe area when closed
+  const inputBottomPadding = keyboardVisible ? 8 : (insets.bottom > 0 ? 4 : 8);
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -344,8 +360,8 @@ export default function AgentScreen() {
 
       <KeyboardAvoidingView
         style={styles.flex1}
-        behavior="padding"
-        keyboardVerticalOffset={kavOffset}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         {/* Messages */}
         <ScrollView
@@ -354,6 +370,8 @@ export default function AgentScreen() {
           contentContainerStyle={styles.messagesContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          onContentSizeChange={scrollToEnd}
+          onLayout={scrollToEnd}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
@@ -413,7 +431,7 @@ export default function AgentScreen() {
         )}
 
         {/* Input bar */}
-        <View style={[styles.inputBar, { paddingBottom: Platform.OS === 'ios' ? 4 : 8 }]}>
+        <View style={[styles.inputBar, { paddingBottom: inputBottomPadding }]}>
           <View style={styles.inputWrapper}>
             <TextInput
               style={styles.input}
@@ -495,7 +513,7 @@ const createStyles = (colors: ThemeColors) =>
     // Messages
     messagesContent: {
       padding: spacing.lg,
-      paddingBottom: spacing.sm,
+      paddingBottom: 8,
       flexGrow: 1,
     },
     messageRow: {

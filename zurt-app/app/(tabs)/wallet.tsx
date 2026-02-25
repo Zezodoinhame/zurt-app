@@ -709,7 +709,12 @@ export default function WalletScreen() {
                       activeOpacity={0.7}
                     >
                       <AppIcon name={tool.icon} size={22} color={colors.accent} />
-                      <Text style={styles.toolName} numberOfLines={2}>
+                      <Text
+                        style={styles.toolName}
+                        numberOfLines={2}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.7}
+                      >
                         {t(tool.labelKey)}
                       </Text>
                       {tool.isTodo && !isDemoMode && (
@@ -1079,6 +1084,7 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.text.primary,
       textAlign: 'center',
       lineHeight: 14,
+      alignSelf: 'stretch',
     },
     toolBadge: {
       backgroundColor: colors.warning + '20',

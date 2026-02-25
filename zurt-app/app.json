@@ -22,6 +22,14 @@
         "NSPhotoLibraryUsageDescription": "ZURT precisa acessar suas fotos para foto de perfil",
         "UIBackgroundModes": [
           "remote-notification"
+        ],
+        "LSApplicationQueriesSchemes": [
+          "santander",
+          "itau",
+          "bradesco",
+          "nubank",
+          "btgpactual",
+          "bancointer"
         ]
       }
     },
@@ -48,7 +56,17 @@
           ],
           "category": ["DEFAULT", "BROWSABLE"]
         }
-      ]
+      ],
+      "queries": {
+        "schemes": [
+          "santander",
+          "itau",
+          "bradesco",
+          "nubank",
+          "btgpactual",
+          "bancointer"
+        ]
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png",

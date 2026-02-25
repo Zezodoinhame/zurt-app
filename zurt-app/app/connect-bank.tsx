@@ -6,7 +6,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
-  ActivityIndicator, Alert, RefreshControl, Linking,
+  ActivityIndicator, Alert, RefreshControl, Linking, Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -107,6 +107,116 @@ const INJECTED_JS = `
 })();
 true;
 `;
+
+// =============================================================================
+// Bank deep linking — open native bank apps for OAuth instead of WebView
+// =============================================================================
+
+interface BankDeepLink {
+  ios: string;
+  android: string;
+  fallback: string;
+}
+
+const BANK_DEEP_LINKS: Record<string, BankDeepLink> = {
+  santander: {
+    ios: 'santander://',
+    android: 'intent://#Intent;package=com.santander.app;end',
+    fallback: 'https://santander.com.br',
+  },
+  itau: {
+    ios: 'itau://',
+    android: 'intent://#Intent;package=com.itau;end',
+    fallback: 'https://itau.com.br',
+  },
+  bradesco: {
+    ios: 'bradesco://',
+    android: 'intent://#Intent;package=com.bradesco;end',
+    fallback: 'https://bradesco.com.br',
+  },
+  nubank: {
+    ios: 'nubank://',
+    android: 'intent://#Intent;package=com.nu.production;end',
+    fallback: 'https://nubank.com.br',
+  },
+  btg: {
+    ios: 'btgpactual://',
+    android: 'intent://#Intent;package=com.btg.pactual.digital;end',
+    fallback: 'https://btgpactual.com',
+  },
+  inter: {
+    ios: 'bancointer://',
+    android: 'intent://#Intent;package=br.com.intermedium;end',
+    fallback: 'https://bancointer.com.br',
+  },
+};
+
+/** Map bank URL domains to deep link keys */
+const BANK_DOMAIN_MAP: Record<string, string> = {
+  'santander.com.br': 'santander',
+  'santander.com': 'santander',
+  'itau.com.br': 'itau',
+  'itau.com': 'itau',
+  'bradesco.com.br': 'bradesco',
+  'bradesco.com': 'bradesco',
+  'nubank.com.br': 'nubank',
+  'nubank.com': 'nubank',
+  'btgpactual.com': 'btg',
+  'btgpactual.com.br': 'btg',
+  'bancointer.com.br': 'inter',
+  'inter.co': 'inter',
+};
+
+/**
+ * Detect bank slug from a URL by checking the domain.
+ * Returns the BANK_DEEP_LINKS key or null.
+ */
+function detectBankFromUrl(url: string): string | null {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    for (const [domain, slug] of Object.entries(BANK_DOMAIN_MAP)) {
+      if (hostname === domain || hostname.endsWith('.' + domain)) {
+        return slug;
+      }
+    }
+  } catch { /* invalid URL */ }
+  return null;
+}
+
+/**
+ * Try to open the bank's native app via deep link.
+ * Returns true if the deep link was opened, false otherwise.
+ */
+async function tryOpenBankApp(bankSlug: string): Promise<boolean> {
+  const bank = BANK_DEEP_LINKS[bankSlug];
+  if (!bank) return false;
+
+  // canOpenURL needs a simple scheme URL (not Android intent syntax)
+  const checkUrl = bank.ios; // e.g. "santander://" — works for both platforms
+  const openUrl = Platform.OS === 'ios' ? bank.ios : bank.android;
+
+  try {
+    const canOpen = await Linking.canOpenURL(checkUrl);
+    if (canOpen) {
+      await Linking.openURL(openUrl);
+      logger.log('[ConnectBank] Opened native app for:', bankSlug);
+      return true;
+    }
+  } catch (err) {
+    logger.log('[ConnectBank] canOpenURL failed for', bankSlug, '— trying openURL directly');
+  }
+
+  // Fallback: try openURL directly (works on some Android versions without canOpenURL)
+  try {
+    await Linking.openURL(openUrl);
+    logger.log('[ConnectBank] Opened native app (direct) for:', bankSlug);
+    return true;
+  } catch {
+    logger.log('[ConnectBank] Native app not available for:', bankSlug);
+  }
+
+  return false;
+}
 
 // =============================================================================
 // Screen
@@ -210,11 +320,21 @@ export default function ConnectBankScreen() {
         if (completedRef.current) return;
 
         // Handle OAuth redirect - bank needs user authentication
-        // Use WebBrowser for better Universal Links / App Links handling (e.g. Santander)
+        // Try native bank app first (e.g. Santander requires it), fall back to WebBrowser
         if (data?.type === 'OAUTH_OPEN' && data?.message) {
           const oauthUrl = data.message;
           logger.log('[ConnectBank] Opening bank OAuth URL:', oauthUrl.substring(0, 80));
           (async () => {
+            // Check if this URL belongs to a bank with a known native app
+            const bankSlug = detectBankFromUrl(oauthUrl);
+            if (bankSlug) {
+              logger.log('[ConnectBank] Detected bank:', bankSlug, '— trying native app');
+              const opened = await tryOpenBankApp(bankSlug);
+              if (opened) return; // Native app opened — user will auth there
+              logger.log('[ConnectBank] Native app not available, falling back to browser');
+            }
+
+            // Fallback: open in system browser
             try {
               await WebBrowser.openBrowserAsync(oauthUrl, {
                 showInRecents: true,
@@ -519,6 +639,26 @@ export default function ConnectBankScreen() {
           }}
           onShouldStartLoadWithRequest={(request) => {
             logger.log('[ConnectBank] Load request:', request.url.substring(0, 100));
+
+            // Intercept bank URLs — try native app before loading in WebView
+            const bankSlug = detectBankFromUrl(request.url);
+            if (bankSlug) {
+              logger.log('[ConnectBank] WebView navigating to bank:', bankSlug, '— trying native app');
+              tryOpenBankApp(bankSlug).then((opened) => {
+                if (!opened) {
+                  // App not installed — let WebBrowser handle it for proper redirect flow
+                  logger.log('[ConnectBank] Native app unavailable, opening in browser:', request.url.substring(0, 80));
+                  WebBrowser.openBrowserAsync(request.url, {
+                    showInRecents: true,
+                    createTask: false,
+                  }).catch(() => {
+                    Linking.openURL(request.url).catch(() => {});
+                  });
+                }
+              });
+              return false; // Block WebView from loading the bank URL
+            }
+
             return true;
           }}
           renderLoading={() => (
