@@ -264,7 +264,7 @@ export default function BillsScreen() {
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               {item.status === 'paid' && (
-                <AppIcon name="success" size={14} color="#FFFFFF" />
+                <AppIcon name="success" size={14} color={colors.background} />
               )}
             </TouchableOpacity>
           </View>

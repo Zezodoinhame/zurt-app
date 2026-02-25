@@ -83,7 +83,7 @@ export default function BudgetScreen() {
       if (limit <= 0) return colors.text.muted;
       const ratio = spent / limit;
       if (ratio > 1) return colors.negative;
-      if (ratio >= 0.8) return '#FFBE0B';
+      if (ratio >= 0.8) return colors.warning;
       return colors.positive;
     },
     [colors],
@@ -465,7 +465,7 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
     },
     overBadgeText: {
-      color: '#FFFFFF',
+      color: colors.background,
       fontSize: 12,
       fontWeight: '800',
     },

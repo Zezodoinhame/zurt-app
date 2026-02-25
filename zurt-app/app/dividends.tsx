@@ -71,7 +71,7 @@ export default function DividendsScreen() {
   const router = useRouter();
   const { t } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
-  const { valuesHidden } = useAuthStore();
+  const { valuesHidden, isDemoMode } = useAuthStore();
   const {
     months,
     selectedMonth,
@@ -204,6 +204,12 @@ export default function DividendsScreen() {
         <Text style={styles.headerTitle}>{t('dividends.title')}</Text>
         <View style={{ width: 24 }} />
       </View>
+
+      {!isDemoMode && (
+        <View style={{ backgroundColor: colors.elevated, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.md, marginHorizontal: spacing.xl, marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <Text style={{ fontSize: 13, color: colors.text.secondary }}>{'\uD83D\uDD1C'} {t('common.featureInDevelopment')}</Text>
+        </View>
+      )}
 
       <ScrollView
         showsVerticalScrollIndicator={false}

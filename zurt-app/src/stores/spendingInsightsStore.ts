@@ -5,12 +5,12 @@ import { demoSpendingInsights } from '../data/demo';
 import { logger } from '../utils/logger';
 
 const CATEGORY_LABELS: Record<TransactionCategory, string> = {
-  food: 'Alimentacao',
+  food: 'Alimentação',
   transport: 'Transporte',
   subscriptions: 'Assinaturas',
   shopping: 'Compras',
-  fuel: 'Combustivel',
-  health: 'Saude',
+  fuel: 'Combustível',
+  health: 'Saúde',
   travel: 'Viagens',
   tech: 'Tecnologia',
 };
@@ -179,7 +179,7 @@ export const useSpendingInsightsStore = create<SpendingInsightsState>((set) => (
       // If no transactions yet, fallback to demo data so screen isn't empty
       set({ insights: computed ?? demoSpendingInsights, isLoading: false });
     } catch (err: any) {
-      set({ isLoading: false, error: err?.message ?? 'Error loading insights' });
+      set({ isLoading: false, error: err?.message ?? 'Erro ao carregar análises' });
     }
   },
 

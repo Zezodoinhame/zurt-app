@@ -62,7 +62,7 @@ export const useGoalsStore = create<GoalsState>((set, get) => ({
       set({ goals, isLoading: false });
     } catch (err: any) {
       logger.log('[GoalsStore] loadGoals error:', err?.message ?? err);
-      set({ goals: [], isLoading: false });
+      set({ goals: [], isLoading: false, error: err?.message ?? 'Erro ao carregar metas' });
     }
   },
 

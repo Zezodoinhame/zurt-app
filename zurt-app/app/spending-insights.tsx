@@ -18,6 +18,7 @@ import { useSpendingInsightsStore } from '../src/stores/spendingInsightsStore';
 import { sendAIChat } from '../src/services/api';
 import { Header } from '../src/components/shared/Header';
 import { Card } from '../src/components/ui/Card';
+import { AIMarkdown } from '../src/components/shared/AIMarkdown';
 import { Badge } from '../src/components/ui/Badge';
 import { MiniLineChart } from '../src/components/charts/MiniLineChart';
 import { AppIcon } from '../src/hooks/useIcon';
@@ -129,9 +130,9 @@ export default function SpendingInsightsScreen() {
         </View>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingTop: 60 }}>
           <Text style={{ fontSize: 40, marginBottom: 16 }}>{'\uD83D\uDCA1'}</Text>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, textAlign: 'center', marginBottom: 8 }}>Insights de Gastos</Text>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, textAlign: 'center', marginBottom: 8 }}>{t('spendingInsights.emptyTitle')}</Text>
           <Text style={{ fontSize: 14, color: colors.text.secondary, textAlign: 'center', lineHeight: 20 }}>
-            Conecte seu banco para receber insights inteligentes sobre seus gastos.
+            {t('spendingInsights.emptyDescription')}
           </Text>
         </View>
       </View>
@@ -186,27 +187,27 @@ export default function SpendingInsightsScreen() {
         >
           {/* Avg daily spend */}
           <View style={styles.kpiCard}>
-            <AppIcon name="wallet" size={16} color={colors.accent} />
+            <AppIcon name="calendar" size={18} color={colors.accent} />
             <Text style={styles.kpiValue}>{displayVal(avgDailySpend)}</Text>
-            <Text style={styles.kpiLabel}>/dia</Text>
+            <Text style={styles.kpiLabel} numberOfLines={2} ellipsizeMode="tail">{t('spendingInsights.perDay')}</Text>
           </View>
 
           {/* Savings rate */}
           <View style={styles.kpiCard}>
-            <AppIcon name="savings" size={16} color={colors.positive} />
-            <Text style={styles.kpiValue}>
+            <AppIcon name="trending" size={18} color={colors.positive} />
+            <Text style={[styles.kpiValue, { color: savingsRate >= 0 ? colors.positive : colors.negative }]}>
               {valuesHidden ? '***' : `${savingsRate.toFixed(1)}%`}
             </Text>
-            <Text style={styles.kpiLabel}>{t('spendingInsights.savings')}</Text>
+            <Text style={styles.kpiLabel} numberOfLines={2} ellipsizeMode="tail">{t('spendingInsights.savings')}</Text>
           </View>
 
           {/* Biggest expense */}
           <View style={styles.kpiCard}>
-            <AppIcon name="alert" size={16} color={colors.warning} />
-            <Text style={styles.kpiValue} numberOfLines={1}>
+            <AppIcon name="warning" size={18} color={colors.warning} />
+            <Text style={[styles.kpiValue, { color: colors.negative }]} numberOfLines={1}>
               {displayVal(biggestExpense.amount)}
             </Text>
-            <Text style={styles.kpiLabel} numberOfLines={1}>
+            <Text style={styles.kpiLabel} numberOfLines={2} ellipsizeMode="tail">
               {biggestExpense.description}
             </Text>
           </View>
@@ -214,8 +215,8 @@ export default function SpendingInsightsScreen() {
           {/* Velocity */}
           <View style={styles.kpiCard}>
             <AppIcon
-              name="trending"
-              size={16}
+              name="gauge"
+              size={18}
               color={spendingVelocity > 100 ? colors.negative : colors.positive}
             />
             <Text
@@ -226,7 +227,7 @@ export default function SpendingInsightsScreen() {
             >
               {valuesHidden ? '***' : `${spendingVelocity}%`}
             </Text>
-            <Text style={styles.kpiLabel}>
+            <Text style={styles.kpiLabel} numberOfLines={2} ellipsizeMode="tail">
               {spendingVelocity > 100
                 ? t('spendingInsights.faster')
                 : t('spendingInsights.slower')}
@@ -237,7 +238,7 @@ export default function SpendingInsightsScreen() {
         {/* AI Analysis */}
         <Card delay={50}>
           <View style={styles.aiHeader}>
-            <Text style={styles.sectionTitle}>{'\uD83E\uDD16'} Análise ZURT AI</Text>
+            <Text style={styles.sectionTitle}>{'\uD83E\uDD16'} {t('spendingInsights.aiTitle')}</Text>
             <TouchableOpacity
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); runAiAnalysis(); }}
               disabled={aiLoading}
@@ -254,13 +255,13 @@ export default function SpendingInsightsScreen() {
           {aiLoading && !aiAnalysis ? (
             <View style={styles.aiLoadingContainer}>
               <ActivityIndicator size="small" color={colors.accent} />
-              <Text style={styles.aiLoadingText}>Analisando seus gastos...</Text>
+              <Text style={styles.aiLoadingText}>{t('spendingInsights.aiLoading')}</Text>
             </View>
           ) : aiAnalysis ? (
-            <Text style={styles.aiText}>{aiAnalysis}</Text>
+            <AIMarkdown content={aiAnalysis} />
           ) : (
             <Text style={styles.aiPlaceholder}>
-              Toque no botão de atualizar para gerar uma análise inteligente dos seus gastos.
+              {t('spendingInsights.aiPlaceholder')}
             </Text>
           )}
         </Card>
@@ -289,7 +290,7 @@ export default function SpendingInsightsScreen() {
 
         {/* Category Trends */}
         <Card delay={200}>
-          <Text style={styles.sectionTitle}>{t('spendingInsights.categoryTrends')}</Text>
+          <Text style={styles.sectionTitle}>{t('spendingInsights.trends')}</Text>
 
           {/* Category filter pills */}
           <ScrollView
@@ -420,18 +421,19 @@ const createStyles = (colors: ThemeColors) =>
       borderWidth: 1,
       borderColor: colors.border,
       padding: spacing.md,
-      minWidth: 130,
+      minWidth: 150,
       gap: spacing.xs,
     },
     kpiValue: {
-      fontSize: 16,
+      fontSize: 18,
       fontWeight: '800',
       color: colors.text.primary,
       fontVariant: ['tabular-nums'],
     },
     kpiLabel: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.text.muted,
+      lineHeight: 16,
     },
 
     // Month Comparison

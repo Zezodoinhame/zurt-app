@@ -1,6 +1,7 @@
 // Exchange rates and conversion functions with BRAPI live data support
 
 import type { CurrencyCode, CurrencyRate } from '../types';
+import { logger } from './logger';
 
 // Hardcoded fallback rates relative to USD
 const FALLBACK_RATES: Record<CurrencyCode, number> = {
@@ -65,7 +66,7 @@ export async function fetchLiveRates(): Promise<string | null> {
     _lastUpdated = new Date().toISOString();
     return _lastUpdated;
   } catch (err) {
-    console.warn('BRAPI fetch failed, using fallback rates:', err);
+    logger.warn('BRAPI fetch failed, using fallback rates:', err);
     return null;
   }
 }

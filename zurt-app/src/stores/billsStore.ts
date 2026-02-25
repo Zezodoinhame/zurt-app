@@ -40,7 +40,7 @@ export const useBillsStore = create<BillsState>((set, get) => ({
       const bills = stored ? JSON.parse(stored) : [];
       set({ bills, isLoading: false });
     } catch (err: any) {
-      set({ isLoading: false, error: err?.message ?? 'Error loading bills' });
+      set({ isLoading: false, error: err?.message ?? 'Erro ao carregar contas' });
     }
   },
 

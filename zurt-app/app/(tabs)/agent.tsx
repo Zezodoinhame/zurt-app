@@ -11,42 +11,40 @@ import {
   Animated,
   Alert,
   Keyboard,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Markdown from 'react-native-markdown-display';
+import { LinearGradient } from 'expo-linear-gradient';
 import { type ThemeColors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useAgentStore, type ChatMessage } from '../../src/stores/agentStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import { AIMarkdown } from '../../src/components/shared/AIMarkdown';
 import { AppIcon } from '../../src/hooks/useIcon';
 
 // ===========================================================================
-// Markdown Styles (dynamic theme)
+// Agent Avatar (gradient badge with sparkle)
 // ===========================================================================
 
-const createMarkdownStyles = (colors: ThemeColors) =>
-  StyleSheet.create({
-    body: { color: colors.text.primary, fontSize: 14, lineHeight: 22 },
-    heading1: { color: colors.text.primary, fontSize: 20, fontWeight: '700' as const, marginBottom: 8 },
-    heading2: { color: colors.text.primary, fontSize: 18, fontWeight: '600' as const, marginBottom: 6 },
-    heading3: { color: colors.accent, fontSize: 16, fontWeight: '600' as const, marginBottom: 4 },
-    strong: { color: colors.text.primary, fontWeight: '700' as const },
-    em: { color: colors.text.secondary, fontStyle: 'italic' as const },
-    bullet_list: { marginLeft: 8 },
-    ordered_list: { marginLeft: 8 },
-    list_item: { marginBottom: 4 },
-    code_inline: { backgroundColor: colors.cardAlt, color: colors.accent, paddingHorizontal: 4, borderRadius: 4, fontSize: 13 },
-    code_block: { backgroundColor: colors.cardAlt, padding: 12, borderRadius: 8, marginVertical: 8 },
-    fence: { backgroundColor: colors.cardAlt, padding: 12, borderRadius: 8, marginVertical: 8 },
-    blockquote: { borderLeftColor: colors.accent, borderLeftWidth: 3, paddingLeft: 12, marginVertical: 8, backgroundColor: colors.card },
-    link: { color: colors.accent },
-    hr: { backgroundColor: colors.border, height: 1, marginVertical: 12 },
-    table: { borderColor: colors.border },
-    thead: { backgroundColor: colors.cardAlt },
-    th: { color: colors.text.primary, fontWeight: '600' as const, padding: 8 },
-    td: { color: colors.text.primary, padding: 8, borderColor: colors.border },
-    paragraph: { marginTop: 0, marginBottom: 8 },
-  });
+function AgentAvatar({ size = 32 }: { size?: number }) {
+  const colors = useSettingsStore((s) => s.colors);
+  return (
+    <LinearGradient
+      colors={[colors.accent, colors.accent + 'AA', colors.accent + '55']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <AppIcon name="sparkle" size={size * 0.5} color={colors.background} />
+    </LinearGradient>
+  );
+}
 
 // ===========================================================================
 // Typing Indicator (pulsing dots)
@@ -89,7 +87,7 @@ function TypingIndicator() {
   return (
     <View style={styles.messageRow}>
       <View style={styles.avatarCol}>
-        <View style={styles.avatar}><AppIcon name="sparkle" size={14} color={colors.accent} /></View>
+        <AgentAvatar size={28} />
       </View>
       <View style={styles.aiBubble}>
         <View style={styles.typingDots}>
@@ -103,49 +101,53 @@ function TypingIndicator() {
 }
 
 // ===========================================================================
-// Animated Empty State
+// Welcome / Empty State
 // ===========================================================================
 
 function EmptyState({ t, onSuggestion }: { t: (k: string) => string; onSuggestion: (s: string) => void }) {
   const colors = useSettingsStore((s) => s.colors);
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const fadeAnim = useRef(new Animated.Value(0.4)).current;
+  const pulseAnim = useRef(new Animated.Value(0.6)).current;
 
   useEffect(() => {
     const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
-        Animated.timing(fadeAnim, { toValue: 0.4, duration: 2000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0.6, duration: 2000, useNativeDriver: true }),
       ]),
     );
     anim.start();
     return () => anim.stop();
   }, []);
 
-  const initialSuggestions = [
-    t('agent.suggestMarket'),
-    t('agent.suggestPortfolio'),
-    t('agent.suggestDollar'),
-    t('agent.suggestSelic'),
+  const suggestions = [
+    { icon: 'trending' as const, text: t('agent.suggestMarket') },
+    { icon: 'chart' as const, text: t('agent.suggestPortfolio') },
+    { icon: 'currency' as const, text: t('agent.suggestDollar') },
+    { icon: 'gauge' as const, text: t('agent.suggestSelic') },
   ];
 
   return (
     <View style={styles.emptyState}>
-      <Animated.View style={{ opacity: fadeAnim, marginBottom: spacing.xl }}>
-        <AppIcon name="sparkle" size={56} color={colors.accent} />
+      <Animated.View style={{ opacity: pulseAnim, marginBottom: spacing.xxl }}>
+        <AgentAvatar size={72} />
       </Animated.View>
       <Text style={styles.emptyTitle}>{t('agent.emptyHello')}</Text>
       <Text style={styles.emptyDescription}>{t('agent.emptyDescription2')}</Text>
+
       <View style={styles.initialSuggestions}>
-        {initialSuggestions.map((s, i) => (
+        {suggestions.map((s, i) => (
           <TouchableOpacity
             key={i}
-            style={styles.initialChip}
-            onPress={() => onSuggestion(s)}
+            style={styles.suggestionCard}
+            onPress={() => onSuggestion(s.text)}
             activeOpacity={0.7}
           >
-            <Text style={styles.initialChipText}>{s}</Text>
+            <View style={styles.suggestionCardIcon}>
+              <AppIcon name={s.icon} size={18} color={colors.accent} />
+            </View>
+            <Text style={styles.suggestionCardText} numberOfLines={2}>{s.text}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -166,14 +168,12 @@ function formatTime(ts: number): string {
 // Message Bubble
 // ===========================================================================
 
-function MessageBubble({ message, onSuggestionPress, isLast }: {
+function MessageBubble({ message, isLast }: {
   message: ChatMessage;
-  onSuggestionPress: (text: string) => void;
   isLast: boolean;
 }) {
   const colors = useSettingsStore((s) => s.colors);
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const markdownStyles = useMemo(() => createMarkdownStyles(colors), [colors]);
 
   const isUser = message.role === 'user';
 
@@ -182,7 +182,7 @@ function MessageBubble({ message, onSuggestionPress, isLast }: {
       {/* Avatar for AI */}
       {!isUser && (
         <View style={styles.avatarCol}>
-          <View style={styles.avatar}><AppIcon name="sparkle" size={14} color={colors.accent} /></View>
+          <AgentAvatar size={28} />
         </View>
       )}
 
@@ -191,7 +191,7 @@ function MessageBubble({ message, onSuggestionPress, isLast }: {
           {isUser ? (
             <Text style={styles.userMessageText}>{message.content}</Text>
           ) : (
-            <Markdown style={markdownStyles}>{message.content}</Markdown>
+            <AIMarkdown content={message.content} />
           )}
         </View>
 
@@ -199,29 +199,43 @@ function MessageBubble({ message, onSuggestionPress, isLast }: {
         <Text style={[styles.timestamp, isUser && styles.timestampUser]}>
           {formatTime(message.timestamp)}
         </Text>
-
-        {/* Suggestion chips (only on last AI message) */}
-        {!isUser && isLast && message.suggestions && message.suggestions.length > 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.suggestionsScroll}
-            contentContainerStyle={styles.suggestionsRow}
-          >
-            {message.suggestions.map((s, i) => (
-              <TouchableOpacity
-                key={i}
-                style={styles.suggestionChip}
-                onPress={() => onSuggestionPress(s)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.suggestionText}>{s}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
       </View>
     </View>
+  );
+}
+
+// ===========================================================================
+// Bottom Suggestions (horizontal chips above input)
+// ===========================================================================
+
+function BottomSuggestions({ suggestions, onPress }: {
+  suggestions: string[];
+  onPress: (s: string) => void;
+}) {
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  if (!suggestions.length) return null;
+
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.bottomSuggestionsScroll}
+      contentContainerStyle={styles.bottomSuggestionsContent}
+      keyboardShouldPersistTaps="handled"
+    >
+      {suggestions.map((s, i) => (
+        <TouchableOpacity
+          key={i}
+          style={styles.bottomChip}
+          onPress={() => onPress(s)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.bottomChipText} numberOfLines={1}>{s}</Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
   );
 }
 
@@ -233,6 +247,7 @@ export default function AgentScreen() {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const [inputText, setInputText] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { t } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -255,7 +270,7 @@ export default function AgentScreen() {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
   }, [messages, isLoading]);
 
-  // Auto-scroll when keyboard shows (fixes Android input hidden by keyboard)
+  // Auto-scroll when keyboard shows
   useEffect(() => {
     const sub = Keyboard.addListener('keyboardDidShow', () => {
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
@@ -290,23 +305,31 @@ export default function AgentScreen() {
     );
   }, [t, clearHistory]);
 
-  // Find last assistant message index
-  const lastAiIndex = messages.reduce((acc, m, i) => (m.role === 'assistant' ? i : acc), -1);
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await loadInitialInsights();
+    setIsRefreshing(false);
+  }, [loadInitialInsights]);
 
-  // Tab bar height = 60 + bottom inset (matches _layout.tsx)
+  // Find last assistant message for suggestions
+  const lastAiIndex = messages.reduce((acc, m, i) => (m.role === 'assistant' ? i : acc), -1);
+  const lastAiSuggestions = lastAiIndex >= 0 ? messages[lastAiIndex]?.suggestions ?? [] : [];
+
+  // Tab bar height = 60 + bottom inset
   const tabBarHeight = 60 + (insets.bottom || 0);
-  const kavOffset = Platform.OS === 'ios'
-    ? insets.top + tabBarHeight
-    : 0;
+  const kavOffset = Platform.OS === 'ios' ? tabBarHeight : 0;
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <AppIcon name="sparkle" size={28} color={colors.accent} />
+        <AgentAvatar size={36} />
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>{t('agent.title')}</Text>
-          <Text style={styles.headerSubtitle}>{t('agent.subtitle')}</Text>
+          <View style={styles.headerOnlineRow}>
+            <View style={styles.onlineDot} />
+            <Text style={styles.headerOnlineText}>{t('agent.online')}</Text>
+          </View>
         </View>
         {messages.length > 0 && (
           <TouchableOpacity
@@ -331,6 +354,15 @@ export default function AgentScreen() {
           contentContainerStyle={styles.messagesContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.accent}
+              colors={[colors.accent]}
+              progressBackgroundColor={colors.card}
+            />
+          }
         >
           {/* Empty state */}
           {messages.length === 0 && !isLoading && !error && !rateLimited && (
@@ -364,7 +396,6 @@ export default function AgentScreen() {
             <MessageBubble
               key={msg.id}
               message={msg}
-              onSuggestionPress={handleSuggestionPress}
               isLast={idx === lastAiIndex}
             />
           ))}
@@ -373,21 +404,34 @@ export default function AgentScreen() {
           {isLoading && <TypingIndicator />}
         </ScrollView>
 
-        {/* Input bar */}
-        <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-          <TextInput
-            style={styles.input}
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder={t('agent.inputPlaceholder')}
-            placeholderTextColor={colors.text.muted}
-            multiline
-            maxLength={500}
-            returnKeyType="send"
-            onSubmitEditing={handleSend}
-            blurOnSubmit
-            editable={!rateLimited}
+        {/* Bottom suggestion chips (above input) */}
+        {!isLoading && lastAiSuggestions.length > 0 && (
+          <BottomSuggestions
+            suggestions={lastAiSuggestions}
+            onPress={handleSuggestionPress}
           />
+        )}
+
+        {/* Input bar */}
+        <View style={[styles.inputBar, { paddingBottom: Platform.OS === 'ios' ? 4 : 8 }]}>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              value={inputText}
+              onChangeText={setInputText}
+              placeholder={t('agent.inputPlaceholder')}
+              placeholderTextColor={colors.text.muted}
+              multiline
+              maxLength={500}
+              returnKeyType="send"
+              onSubmitEditing={handleSend}
+              blurOnSubmit
+              editable={!rateLimited}
+            />
+            <TouchableOpacity style={styles.micButton} disabled activeOpacity={0.5}>
+              <AppIcon name="radar" size={18} color={colors.text.muted + '60'} />
+            </TouchableOpacity>
+          </View>
           <TouchableOpacity
             style={[
               styles.sendButton,
@@ -397,7 +441,18 @@ export default function AgentScreen() {
             activeOpacity={0.7}
             disabled={!inputText.trim() || isLoading}
           >
-            <AppIcon name="send" size={18} color={colors.background} />
+            <LinearGradient
+              colors={
+                !inputText.trim() || isLoading
+                  ? [colors.text.muted + '40', colors.text.muted + '40']
+                  : [colors.accent, colors.accent + 'CC']
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.sendButtonGradient}
+            >
+              <AppIcon name="send" size={18} color={colors.background} />
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -420,41 +475,38 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       paddingHorizontal: spacing.xl,
       paddingTop: spacing.md,
-      paddingBottom: spacing.lg,
-      borderBottomWidth: 0.5,
+      paddingBottom: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
+      gap: spacing.md,
     },
-    headerIcon: { fontSize: 28, marginRight: spacing.md },
     headerCenter: { flex: 1 },
-    headerTitle: { fontSize: 20, fontWeight: '700', color: colors.text.primary },
-    headerSubtitle: { fontSize: 12, color: colors.text.secondary, marginTop: 2 },
+    headerTitle: { fontSize: 18, fontWeight: '700', color: colors.text.primary },
+    headerOnlineRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2, gap: 6 },
+    onlineDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 4,
+      backgroundColor: colors.positive,
+    },
+    headerOnlineText: { fontSize: 12, color: colors.text.secondary },
     clearButton: { padding: spacing.xs },
-    clearIcon: { fontSize: 20 },
 
     // Messages
     messagesContent: {
       padding: spacing.lg,
-      paddingBottom: spacing.md,
+      paddingBottom: spacing.sm,
       flexGrow: 1,
     },
     messageRow: {
       flexDirection: 'row',
       marginBottom: spacing.lg,
-      maxWidth: '88%',
+      maxWidth: '85%',
     },
     messageRowUser: { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
 
     // Avatar
     avatarCol: { marginRight: spacing.sm, paddingTop: 2 },
-    avatar: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      backgroundColor: colors.accent + '20',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    avatarText: { fontSize: 14 },
 
     // Bubble column
     bubbleCol: { flex: 1 },
@@ -463,18 +515,20 @@ const createStyles = (colors: ThemeColors) =>
     aiBubble: {
       backgroundColor: colors.card,
       borderRadius: radius.lg,
-      borderWidth: 1,
+      borderTopLeftRadius: 4,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
-      borderLeftWidth: 3,
-      borderLeftColor: colors.accent,
-      padding: spacing.lg,
+      padding: spacing.md,
+      paddingHorizontal: spacing.lg,
     },
 
     // User bubble
     userBubble: {
       backgroundColor: colors.accent,
       borderRadius: radius.lg,
-      padding: spacing.lg,
+      borderTopRightRadius: 4,
+      padding: spacing.md,
+      paddingHorizontal: spacing.lg,
     },
     userMessageText: { fontSize: 14, color: colors.background, lineHeight: 22 },
 
@@ -483,36 +537,23 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 10,
       color: colors.text.muted,
       marginTop: 4,
-      marginLeft: spacing.sm,
+      marginLeft: spacing.xs,
     },
-    timestampUser: { textAlign: 'right', marginRight: spacing.sm, marginLeft: 0 },
-
-    // Suggestions
-    suggestionsScroll: { marginTop: spacing.sm },
-    suggestionsRow: { gap: spacing.xs, paddingRight: spacing.md },
-    suggestionChip: {
-      borderWidth: 1,
-      borderColor: colors.accent,
-      borderRadius: radius.full,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.xs + 2,
-    },
-    suggestionText: { fontSize: 12, color: colors.accent, fontWeight: '500' },
+    timestampUser: { textAlign: 'right', marginRight: spacing.xs, marginLeft: 0 },
 
     // Typing indicator
-    typingDots: { flexDirection: 'row', gap: 6 },
-    dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
+    typingDots: { flexDirection: 'row', gap: 6, paddingVertical: 4 },
+    dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.accent },
 
     // Empty state
     emptyState: {
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 60,
+      paddingVertical: 48,
     },
-    emptyIcon: { fontSize: 56, marginBottom: spacing.xl },
     emptyTitle: {
-      fontSize: 20,
+      fontSize: 22,
       fontWeight: '700',
       color: colors.text.primary,
       textAlign: 'center',
@@ -523,8 +564,8 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.text.secondary,
       textAlign: 'center',
       lineHeight: 22,
-      paddingHorizontal: spacing.xl,
-      marginBottom: spacing.xl,
+      paddingHorizontal: spacing.xxl,
+      marginBottom: spacing.xxl,
     },
     initialSuggestions: {
       flexDirection: 'row',
@@ -533,15 +574,50 @@ const createStyles = (colors: ThemeColors) =>
       gap: spacing.sm,
       paddingHorizontal: spacing.lg,
     },
-    initialChip: {
-      borderWidth: 1,
-      borderColor: colors.accent,
-      borderRadius: radius.full,
+    suggestionCard: {
+      width: '46%',
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      padding: spacing.md,
+      gap: spacing.sm,
+    },
+    suggestionCardIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 10,
+      backgroundColor: colors.accent + '15',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    suggestionCardText: {
+      fontSize: 13,
+      color: colors.text.primary,
+      lineHeight: 18,
+    },
+
+    // Bottom suggestions (above input)
+    bottomSuggestionsScroll: {
+      maxHeight: 44,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.border,
+      backgroundColor: colors.background,
+    },
+    bottomSuggestionsContent: {
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.sm,
+      gap: spacing.sm,
+    },
+    bottomChip: {
+      borderWidth: 1,
+      borderColor: colors.accent + '50',
+      borderRadius: radius.full,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs + 2,
       backgroundColor: colors.accent + '10',
     },
-    initialChipText: { fontSize: 13, color: colors.accent, fontWeight: '500' },
+    bottomChipText: { fontSize: 12, color: colors.accent, fontWeight: '500' },
 
     // Rate limit
     rateLimitCard: {
@@ -552,8 +628,8 @@ const createStyles = (colors: ThemeColors) =>
       padding: spacing.xl,
       alignItems: 'center',
       marginBottom: spacing.lg,
+      gap: spacing.md,
     },
-    rateLimitIcon: { fontSize: 32, marginBottom: spacing.md },
     rateLimitText: {
       fontSize: 14,
       color: colors.text.secondary,
@@ -584,33 +660,46 @@ const createStyles = (colors: ThemeColors) =>
     inputBar: {
       flexDirection: 'row',
       alignItems: 'flex-end',
-      paddingHorizontal: spacing.lg,
+      paddingHorizontal: spacing.md,
       paddingTop: spacing.sm,
-      borderTopWidth: 0.5,
-      borderTopColor: colors.border,
       backgroundColor: colors.background,
+      gap: spacing.sm,
+    },
+    inputWrapper: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      backgroundColor: colors.card,
+      borderRadius: radius.xl,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      paddingRight: spacing.xs,
     },
     input: {
       flex: 1,
-      backgroundColor: colors.input,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
       paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.md,
+      paddingVertical: Platform.OS === 'ios' ? spacing.md : spacing.sm,
       fontSize: 14,
       color: colors.text.primary,
       maxHeight: 100,
     },
-    sendButton: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: colors.accent,
+    micButton: {
+      width: 36,
+      height: 36,
       alignItems: 'center',
       justifyContent: 'center',
-      marginLeft: spacing.sm,
+      alignSelf: 'flex-end',
+      marginBottom: 2,
     },
-    sendButtonDisabled: { opacity: 0.4 },
-    sendIcon: { fontSize: 18, color: colors.background },
+    sendButton: {
+      marginBottom: Platform.OS === 'ios' ? 2 : 0,
+    },
+    sendButtonDisabled: { opacity: 0.5 },
+    sendButtonGradient: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
   });

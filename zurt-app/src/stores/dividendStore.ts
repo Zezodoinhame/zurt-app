@@ -33,7 +33,7 @@ export const useDividendStore = create<DividendState>((set) => ({
       // TODO: fetch from API when endpoint is ready
       set({ months: [], totalAnnualIncome: 0, isLoading: false });
     } catch (err: any) {
-      set({ isLoading: false, error: err?.message ?? 'Error loading dividends' });
+      set({ isLoading: false, error: err?.message ?? 'Erro ao carregar dividendos' });
     }
   },
 

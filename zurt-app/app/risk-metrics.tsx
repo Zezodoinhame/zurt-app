@@ -22,12 +22,12 @@ import { SkeletonList } from '../src/components/skeletons/Skeleton';
 import { getScoreLabel, getScoreColor, normalizeForRadar } from '../src/utils/riskCalc';
 import { maskValue } from '../src/utils/formatters';
 
-// Placeholder metric cards shown when no real data is available
-const PLACEHOLDER_METRICS = [
-  { label: 'Sharpe Ratio', desc: 'Mede o retorno ajustado ao risco. Quanto maior, melhor a relação risco/retorno.' },
-  { label: 'Volatilidade', desc: 'Mede a variação dos retornos. Alta volatilidade = mais risco.' },
-  { label: 'Beta', desc: 'Sensibilidade ao mercado. Beta > 1 = mais volátil que o Ibovespa.' },
-  { label: 'Drawdown Máximo', desc: 'Maior queda do pico ao vale. Indica o pior cenário histórico.' },
+// Placeholder metric keys shown when no real data is available
+const PLACEHOLDER_METRIC_KEYS = [
+  { labelKey: 'risk.sharpeLabel', descKey: 'risk.sharpeDesc' },
+  { labelKey: 'risk.volatility', descKey: 'risk.volatilityDesc' },
+  { labelKey: 'risk.betaLabel', descKey: 'risk.betaDesc' },
+  { labelKey: 'risk.drawdownLabel', descKey: 'risk.drawdownDesc' },
 ];
 
 export default function RiskMetricsScreen() {
@@ -75,20 +75,20 @@ export default function RiskMetricsScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.emptyHero}>
             <Text style={styles.emptyEmoji}>{'\uD83D\uDC9A'}</Text>
-            <Text style={styles.emptyTitle}>Saúde da Carteira</Text>
+            <Text style={styles.emptyTitle}>{t('risk.title')}</Text>
             <Text style={styles.emptyDesc}>
-              Conecte sua conta ou adicione investimentos para ver métricas de risco da sua carteira.
+              {t('risk.emptyDesc')}
             </Text>
           </View>
 
           {/* Placeholder metric cards */}
           <Card delay={100}>
-            <Text style={styles.sectionTitle}>Métricas de Risco</Text>
-            {PLACEHOLDER_METRICS.map((m, i) => (
+            <Text style={styles.sectionTitle}>{t('risk.riskMetrics')}</Text>
+            {PLACEHOLDER_METRIC_KEYS.map((m, i) => (
               <View key={i} style={styles.metricRow}>
                 <View style={styles.metricInfo}>
-                  <Text style={styles.metricLabel}>{m.label}</Text>
-                  <Text style={styles.metricDesc}>{m.desc}</Text>
+                  <Text style={styles.metricLabel}>{t(m.labelKey)}</Text>
+                  <Text style={styles.metricDesc}>{t(m.descKey)}</Text>
                 </View>
                 <Text style={[styles.metricValue, { color: colors.text.muted }]}>{'\u2014'}</Text>
               </View>
@@ -116,20 +116,20 @@ export default function RiskMetricsScreen() {
           <Card variant="glow" delay={100}>
             <View style={styles.placeholderHero}>
               <Text style={styles.placeholderEmoji}>{'\uD83D\uDEE0\uFE0F'}</Text>
-              <Text style={styles.placeholderTitle}>Calculando métricas...</Text>
+              <Text style={styles.placeholderTitle}>{t('risk.calculatingTitle')}</Text>
               <Text style={styles.placeholderDesc}>
-                Estamos processando seus investimentos. As métricas de risco aparecerão aqui em breve.
+                {t('risk.calculatingDesc')}
               </Text>
             </View>
           </Card>
 
           <Card delay={200}>
-            <Text style={styles.sectionTitle}>Métricas de Risco</Text>
-            {PLACEHOLDER_METRICS.map((m, i) => (
+            <Text style={styles.sectionTitle}>{t('risk.riskMetrics')}</Text>
+            {PLACEHOLDER_METRIC_KEYS.map((m, i) => (
               <View key={i} style={styles.metricRow}>
                 <View style={styles.metricInfo}>
-                  <Text style={styles.metricLabel}>{m.label}</Text>
-                  <Text style={styles.metricDesc}>{m.desc}</Text>
+                  <Text style={styles.metricLabel}>{t(m.labelKey)}</Text>
+                  <Text style={styles.metricDesc}>{t(m.descKey)}</Text>
                 </View>
                 <Text style={[styles.metricValue, { color: colors.text.muted }]}>{'\u2014'}</Text>
               </View>

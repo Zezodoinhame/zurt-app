@@ -32,7 +32,7 @@ export const useConsultantStore = create<ConsultantState>((set, get) => ({
       // TODO: fetch from API when endpoint is ready
       set({ clients: [], isLoading: false });
     } catch (err: any) {
-      set({ isLoading: false, error: err?.message ?? 'Error loading clients' });
+      set({ isLoading: false, error: err?.message ?? 'Erro ao carregar clientes' });
     }
   },
 
@@ -47,7 +47,7 @@ export const useConsultantStore = create<ConsultantState>((set, get) => ({
       // TODO: fetch from API when endpoint is ready
       set({ clientPortfolio: null, isLoading: false });
     } catch (err: any) {
-      set({ isLoading: false, error: err?.message ?? 'Error loading portfolio' });
+      set({ isLoading: false, error: err?.message ?? 'Erro ao carregar portfólio' });
     }
   },
 

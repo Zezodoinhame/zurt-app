@@ -118,12 +118,12 @@ export default function TaxesScreen() {
     try {
       const monthLabel = getMonthLabel(selectedMonth.month, selectedMonth.year);
       const contextMessage =
-        `Analise minha situacao tributaria do mes ${monthLabel}. ` +
+        `Analise minha situação tributária do mês ${monthLabel}. ` +
         `Resumo: IR total estimado: ${fmt(taxResult.totalIR)}. ` +
-        `Acoes - Vendas: ${fmt(taxResult.rendaVariavel.vendasMes)}, ` +
+        `Ações - Vendas: ${fmt(taxResult.rendaVariavel.vendasMes)}, ` +
         `Lucro: ${fmt(taxResult.rendaVariavel.lucro)}, ` +
         `IR devido: ${fmt(taxResult.rendaVariavel.irDevido)}, ` +
-        `Isento: ${taxResult.rendaVariavel.isento ? 'Sim' : 'Nao'}. ` +
+        `Isento: ${taxResult.rendaVariavel.isento ? 'Sim' : 'Não'}. ` +
         `FIIs - Rendimentos: ${fmt(taxResult.fiis.rendimentos)}, ` +
         `Lucro venda: ${fmt(taxResult.fiis.lucroVenda)}, ` +
         `IR devido: ${fmt(taxResult.fiis.irDevido)}. ` +
@@ -131,8 +131,8 @@ export default function TaxesScreen() {
         `IR retido: ${fmt(taxResult.rendaFixa.irRetido)}. ` +
         `Cripto - Vendas: ${fmt(taxResult.cripto.vendasMes)}, ` +
         `IR devido: ${fmt(taxResult.cripto.irDevido)}, ` +
-        `Isento: ${taxResult.cripto.isento ? 'Sim' : 'Nao'}. ` +
-        `Me de orientacoes sobre como otimizar meus impostos e se preciso emitir DARF.`;
+        `Isento: ${taxResult.cripto.isento ? 'Sim' : 'Não'}. ` +
+        `Me dê orientações sobre como otimizar meus impostos e se preciso emitir DARF.`;
 
       await sendAIChat(contextMessage);
       router.push('/(tabs)/agent');

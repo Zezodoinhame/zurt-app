@@ -69,8 +69,9 @@ function getInitial(name: string): string {
 }
 
 function getMemberName(member: any): string {
-  if (!member) return 'Desconhecido';
-  return member.full_name || member.name || member.email || member.invited_email || 'Membro';
+  const t = useSettingsStore.getState().t;
+  if (!member) return t('family.unknown');
+  return member.full_name || member.name || member.email || member.invited_email || t('family.defaultMember');
 }
 
 // =============================================================================
@@ -230,19 +231,19 @@ export default function FamilyScreen() {
   const handleCreateGroup = useCallback(() => {
     const name = groupName.trim();
     if (!name) {
-      Alert.alert(t('common.error'), 'Digite um nome para o grupo.');
+      Alert.alert(t('common.error'), t('family.groupNameRequired'));
       return;
     }
     try {
-      const ownerName = currentUser?.name || 'Você';
+      const ownerName = currentUser?.name || t('common.you');
       const ownerEmail = currentUser?.email ?? 'user@zurt.com.br';
       familyStore.createGroup(name, ownerName, ownerEmail);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setGroupName('');
       loadFromLocalStore();
-      Alert.alert('Sucesso', 'Grupo familiar criado!');
+      Alert.alert(t('common.success'), t('family.groupCreated'));
     } catch (err: any) {
-      Alert.alert(t('common.error'), err?.message || 'Erro ao criar grupo.');
+      Alert.alert(t('common.error'), err?.message || t('family.createError'));
     }
   }, [groupName, currentUser, familyStore, loadFromLocalStore, t]);
 
@@ -279,10 +280,10 @@ export default function FamilyScreen() {
 
   const handleWhatsAppInvite = useCallback(() => {
     const groupName = useFamilyStore.getState().groups?.[0]?.name || 'ZURT';
-    const message = `Convite para o grupo familiar "${groupName}" no ZURT! Baixe o app e entre na nossa família: https://zurt.com.br`;
+    const message = t('family.whatsAppMessage').replace('{group}', groupName);
     const url = `whatsapp://send?text=${encodeURIComponent(message)}`;
     Linking.openURL(url).catch(() => {
-      Alert.alert('', t('family.whatsAppNotInstalled') || 'WhatsApp não está instalado.');
+      Alert.alert('', t('family.whatsAppNotInstalled'));
     });
   }, [t]);
 
@@ -509,7 +510,7 @@ export default function FamilyScreen() {
                       activeOpacity={0.7}
                     >
                       {acceptingToken === invite.token ? (
-                        <ActivityIndicator size="small" color="#FFF" />
+                        <ActivityIndicator size="small" color={colors.background} />
                       ) : (
                         <Text style={styles.acceptBtnText}>{t('family.accept')}</Text>
                       )}
@@ -555,7 +556,7 @@ export default function FamilyScreen() {
                 activeOpacity={0.8}
               >
                 {creating ? (
-                  <ActivityIndicator size="small" color="#FFF" />
+                  <ActivityIndicator size="small" color={colors.background} />
                 ) : (
                   <Text style={styles.createBtnText}>{t('family.createGroup')}</Text>
                 )}
@@ -569,7 +570,7 @@ export default function FamilyScreen() {
               {isDemo && (
                 <View style={styles.demoBanner}>
                   <Text style={styles.demoBannerText}>
-                    Modo demonstração — dados fictícios
+                    {t('family.demoBanner')}
                   </Text>
                 </View>
               )}
@@ -682,7 +683,7 @@ export default function FamilyScreen() {
                         {isAccepted && (
                           <TouchableOpacity
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            onPress={() => Alert.alert('Em breve', 'Visualização da carteira do membro em desenvolvimento.')}
+                            onPress={() => Alert.alert(t('common.comingSoon'), t('family.memberPortfolioComingSoon'))}
                             style={{ marginRight: 8 }}
                           >
                             <AppIcon name="eye" size={16} color={colors.accent} />
@@ -766,8 +767,8 @@ export default function FamilyScreen() {
                         activeOpacity={0.7}
                       >
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <AppIcon name={opt.iconName} size={14} color={selected ? '#FFF' : colors.text.secondary} />
-                          <Text style={[styles.roleChipText, selected && { color: '#FFF' }]}>
+                          <AppIcon name={opt.iconName} size={14} color={selected ? colors.background : colors.text.secondary} />
+                          <Text style={[styles.roleChipText, selected && { color: colors.background }]}>
                             {opt.label}
                           </Text>
                         </View>
@@ -783,7 +784,7 @@ export default function FamilyScreen() {
                   activeOpacity={0.8}
                 >
                   {inviting ? (
-                    <ActivityIndicator size="small" color="#FFF" />
+                    <ActivityIndicator size="small" color={colors.background} />
                   ) : (
                     <Text style={styles.inviteBtnText}>{t('family.sendInvite')}</Text>
                   )}
@@ -897,7 +898,7 @@ export default function FamilyScreen() {
                 disabled={savingVisibility}
               >
                 {savingVisibility ? (
-                  <ActivityIndicator size="small" color="#FFF" />
+                  <ActivityIndicator size="small" color={colors.background} />
                 ) : (
                   <Text style={styles.modalSaveText}>{t('family.save')}</Text>
                 )}
@@ -1054,7 +1055,7 @@ export default function FamilyScreen() {
                 disabled={savingDelegation}
               >
                 {savingDelegation ? (
-                  <ActivityIndicator size="small" color="#FFF" />
+                  <ActivityIndicator size="small" color={colors.background} />
                 ) : (
                   <Text style={styles.modalSaveText}>{t('family.save')}</Text>
                 )}
@@ -1130,12 +1131,12 @@ const createStyles = (colors: ThemeColors) =>
     },
     createBtn: {
       width: '100%',
-      backgroundColor: '#00D4AA',
+      backgroundColor: colors.accent,
       borderRadius: radius.lg,
       paddingVertical: spacing.lg,
       alignItems: 'center',
     },
-    createBtnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
+    createBtnText: { fontSize: 16, fontWeight: '700', color: colors.background },
 
     // Wealth card
     wealthCard: {
@@ -1144,12 +1145,12 @@ const createStyles = (colors: ThemeColors) =>
       borderWidth: 1,
       borderColor: colors.border,
       borderLeftWidth: 4,
-      borderLeftColor: '#00D4AA',
+      borderLeftColor: colors.accent,
       padding: spacing.xl,
       marginBottom: spacing.xl,
     },
     wealthLabel: { fontSize: 13, fontWeight: '600', color: colors.text.secondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.xs },
-    wealthValue: { fontSize: 28, fontWeight: '800', color: '#00D4AA', marginBottom: spacing.xs },
+    wealthValue: { fontSize: 28, fontWeight: '800', color: colors.accent, marginBottom: spacing.xs },
     wealthSub: { fontSize: 13, color: colors.text.muted, marginBottom: spacing.lg },
 
     // Bar
@@ -1177,20 +1178,20 @@ const createStyles = (colors: ThemeColors) =>
     },
     memberRow: { flexDirection: 'row', alignItems: 'center' },
     avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md },
-    avatarText: { fontSize: 18, fontWeight: '700', color: '#FFF' },
+    avatarText: { fontSize: 18, fontWeight: '700', color: colors.background },
     memberInfo: { flex: 1, marginRight: spacing.sm },
     nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: 2 },
     memberName: { fontSize: 15, fontWeight: '600', color: colors.text.primary, flexShrink: 1 },
     roleBadge: { borderRadius: radius.sm, paddingHorizontal: 6, paddingVertical: 1 },
     roleBadgeText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
     pendingLabel: { fontSize: 12, color: '#E6A817', fontStyle: 'italic' },
-    memberWealth: { fontSize: 14, fontWeight: '600', color: '#00D4AA' },
+    memberWealth: { fontSize: 14, fontWeight: '600', color: colors.accent },
     memberRight: { alignItems: 'flex-end', gap: 4 },
     statusBadge: { borderRadius: radius.sm, paddingHorizontal: 8, paddingVertical: 3 },
-    statusActive: { backgroundColor: '#00D4AA20' },
+    statusActive: { backgroundColor: colors.accent + '20' },
     statusPending: { backgroundColor: '#FFD93D20' },
     statusText: { fontSize: 10, fontWeight: '600' },
-    statusTextActive: { color: '#00D4AA' },
+    statusTextActive: { color: colors.accent },
     statusTextPending: { color: '#E6A817' },
     visIcon: { fontSize: 14 },
 
@@ -1229,13 +1230,13 @@ const createStyles = (colors: ThemeColors) =>
     },
     roleChipText: { fontSize: 12, fontWeight: '600', color: colors.text.secondary },
     inviteBtn: {
-      backgroundColor: '#00D4AA',
+      backgroundColor: colors.accent,
       borderRadius: radius.lg,
       paddingVertical: spacing.lg - 2,
       alignItems: 'center',
     },
-    inviteBtnText: { fontSize: 15, fontWeight: '700', color: '#FFF' },
-    inviteFeedback: { fontSize: 13, color: '#00D4AA', textAlign: 'center', marginTop: spacing.md, lineHeight: 20 },
+    inviteBtnText: { fontSize: 15, fontWeight: '700', color: colors.background },
+    inviteFeedback: { fontSize: 13, color: colors.accent, textAlign: 'center', marginTop: spacing.md, lineHeight: 20 },
 
     // Pending invites
     pendingSection: { marginBottom: spacing.lg },
@@ -1249,10 +1250,10 @@ const createStyles = (colors: ThemeColors) =>
     },
     pendingText: { fontSize: 14, color: colors.text.primary, lineHeight: 22, marginBottom: spacing.md },
     pendingActions: { flexDirection: 'row', gap: spacing.md },
-    acceptBtn: { flex: 1, backgroundColor: '#00D4AA', borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },
-    acceptBtnText: { fontSize: 14, fontWeight: '700', color: '#FFF' },
-    rejectBtn: { flex: 1, borderWidth: 1, borderColor: '#FF6B6B', borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },
-    rejectBtnText: { fontSize: 14, fontWeight: '600', color: '#FF6B6B' },
+    acceptBtn: { flex: 1, backgroundColor: colors.accent, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },
+    acceptBtnText: { fontSize: 14, fontWeight: '700', color: colors.background },
+    rejectBtn: { flex: 1, borderWidth: 1, borderColor: colors.negative, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },
+    rejectBtnText: { fontSize: 14, fontWeight: '600', color: colors.negative },
 
     // Education
     eduCard: {
@@ -1329,7 +1330,7 @@ const createStyles = (colors: ThemeColors) =>
       backgroundColor: colors.accent,
       alignItems: 'center',
     },
-    modalSaveText: { fontSize: 15, fontWeight: '700', color: '#FFF' },
+    modalSaveText: { fontSize: 15, fontWeight: '700', color: colors.background },
 
     // Profile modal
     profileHeader: {
@@ -1353,7 +1354,7 @@ const createStyles = (colors: ThemeColors) =>
     profileStatValue: {
       fontSize: 22,
       fontWeight: '800',
-      color: '#00D4AA',
+      color: colors.accent,
     },
     profileSection: {
       marginBottom: spacing.lg,

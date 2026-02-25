@@ -230,7 +230,7 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: '#080D14',
+      backgroundColor: colors.background,
     },
     skipButton: {
       position: 'absolute',
@@ -256,7 +256,7 @@ const createStyles = (colors: ThemeColors) =>
       left: 0,
       right: 0,
       height: 200,
-      backgroundColor: '#0D1520',
+      backgroundColor: colors.card,
       opacity: 0.5,
     },
     pageContent: {
@@ -311,7 +311,7 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
     },
     nextButtonText: {
-      color: '#080D14',
+      color: colors.background,
       fontSize: 16,
       fontWeight: '700',
     },
@@ -327,7 +327,7 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
     },
     createAccountText: {
-      color: '#080D14',
+      color: colors.background,
       fontSize: 17,
       fontWeight: '800',
     },

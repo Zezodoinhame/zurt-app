@@ -72,12 +72,13 @@ type ChartRange = '1M' | '3M' | '6M' | '1A';
 // ===========================================================================
 
 function PriceChart({ data, width, height, colors }: { data: number[]; width: number; height: number; colors: ThemeColors }) {
+  const { t } = useSettingsStore();
   const chartStyles = useMemo(() => createChartStyles(colors), [colors]);
 
   if (data.length < 2) {
     return (
       <View style={[chartStyles.empty, { width, height }]}>
-        <Text style={chartStyles.emptyText}>Sem dados</Text>
+        <Text style={chartStyles.emptyText}>{t('asset.noChartData')}</Text>
       </View>
     );
   }
@@ -463,7 +464,7 @@ export default function AssetDetailScreen() {
                   <Text style={styles.dividendType}>{d.type ?? 'Dividendo'}</Text>
                 </View>
                 <Text style={styles.dividendValue}>
-                  R$ {formatNumber(d.rate, 4)}/acao
+                  R$ {formatNumber(d.rate, 4)}{t('asset.perShare')}
                 </Text>
               </View>
             ))}

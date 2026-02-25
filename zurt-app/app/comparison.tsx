@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { type ThemeColors } from '../src/theme/colors';
 import { spacing, radius } from '../src/theme/spacing';
 import { useSettingsStore } from '../src/stores/settingsStore';
+import { useAuthStore } from '../src/stores/authStore';
 import { useComparisonStore } from '../src/stores/comparisonStore';
 import { Header } from '../src/components/shared/Header';
 import { Card } from '../src/components/ui/Card';
@@ -19,6 +20,7 @@ export default function ComparisonScreen() {
   const router = useRouter();
   const { t } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
+  const { isDemoMode } = useAuthStore();
   const {
     selectedAssets,
     availableAssets,
@@ -89,6 +91,12 @@ export default function ComparisonScreen() {
           <Text style={styles.clearText}>{t('comparison.clear')}</Text>
         </TouchableOpacity>
       </View>
+
+      {!isDemoMode && (
+        <View style={{ backgroundColor: colors.elevated, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.md, marginHorizontal: spacing.xl, marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <Text style={{ fontSize: 13, color: colors.text.secondary }}>{'\uD83D\uDD1C'} {t('common.featureInDevelopment')}</Text>
+        </View>
+      )}
 
       {/* Asset selector pills */}
       <View style={styles.pillRow}>

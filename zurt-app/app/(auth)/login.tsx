@@ -32,7 +32,7 @@ WebBrowser.maybeCompleteAuthSession();
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://zurt.com.br/api';
 
 // Google web client ID — used as clientId fallback on all platforms
-const GOOGLE_WEB_CLIENT_ID = '878759393474-409rju4qa7lnc1s99d0alctsoquhrtr7.apps.googleusercontent.com';
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
 
 const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/userinfo/v2/me';
 
@@ -216,6 +216,8 @@ export default function LoginScreen() {
 
     setGoogleLoading(true);
     try {
+      logger.log('[ZURT Google Auth] redirectUri:', 'https://auth.expo.io/@zurt/zurt-app');
+      logger.log('[ZURT Google Auth] request?.url:', googleRequest?.url);
       await googlePromptAsync();
     } catch (err: any) {
       logger.log('[ZURT Auth] googlePromptAsync error:', err?.message ?? err);

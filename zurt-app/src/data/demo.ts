@@ -1222,7 +1222,7 @@ export const notifications: Notification[] = [
     id: 'n9',
     type: 'maturity',
     title: 'Debenture VALE rendendo bem',
-    body: 'Sua debenture da Vale rendeu 3,4% no periodo. Proximo pagamento de cupom em 15/03.',
+    body: 'Sua debenture da Vale rendeu 3,4% no período. Próximo pagamento de cupom em 15/03.',
     date: '2026-02-15T08:30:00',
     read: true,
   },
@@ -1277,8 +1277,8 @@ export const notifications: Notification[] = [
   {
     id: 'n16',
     type: 'insight',
-    title: 'Alocacao desbalanceada',
-    body: 'Sua alocação em renda fixa (65%) esta acima do recomendado (57%). Considere diversificar.',
+    title: 'Alocação desbalanceada',
+    body: 'Sua alocação em renda fixa (65%) está acima do recomendado (57%). Considere diversificar.',
     date: '2026-02-12T07:00:00',
     read: false,
   },
@@ -1299,7 +1299,7 @@ export const insights: Insight[] = [
   {
     id: 'i2',
     icon: '\u{1F4CA}',
-    text: 'Sua alocação em renda fixa esta 8% acima do recomendado',
+    text: 'Sua alocação em renda fixa está 8% acima do recomendado',
     action: 'Rebalancear',
     type: 'info',
   },

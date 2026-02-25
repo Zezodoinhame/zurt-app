@@ -33,7 +33,7 @@ export default function BacktestScreen() {
   const router = useRouter();
   const { t, currency } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
-  const { valuesHidden } = useAuthStore();
+  const { valuesHidden, isDemoMode } = useAuthStore();
 
   const {
     allocations, period, result, isRunning,
@@ -79,6 +79,12 @@ export default function BacktestScreen() {
         <Text style={styles.headerTitle}>{t('backtest.title')}</Text>
         <View style={{ width: 24 }} />
       </View>
+
+      {!isDemoMode && (
+        <View style={{ backgroundColor: colors.elevated, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.md, marginHorizontal: spacing.xl, marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <Text style={{ fontSize: 13, color: colors.text.secondary }}>{'\uD83D\uDD1C'} {t('common.featureInDevelopment')}</Text>
+        </View>
+      )}
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Allocation sliders */}

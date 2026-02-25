@@ -150,7 +150,7 @@ export default function NetWorthScreen() {
           <Text style={{ fontSize: 40, marginBottom: 16 }}>{'\uD83C\uDFE6'}</Text>
           <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, textAlign: 'center', marginBottom: 8 }}>{t('netWorth.title')}</Text>
           <Text style={{ fontSize: 14, color: colors.text.secondary, textAlign: 'center', lineHeight: 20 }}>
-            O Patrim\u00f4nio L\u00edquido consolida seus ativos, investimentos e d\u00edvidas. Conecte seu banco ou adicione manualmente.
+            {t('netWorth.emptyDesc')}
           </Text>
         </View>
       </View>

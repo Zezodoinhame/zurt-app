@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,12 @@ import {
   RefreshControl,
   Alert,
   ActivityIndicator,
-  Animated,
-  Dimensions,
+  Share,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 
@@ -19,75 +21,76 @@ import { type ThemeColors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePortfolioStore } from '../../src/stores/portfolioStore';
-import { useNotificationStore } from '../../src/stores/notificationStore';
 import { useGoalsStore } from '../../src/stores/goalsStore';
 import { useCardsStore } from '../../src/stores/cardsStore';
+import { useAgentStore } from '../../src/stores/agentStore';
 import { generatePatrimonialReport } from '../../src/services/reportGenerator';
+import { syncAllFinance } from '../../src/services/api';
 
 import { Card } from '../../src/components/ui/Card';
-import { Badge, DotBadge } from '../../src/components/ui/Badge';
-import { LineChart } from '../../src/components/charts/LineChart';
-import { AllocationBar } from '../../src/components/charts/AllocationBar';
-import { AccountCard } from '../../src/components/cards/AccountCard';
+import { Badge } from '../../src/components/ui/Badge';
 import {
   SkeletonCard,
   SkeletonChart,
   SkeletonList,
 } from '../../src/components/skeletons/Skeleton';
-import { CircularProgress } from '../../src/components/charts/CircularProgress';
 import { ErrorState } from '../../src/components/shared/ErrorState';
+import { SectionHeader } from '../../src/components/shared/SectionHeader';
+import { QuickActionButton } from '../../src/components/shared/QuickActionButton';
+import { InsightCard } from '../../src/components/shared/InsightCard';
+import { TransactionRow } from '../../src/components/shared/TransactionRow';
+import { GoalCard } from '../../src/components/shared/GoalCard';
+import { AllocationBar } from '../../src/components/shared/AllocationBar';
 
 import {
   formatCurrency,
   formatPct,
   maskValue,
 } from '../../src/utils/formatters';
-import { demoBenchmarks } from '../../src/data/demo';
-import type { BenchmarkData } from '../../src/services/benchmarks';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { AppIcon } from '../../src/hooks/useIcon';
 
 // ---------------------------------------------------------------------------
-// Time range options for the chart
+// Sparkline SVG — lightweight chart for the hero card
 // ---------------------------------------------------------------------------
 
-const TIME_RANGES = ['1M', '3M', '6M', '1A', 'MAX'] as const;
-type TimeRange = (typeof TIME_RANGES)[number];
-
-// ===========================================================================
-// Animated Tool Card (stagger fadeIn)
-// ===========================================================================
-
-function ToolCardAnimated({
-  index,
-  onPress,
-  style,
-  children,
+function Sparkline({
+  data,
+  width,
+  height,
+  color,
 }: {
-  index: number;
-  onPress: () => void;
-  style: any;
-  children: React.ReactNode;
+  data: number[];
+  width: number;
+  height: number;
+  color: string;
 }) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(16)).current;
+  if (data.length < 2) return null;
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(opacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-        Animated.timing(translateY, { toValue: 0, duration: 400, useNativeDriver: true }),
-      ]).start();
-    }, index * 60);
-    return () => clearTimeout(timer);
-  }, [index, opacity, translateY]);
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const padY = 4;
+
+  const points = data.map((v, i) => ({
+    x: (i / (data.length - 1)) * width,
+    y: padY + (1 - (v - min) / range) * (height - padY * 2),
+  }));
+
+  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+  const areaPath = `${linePath} L${width},${height} L0,${height} Z`;
 
   return (
-    <Animated.View style={[style, { opacity, transform: [{ translateY }] }]}>
-      <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={{ flex: 1 }}>
-        {children}
-      </TouchableOpacity>
-    </Animated.View>
+    <Svg width={width} height={height}>
+      <Defs>
+        <SvgGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={color} stopOpacity="0.25" />
+          <Stop offset="1" stopColor={color} stopOpacity="0" />
+        </SvgGradient>
+      </Defs>
+      <Path d={areaPath} fill="url(#sparkFill)" />
+      <Path d={linePath} fill="none" stroke={color} strokeWidth={2} />
+    </Svg>
   );
 }
 
@@ -99,64 +102,47 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  // ---- Stores -------------------------------------------------------------
+  // ---- Stores ---------------------------------------------------------------
   const { user, valuesHidden, toggleValuesHidden } = useAuthStore();
   const {
     summary,
     institutions,
     allocations,
     insights,
-    benchmarks,
     isLoading,
     isRefreshing,
     error,
     loadPortfolio,
     refresh,
     loadBenchmarks,
-    selectedTimeRange,
-    setTimeRange,
   } = usePortfolioStore();
-  const { getUnreadCount, loadNotifications } = useNotificationStore();
   const { goals, loadGoals } = useGoalsStore();
+  const { cards, dashboardTransactions, loadTransactions } = useCardsStore();
+  const { loadInitialInsights } = useAgentStore();
   const { t, currency } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
   const accentColor = useSettingsStore((s) => s.accentColor);
-  const { cards } = useCardsStore();
-  const [isExporting, setIsExporting] = useState(false);
 
-  // ---- Memoised styles & constants ----------------------------------------
+  const [isExporting, setIsExporting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // ---- Memoised styles ------------------------------------------------------
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const INSIGHT_COLORS: Record<string, string> = useMemo(
-    () => ({
-      warning: colors.warning,
-      info: colors.info,
-      opportunity: colors.accent,
-    }),
-    [colors],
-  );
-
-  // ---- Effects ------------------------------------------------------------
+  // ---- Effects --------------------------------------------------------------
   useEffect(() => {
     loadPortfolio();
-    loadNotifications();
     loadGoals();
     loadBenchmarks();
+    loadTransactions();
+    loadInitialInsights();
   }, []);
 
-  // ---- Handlers -----------------------------------------------------------
+  // ---- Handlers -------------------------------------------------------------
   const handleToggleValues = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     toggleValuesHidden();
   }, [toggleValuesHidden]);
-
-  const handleTimeRangePress = useCallback(
-    (range: TimeRange) => {
-      Haptics.selectionAsync();
-      setTimeRange(range);
-    },
-    [setTimeRange],
-  );
 
   const handleRefresh = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -174,69 +160,106 @@ export default function HomeScreen() {
         user,
         accentColor,
       );
-    } catch (err: any) {
+    } catch {
       Alert.alert(t('common.error'), t('report.error'));
     } finally {
       setIsExporting(false);
     }
   }, [summary, user, institutions, allocations, cards, accentColor, isExporting, t]);
 
-  // ---- Derived values -----------------------------------------------------
-  const unreadCount = getUnreadCount();
+  const handleSync = useCallback(async () => {
+    if (isSyncing) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsSyncing(true);
+    try {
+      await syncAllFinance();
+      await refresh();
+    } catch {
+      // silent
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [isSyncing, refresh]);
+
+  const handleInvite = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await Share.share({
+        message: 'Conheça o ZURT — inteligência patrimonial para investidores. https://zurt.com.br',
+      });
+    } catch {
+      // cancelled
+    }
+  }, []);
+
+  // ---- Derived values -------------------------------------------------------
   const firstName = user?.name?.split(' ')[0] ?? '';
-  const greeting = `${t('greeting.' + (new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'))}, ${firstName}`;
+  const hour = new Date().getHours();
+  const greeting = `${t('greeting.' + (hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'))}, ${firstName}`;
 
-  const variation1mVariant =
+  const variation1mVariant: 'positive' | 'negative' =
     (summary?.variation1m ?? 0) >= 0 ? 'positive' : 'negative';
-  const variation12mVariant =
-    (summary?.variation12m ?? 0) >= 0 ? 'positive' : 'negative';
-  const profitColor =
-    (summary?.profit ?? 0) >= 0 ? colors.positive : colors.negative;
 
-  // ---- Helpers for value display ------------------------------------------
+  const monthlyReturn = summary
+    ? summary.totalValue - (summary.investedValue + (summary.profit - (summary.totalValue - summary.investedValue)))
+    : 0;
+  const monthlyReturnValue = summary
+    ? summary.totalValue * (summary.variation1m / 100)
+    : 0;
+
+  // ---- Helpers for value display --------------------------------------------
   const displayValue = (value: number) =>
     valuesHidden ? maskValue('') : formatCurrency(value, currency);
 
   const displayPct = (value: number) =>
     valuesHidden ? '••••' : formatPct(value);
 
-  // ---- Chart data (filtered by selected time range) ----------------------
-  const chartData = useMemo(() => {
+  // ---- Sparkline data from history ------------------------------------------
+  const sparklineData = useMemo(() => {
     const history = summary?.history ?? [];
-    if (history.length === 0) return [];
+    if (history.length < 2) return [];
+    return history.slice(-12).map((h) => h.value);
+  }, [summary?.history]);
 
-    const cutoffDays: Record<TimeRange, number> = {
-      '1M': 30,
-      '3M': 90,
-      '6M': 180,
-      '1A': 365,
-      'MAX': Infinity,
-    };
-    const days = cutoffDays[selectedTimeRange] ?? 365;
+  // ---- Insight type mapping -------------------------------------------------
+  const insightTypeMap: Record<string, 'positive' | 'negative' | 'warning' | 'info'> = {
+    opportunity: 'positive',
+    warning: 'warning',
+    info: 'info',
+  };
 
-    if (days === Infinity) {
-      return history.map((h) => ({ label: h.month, value: h.value }));
-    }
+  const insightIconMap: Record<string, 'trending' | 'warning' | 'info'> = {
+    opportunity: 'trending',
+    warning: 'warning',
+    info: 'info',
+  };
 
-    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  // ---- Transaction category label map ---------------------------------------
+  const categoryLabelMap: Record<string, string> = {
+    food: 'Alimentação',
+    transport: 'Transporte',
+    subscriptions: 'Assinaturas',
+    shopping: 'Compras',
+    fuel: 'Combustível',
+    health: 'Saúde',
+    travel: 'Viagens',
+    tech: 'Tecnologia',
+  };
 
-    const filtered = history.filter((h) => new Date(h.date) >= cutoff);
+  // ---- Valid allocations (> 0) ----------------------------------------------
+  const validAllocations = useMemo(
+    () => allocations.filter((a) => a.value > 0),
+    [allocations],
+  );
 
-    // Fallback: if filter returns < 2 points, take last N proportional points
-    if (filtered.length < 2) {
-      const fallbackCount: Record<TimeRange, number> = {
-        '1M': 5,
-        '3M': 15,
-        '6M': 30,
-        '1A': 52,
-        'MAX': history.length,
-      };
-      const count = Math.max(2, Math.min(history.length, fallbackCount[selectedTimeRange] ?? history.length));
-      return history.slice(-count).map((h) => ({ label: h.month, value: h.value }));
-    }
+  // ---- Transactions (last 4) ------------------------------------------------
+  const recentTransactions = useMemo(
+    () => dashboardTransactions.slice(0, 4),
+    [dashboardTransactions],
+  );
 
-    return filtered.map((h) => ({ label: h.month, value: h.value }));
-  }, [summary?.history, selectedTimeRange]);
+  // ---- Top 2 cards ----------------------------------------------------------
+  const topCards = useMemo(() => cards.slice(0, 2), [cards]);
 
   // =========================================================================
   // Render
@@ -246,10 +269,7 @@ export default function HomeScreen() {
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: 100 },
-        ]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -261,48 +281,29 @@ export default function HomeScreen() {
         }
       >
         {/* ---------------------------------------------------------------- */}
-        {/* Header                                                           */}
+        {/* 1. Header                                                        */}
         {/* ---------------------------------------------------------------- */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.greeting}>{greeting}</Text>
           </View>
-
           <View style={styles.headerActions}>
-            {summary && (
-              <TouchableOpacity
-                style={styles.pdfButton}
-                activeOpacity={0.7}
-                accessibilityLabel={t('home.exportPdf')}
-                onPress={handleExportPdf}
-                disabled={isExporting}
-              >
-                {isExporting ? (
-                  <ActivityIndicator size="small" color={colors.accent} />
-                ) : (
-                  <AppIcon name="report" size={20} color={colors.text.primary} />
-                )}
-              </TouchableOpacity>
-            )}
             <TouchableOpacity
-              style={styles.bellContainer}
-              activeOpacity={0.7}
-              accessibilityLabel={`${t('home.notifications')}, ${unreadCount} ${t('home.unread')}`}
-              onPress={() => router.push('/(tabs)/alerts')}
+              onPress={handleToggleValues}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityLabel={valuesHidden ? t('home.showValues') : t('home.hideValues')}
+              style={styles.headerIconBtn}
             >
-              <AppIcon name="notification" size={22} color={colors.text.primary} />
-              {unreadCount > 0 && (
-                <DotBadge
-                  count={unreadCount}
-                  style={styles.dotBadge}
-                />
-              )}
+              <AppIcon name="eye" size={20} color={colors.text.secondary} />
             </TouchableOpacity>
+            <View style={styles.zurtBadge}>
+              <Text style={styles.zurtBadgeText}>ZURT</Text>
+            </View>
           </View>
         </View>
 
         {/* ---------------------------------------------------------------- */}
-        {/* Loading skeleton state                                           */}
+        {/* Loading / Error                                                  */}
         {/* ---------------------------------------------------------------- */}
         {isLoading ? (
           <View>
@@ -316,70 +317,67 @@ export default function HomeScreen() {
         ) : (
           <>
             {/* -------------------------------------------------------------- */}
-            {/* Hero Card - Patrimonio Total                                    */}
+            {/* 2. Hero Card — Patrimônio Total + Sparkline                    */}
             {/* -------------------------------------------------------------- */}
             {summary && (
               <Card variant="glow" delay={100}>
-                <Text style={styles.heroLabel}>{t('home.totalPatrimony')}</Text>
-
-                <View style={styles.heroValueRow}>
-                  <Text style={styles.heroValue}>
-                    {displayValue(summary.totalValue)}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={handleToggleValues}
-                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                    accessibilityLabel={
-                      valuesHidden ? t('home.showValues') : t('home.hideValues')
-                    }
-                  >
-                    <AppIcon name="eye" size={22} color={colors.text.primary} />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.badgeRow}>
-                  <Badge
-                    value={`${t('home.month')}: ${displayPct(summary.variation1m)}`}
-                    variant={variation1mVariant}
-                    size="sm"
-                  />
-                  <Badge
-                    value={`${t('home.12m')}: ${displayPct(summary.variation12m)}`}
-                    variant={variation12mVariant}
-                    size="sm"
-                    style={styles.badgeSpacing}
-                  />
-                </View>
-
-                <View style={styles.heroDivider} />
-
-                <View style={styles.heroSubRow}>
-                  <View style={styles.heroSubItem}>
-                    <Text style={styles.heroSubLabel}>{t('home.invested')}</Text>
-                    <Text style={styles.heroSubValue}>
-                      {displayValue(summary.investedValue)}
+                <View style={styles.heroTop}>
+                  <View style={styles.heroTextCol}>
+                    <Text style={styles.heroLabel}>{t('home.totalPatrimony')}</Text>
+                    <Text style={styles.heroValue}>
+                      {displayValue(summary.totalValue)}
                     </Text>
+                    <View style={styles.heroBadgeRow}>
+                      <Badge
+                        value={`${displayPct(summary.variation1m)}  ${valuesHidden ? '' : formatCurrency(monthlyReturnValue, currency)}`}
+                        variant={variation1mVariant}
+                        size="sm"
+                      />
+                    </View>
                   </View>
-                  <View style={styles.heroSubSeparator} />
-                  <View style={styles.heroSubItem}>
-                    <Text style={styles.heroSubLabel}>{t('home.profit')}</Text>
-                    <Text
-                      style={[
-                        styles.heroSubValue,
-                        !valuesHidden && { color: profitColor },
-                      ]}
-                    >
-                      {displayValue(summary.profit)}
-                    </Text>
-                  </View>
+                  {sparklineData.length >= 2 && (
+                    <View style={styles.sparklineWrap}>
+                      <Sparkline
+                        data={sparklineData}
+                        width={100}
+                        height={48}
+                        color={colors.accent}
+                      />
+                    </View>
+                  )}
                 </View>
+
+                {/* Mini-badges: institutions */}
+                {institutions.length > 0 && (
+                  <>
+                    <View style={styles.heroDivider} />
+                    <View style={styles.institutionRow}>
+                      {institutions.slice(0, 4).map((inst) => {
+                        const pct = summary.totalValue > 0
+                          ? (inst.totalValue / summary.totalValue) * 100
+                          : 0;
+                        return (
+                          <View key={inst.id} style={styles.institutionChip}>
+                            <View style={[styles.institutionDot, { backgroundColor: inst.color }]} />
+                            <Text style={styles.institutionName} numberOfLines={1}>
+                              {inst.name}
+                            </Text>
+                            <Text style={styles.institutionPct}>
+                              {valuesHidden ? '••' : `${pct.toFixed(0)}%`}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </>
+                )}
               </Card>
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* Empty State CTA - No connections                                */}
+            {/* Empty State — no connections                                    */}
             {/* -------------------------------------------------------------- */}
-            {allocations.length === 0 && institutions.length === 0 && (
+            {validAllocations.length === 0 && institutions.length === 0 && (
               <Card delay={200}>
                 <View style={styles.emptyState}>
                   <AppIcon name="bank" size={48} color={colors.text.secondary} />
@@ -396,306 +394,208 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* Chart Section - Evolucao patrimonial                            */}
+            {/* 3. Quick Actions                                               */}
             {/* -------------------------------------------------------------- */}
-            {summary && chartData.length > 0 && (
-              <Card delay={200}>
-                <Text style={styles.sectionTitleInCard}>
-                  {t('home.evolution')}
-                </Text>
+            <View style={styles.quickActions}>
+              <QuickActionButton
+                icon="bank"
+                label={t('home.connectBank')}
+                onPress={() => router.push('/connect-bank')}
+              />
+              <QuickActionButton
+                icon="report"
+                label={t('home.generateReport')}
+                onPress={handleExportPdf}
+              />
+              <QuickActionButton
+                icon="refresh"
+                label={t('home.syncData')}
+                onPress={handleSync}
+              />
+              <QuickActionButton
+                icon="send"
+                label={t('home.inviteFriends')}
+                onPress={handleInvite}
+              />
+            </View>
 
-                {/* Time range pills */}
-                <View style={styles.timeRangeRow}>
-                  {TIME_RANGES.map((range) => {
-                    const isSelected = selectedTimeRange === range;
+            {/* -------------------------------------------------------------- */}
+            {/* 4. ZURT Insights                                               */}
+            {/* -------------------------------------------------------------- */}
+            {insights.length > 0 && (
+              <View style={styles.section}>
+                <SectionHeader
+                  title={t('home.insights')}
+                  onAction={() => router.push('/(tabs)/agent')}
+                />
+                {insights.slice(0, 3).map((insight) => (
+                  <InsightCard
+                    key={insight.id}
+                    icon={insightIconMap[insight.type] ?? 'info'}
+                    text={insight.text}
+                    type={insightTypeMap[insight.type] ?? 'info'}
+                    onPress={() => router.push('/(tabs)/agent')}
+                  />
+                ))}
+              </View>
+            )}
+
+            {/* -------------------------------------------------------------- */}
+            {/* 5. Alocação                                                    */}
+            {/* -------------------------------------------------------------- */}
+            {validAllocations.length > 0 && (
+              <View style={styles.section}>
+                <SectionHeader title={t('home.allocation')} />
+                <Card animated={false}>
+                  <AllocationBar
+                    allocations={validAllocations}
+                    valuesHidden={valuesHidden}
+                  />
+                </Card>
+              </View>
+            )}
+
+            {/* -------------------------------------------------------------- */}
+            {/* 6. Metas — horizontal scroll                                   */}
+            {/* -------------------------------------------------------------- */}
+            {goals.length > 0 && (
+              <View style={styles.section}>
+                <SectionHeader
+                  title={t('home.goals')}
+                  onAction={() => router.push('/goals')}
+                />
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.goalsScroll}
+                >
+                  {goals.slice(0, 5).map((goal) => {
+                    const progress =
+                      goal.target_amount > 0
+                        ? goal.current_amount / goal.target_amount
+                        : 0;
+                    return (
+                      <View key={goal.id} style={styles.goalCardWrap}>
+                        <GoalCard
+                          name={goal.name}
+                          icon="goal"
+                          progress={progress}
+                          currentValue={goal.current_amount}
+                          targetValue={goal.target_amount}
+                          valuesHidden={valuesHidden}
+                          color={goal.color || colors.accent}
+                          onPress={() => router.push('/goals')}
+                        />
+                      </View>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* -------------------------------------------------------------- */}
+            {/* 7. Cartões — 2 side by side                                    */}
+            {/* -------------------------------------------------------------- */}
+            {topCards.length > 0 && (
+              <View style={styles.section}>
+                <SectionHeader
+                  title={t('home.cards')}
+                  onAction={() => router.push('/(tabs)/cards')}
+                />
+                <View style={styles.cardsRow}>
+                  {topCards.map((card) => {
+                    const usage = card.limit > 0 ? card.used / card.limit : 0;
+                    const usageColor =
+                      usage > 0.8 ? colors.negative : usage > 0.5 ? colors.warning : colors.accent;
                     return (
                       <TouchableOpacity
-                        key={range}
-                        style={[
-                          styles.timeRangePill,
-                          isSelected && styles.timeRangePillSelected,
-                        ]}
-                        onPress={() => handleTimeRangePress(range)}
+                        key={card.id}
+                        style={styles.miniCard}
                         activeOpacity={0.7}
+                        onPress={() => router.push('/(tabs)/cards')}
                       >
-                        <Text
-                          style={[
-                            styles.timeRangeText,
-                            isSelected && styles.timeRangeTextSelected,
-                          ]}
-                        >
-                          {range}
+                        <View style={[styles.miniCardStripe, { backgroundColor: card.color }]} />
+                        <Text style={styles.miniCardName} numberOfLines={1}>
+                          {card.name}
+                        </Text>
+                        <Text style={styles.miniCardLabel}>
+                          {valuesHidden ? maskValue('') : formatCurrency(card.currentInvoice, currency)}
+                        </Text>
+                        {/* Usage bar */}
+                        <View style={styles.usageBarBg}>
+                          <View
+                            style={[
+                              styles.usageBarFill,
+                              {
+                                width: `${Math.min(usage * 100, 100)}%`,
+                                backgroundColor: usageColor,
+                              },
+                            ]}
+                          />
+                        </View>
+                        <Text style={styles.miniCardUsage}>
+                          {valuesHidden ? '••%' : `${(usage * 100).toFixed(0)}%`}
                         </Text>
                       </TouchableOpacity>
                     );
                   })}
                 </View>
-
-                <LineChart
-                  data={chartData}
-                  referenceValue={summary.investedValue}
-                />
-              </Card>
-            )}
-
-            {/* -------------------------------------------------------------- */}
-            {/* Allocation Section                                              */}
-            {/* -------------------------------------------------------------- */}
-            {allocations.filter(a => a.value > 0).length > 0 && (
-              <Card delay={300}>
-                <Text style={styles.sectionTitleInCard}>
-                  {t('home.allocation')}
-                </Text>
-                <AllocationBar allocations={allocations.filter(a => a.value > 0)} />
-              </Card>
-            )}
-
-            {/* -------------------------------------------------------------- */}
-            {/* Performance Comparison                                          */}
-            {/* -------------------------------------------------------------- */}
-            {summary && (
-              <Card delay={350}>
-                <Text style={styles.sectionTitleInCard}>
-                  {t('comparison.title')}
-                </Text>
-                <Text style={styles.compPeriod}>{t('comparison.period12m')}</Text>
-
-                {(() => {
-                  const benchmarkData = benchmarks?.['12M'] ?? demoBenchmarks['12M'];
-                  const portfolioReturn = summary.variation12m ?? 0;
-                  const items = [
-                    { label: t('comparison.portfolio'), value: portfolioReturn, color: colors.accent },
-                    { label: t('comparison.cdi'), value: benchmarkData.cdi, color: colors.info },
-                    { label: t('comparison.ipca'), value: benchmarkData.ipca, color: colors.warning },
-                    { label: t('comparison.ibov'), value: benchmarkData.ibov, color: '#A855F7' },
-                  ];
-                  const maxVal = Math.max(...items.map((i) => Math.abs(i.value)), 1);
-
-                  return items.map((item, i) => (
-                    <View key={i} style={styles.compRow}>
-                      <Text style={styles.compLabel}>{item.label}</Text>
-                      <View style={styles.compBarBg}>
-                        <View
-                          style={[
-                            styles.compBarFill,
-                            {
-                              width: `${Math.max((Math.abs(item.value) / maxVal) * 100, 4)}%`,
-                              backgroundColor: item.color,
-                            },
-                          ]}
-                        />
-                      </View>
-                      <Text style={[styles.compValue, { color: item.color }]}>
-                        {valuesHidden ? '\u{2022}\u{2022}\u{2022}\u{2022}' : displayPct(item.value)}
-                      </Text>
-                    </View>
-                  ));
-                })()}
-              </Card>
-            )}
-
-            {/* -------------------------------------------------------------- */}
-            {/* Tools Grid — Ferramentas ZURT (horizontal scroll 2 rows)       */}
-            {/* -------------------------------------------------------------- */}
-            <View style={styles.toolsSection}>
-              <Text style={[styles.sectionTitle, { paddingHorizontal: spacing.xl }]}>{t('tools.title')}</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.toolsScrollContent}
-              >
-                <View style={styles.toolsColumns}>
-                  {(() => {
-                    const allTools = [
-                      { emoji: '\u{1F916}', title: t('tools.agent'), desc: t('tools.agentDesc'), onPress: () => router.push('/(tabs)/agent') },
-                      { emoji: '\u{1F4C8}', title: t('tools.simulator'), desc: t('tools.simulatorDesc'), onPress: () => router.push('/simulator') },
-                      { emoji: '\u{1F3AF}', title: t('tools.goals'), desc: t('tools.goalsDesc'), onPress: () => router.push('/goals') },
-                      { emoji: '\u{1F4C4}', title: t('tools.report'), desc: t('tools.reportDesc'), onPress: handleExportPdf },
-                      { emoji: '\u{1F46A}', title: t('tools.family'), desc: t('tools.familyDesc'), onPress: () => router.push('/family') },
-                      { emoji: '\u{1F4B3}', title: t('tools.cards'), desc: t('tools.cardsDesc'), onPress: () => router.push('/(tabs)/cards') },
-                      { emoji: '\u{2696}\u{FE0F}', title: t('tools.rebalance'), desc: t('tools.rebalanceDesc'), onPress: () => router.push('/rebalance') },
-                      { emoji: '\u{1F9FE}', title: t('tools.taxDashboard'), desc: t('tools.taxDashboardDesc'), onPress: () => router.push('/tax-dashboard') },
-                      { emoji: '\u{1F49A}', title: t('tools.health'), desc: t('tools.healthDesc'), onPress: () => router.push('/risk-metrics') },
-                      { emoji: '\u{1F3C6}', title: t('tools.badges'), desc: t('tools.badgesDesc'), onPress: () => router.push('/badges') },
-                      { emoji: '\u{1F4F0}', title: t('tools.news'), desc: t('tools.newsDesc'), onPress: () => router.push('/news') },
-                      { emoji: '\u{1F4B8}', title: t('tools.dividends'), desc: t('tools.dividendsDesc'), onPress: () => router.push('/dividends') },
-                      { emoji: '\u{1F967}', title: t('tools.budget'), desc: t('tools.budgetDesc'), onPress: () => router.push('/budget') },
-                      { emoji: '\u{1F4C9}', title: t('tools.insights'), desc: t('tools.insightsDesc'), onPress: () => router.push('/spending-insights') },
-                      { emoji: '\u{1F9FE}', title: t('tools.bills'), desc: t('tools.billsDesc'), onPress: () => router.push('/bills') },
-                      { emoji: '\u{1F514}', title: t('tools.priceAlerts'), desc: t('tools.priceAlertsDesc'), onPress: () => router.push('/price-alerts') },
-                      { emoji: '\u{1F4B3}', title: t('tools.debt'), desc: t('tools.debtDesc'), onPress: () => router.push('/debt-manager') },
-                      { emoji: '\u{2602}\u{FE0F}', title: t('tools.retirement'), desc: t('tools.retirementDesc'), onPress: () => router.push('/retirement') },
-                      { emoji: '\u{1F4DA}', title: t('tools.learnHub'), desc: t('tools.learnHubDesc'), onPress: () => router.push('/learn') },
-                      { emoji: '\u{20BF}', title: t('tools.crypto'), desc: t('tools.cryptoDesc'), onPress: () => router.push('/crypto') },
-                      { emoji: '\u{1F4E6}', title: t('tools.subscriptions'), desc: t('tools.subscriptionsDesc'), onPress: () => router.push('/subscriptions') },
-                      { emoji: '\u{1F3E0}', title: t('tools.realEstate'), desc: t('tools.realEstateDesc'), onPress: () => router.push('/real-estate') },
-                      { emoji: '\u{1F3C5}', title: t('tools.challenges'), desc: t('tools.challengesDesc'), onPress: () => router.push('/savings-challenges') },
-                      { emoji: '\u{1F525}', title: t('tools.fire'), desc: t('tools.fireDesc'), onPress: () => router.push('/fire') },
-                    ];
-                    // Arrange as 2 rows x N columns
-                    const columns: Array<[typeof allTools[0], typeof allTools[0] | undefined]> = [];
-                    for (let c = 0; c < Math.ceil(allTools.length / 2); c++) {
-                      columns.push([allTools[c * 2], allTools[c * 2 + 1]]);
-                    }
-                    return columns.map((col, ci) => (
-                      <View key={ci} style={styles.toolColumn}>
-                        {col.map((tool, ri) =>
-                          tool ? (
-                            <ToolCardAnimated key={ci * 2 + ri} index={ci * 2 + ri} onPress={tool.onPress} style={styles.toolCard}>
-                              <Text style={styles.toolEmoji}>{tool.emoji}</Text>
-                              <Text style={styles.toolTitle} numberOfLines={1}>{tool.title}</Text>
-                            </ToolCardAnimated>
-                          ) : null,
-                        )}
-                      </View>
-                    ));
-                  })()}
-                </View>
-              </ScrollView>
-            </View>
-
-            {/* -------------------------------------------------------------- */}
-            {/* Goals Preview                                                   */}
-            {/* -------------------------------------------------------------- */}
-            {goals.length > 0 && (
-              <View>
-                <View style={styles.sectionHeaderRow}>
-                  <Text style={styles.sectionTitle}>{t('goals.title')}</Text>
-                  <TouchableOpacity
-                    onPress={() => router.push('/goals')}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.viewAllLink}>{t('goals.viewAll')} →</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {goals.slice(0, 2).map((goal) => {
-                  const progress = goal.target_amount > 0
-                    ? goal.current_amount / goal.target_amount
-                    : 0;
-                  const pct = Math.round(progress * 100);
-                  const goalColor = goal.color || colors.accent;
-
-                  return (
-                    <TouchableOpacity
-                      key={goal.id}
-                      style={styles.goalMiniCard}
-                      onPress={() => router.push('/goals')}
-                      activeOpacity={0.7}
-                    >
-                      <CircularProgress
-                        progress={progress}
-                        size={48}
-                        strokeWidth={5}
-                        color={goalColor}
-                      >
-                        <Text style={[styles.goalMiniPct, { color: goalColor }]}>{pct}%</Text>
-                      </CircularProgress>
-                      <View style={styles.goalMiniInfo}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <Text style={{ fontSize: 16, marginRight: 6 }}>{goal.icon || '\u{1F3AF}'}</Text>
-                          <Text style={styles.goalMiniName} numberOfLines={1}>{goal.name}</Text>
-                        </View>
-                        <Text style={styles.goalMiniProgress}>
-                          {valuesHidden
-                            ? 'R$ \u{2022}\u{2022}\u{2022}\u{2022}\u{2022} / R$ \u{2022}\u{2022}\u{2022}\u{2022}\u{2022}'
-                            : `${formatCurrency(goal.current_amount, currency)} / ${formatCurrency(goal.target_amount, currency)}`}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
               </View>
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* Simulator CTA                                                   */}
+            {/* 8. Movimentações — last 4                                      */}
+            {/* -------------------------------------------------------------- */}
+            {recentTransactions.length > 0 && (
+              <View style={styles.section}>
+                <SectionHeader
+                  title={t('home.transactions')}
+                  onAction={() => router.push('/(tabs)/cards')}
+                />
+                <Card animated={false}>
+                  {recentTransactions.map((tx, idx) => (
+                    <View key={tx.id || idx}>
+                      <TransactionRow
+                        description={tx.description || tx.merchant || ''}
+                        category={tx.category || ''}
+                        categoryLabel={categoryLabelMap[tx.category || ''] || tx.category || ''}
+                        amount={tx.amount}
+                        date={tx.date ? new Date(tx.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : ''}
+                        valuesHidden={valuesHidden}
+                      />
+                      {idx < recentTransactions.length - 1 && (
+                        <View style={styles.txDivider} />
+                      )}
+                    </View>
+                  ))}
+                </Card>
+              </View>
+            )}
+
+            {/* -------------------------------------------------------------- */}
+            {/* 9. Premium Banner                                              */}
             {/* -------------------------------------------------------------- */}
             <TouchableOpacity
-              style={styles.simulatorCta}
-              onPress={() => router.push('/simulator')}
-              activeOpacity={0.7}
+              style={styles.premiumBanner}
+              activeOpacity={0.8}
+              onPress={() => router.push('/profile' as any)}
             >
-              <AppIcon name="trending" size={20} color={colors.accent} />
-              <Text style={styles.simulatorCtaText}>{t('simulator.cta')}</Text>
-              <AppIcon name="chevron" size={16} color={colors.text.muted} />
+              <LinearGradient
+                colors={[colors.accent + '18', colors.accent + '08']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.premiumGradient}
+              >
+                <View style={styles.premiumContent}>
+                  <AppIcon name="diamond" size={22} color={colors.accent} />
+                  <View style={styles.premiumText}>
+                    <Text style={styles.premiumTitle}>{t('home.premium')}</Text>
+                    <Text style={styles.premiumDesc}>{t('home.premiumDescription')}</Text>
+                  </View>
+                  <AppIcon name="chevron" size={16} color={colors.text.muted} />
+                </View>
+              </LinearGradient>
             </TouchableOpacity>
-
-            {/* -------------------------------------------------------------- */}
-            {/* Contas Conectadas                                               */}
-            {/* -------------------------------------------------------------- */}
-            {institutions.length > 0 && (
-              <View>
-                <Text style={styles.sectionTitle}>{t('home.connectedAccounts')}</Text>
-
-                {institutions.map((inst, idx) => (
-                  <AccountCard
-                    key={inst.id}
-                    institution={inst}
-                    index={idx}
-                  />
-                ))}
-
-                <TouchableOpacity
-                  style={styles.connectButton}
-                  activeOpacity={0.7}
-                  onPress={() => router.push('/connect-bank')}
-                >
-                  <Text style={styles.connectButtonText}>
-                    {t('home.connectInstitution')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* -------------------------------------------------------------- */}
-            {/* Insights                                                        */}
-            {/* -------------------------------------------------------------- */}
-            {insights.length > 0 && (
-              <View>
-                <Text style={styles.sectionTitle}>{t('home.insights')}</Text>
-
-                {insights.map((insight, idx) => {
-                  const borderColor =
-                    INSIGHT_COLORS[insight.type] ?? colors.accent;
-
-                  return (
-                    <View key={insight.id}>
-                      <View
-                        style={[
-                          styles.insightCard,
-                          { borderLeftColor: borderColor },
-                        ]}
-                      >
-                        <View style={styles.insightContent}>
-                          <Text style={styles.insightIcon}>
-                            {insight.icon}
-                          </Text>
-                          <Text style={styles.insightText}>
-                            {insight.text}
-                          </Text>
-                        </View>
-
-                        <TouchableOpacity
-                          style={styles.insightAction}
-                          activeOpacity={0.7}
-                          onPress={() => router.push('/(tabs)/agent')}
-                        >
-                          <Text
-                            style={[
-                              styles.insightActionText,
-                              { color: borderColor },
-                            ]}
-                          >
-                            {insight.action || t('home.viewDetails')} →
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
           </>
         )}
       </ScrollView>
@@ -724,7 +624,7 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingTop: spacing.md,
-      paddingBottom: spacing.xl,
+      paddingBottom: spacing.lg,
     },
     headerLeft: {
       flex: 1,
@@ -737,312 +637,208 @@ const createStyles = (colors: ThemeColors) =>
     headerActions: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
+      gap: spacing.sm,
     },
-    pdfButton: {
-      width: 40,
-      height: 40,
+    headerIconBtn: {
+      width: 36,
+      height: 36,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    bellContainer: {
-      position: 'relative',
-      width: 44,
-      height: 44,
-      alignItems: 'center',
-      justifyContent: 'center',
+    zurtBadge: {
+      backgroundColor: colors.accent + '20',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.full,
+      borderWidth: 1,
+      borderColor: colors.accent + '40',
     },
-    dotBadge: {
-      position: 'absolute',
-      top: 2,
-      right: 0,
+    zurtBadgeText: {
+      fontSize: 11,
+      fontWeight: '800',
+      color: colors.accent,
+      letterSpacing: 1,
     },
 
     // -- Hero Card ------------------------------------------------------------
+    heroTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+    },
+    heroTextCol: {
+      flex: 1,
+    },
     heroLabel: {
-      fontSize: 14,
+      fontSize: 13,
       color: colors.text.secondary,
       marginBottom: spacing.xs,
     },
-    heroValueRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: spacing.sm,
-    },
     heroValue: {
-      fontSize: 32,
+      fontSize: 30,
       fontWeight: '700',
       color: colors.text.primary,
       fontVariant: ['tabular-nums'],
+      marginBottom: spacing.sm,
     },
-    badgeRow: {
+    heroBadgeRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: spacing.lg,
     },
-    badgeSpacing: {
-      marginLeft: spacing.sm,
+    sparklineWrap: {
+      marginLeft: spacing.md,
+      marginTop: spacing.sm,
     },
     heroDivider: {
       height: 1,
       backgroundColor: colors.border,
-      marginBottom: spacing.lg,
+      marginVertical: spacing.lg,
     },
-    heroSubRow: {
+    institutionRow: {
       flexDirection: 'row',
-      alignItems: 'flex-start',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
     },
-    heroSubItem: {
-      flex: 1,
-    },
-    heroSubSeparator: {
-      width: 1,
-      height: 36,
-      backgroundColor: colors.border,
-      marginHorizontal: spacing.lg,
-    },
-    heroSubLabel: {
-      fontSize: 12,
-      color: colors.text.secondary,
-      marginBottom: spacing.xs,
-    },
-    heroSubValue: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.text.primary,
-      fontVariant: ['tabular-nums'],
-    },
-
-    // -- Section titles -------------------------------------------------------
-    sectionTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: colors.text.primary,
-      marginBottom: spacing.md,
-      marginTop: spacing.xl,
-    },
-    sectionTitleInCard: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: colors.text.primary,
-      marginBottom: spacing.md,
-    },
-
-    // -- Time range pills -----------------------------------------------------
-    timeRangeRow: {
+    institutionChip: {
       flexDirection: 'row',
-      marginBottom: spacing.lg,
-    },
-    timeRangePill: {
+      alignItems: 'center',
+      backgroundColor: colors.elevated,
+      borderRadius: radius.full,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.xs + 2,
-      borderRadius: radius.full,
-      borderWidth: 1,
-      borderColor: colors.border,
-      marginRight: spacing.sm,
+      gap: 6,
     },
-    timeRangePillSelected: {
-      backgroundColor: colors.accent,
-      borderColor: colors.accent,
-    },
-    timeRangeText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: colors.text.secondary,
-    },
-    timeRangeTextSelected: {
-      color: colors.background,
-    },
-
-    // -- Connect institution button -------------------------------------------
-    connectButton: {
-      borderWidth: 1.5,
-      borderColor: colors.border,
-      borderStyle: 'dashed',
-      borderRadius: radius.md,
-      paddingVertical: spacing.lg,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginTop: spacing.xs,
-    },
-    connectButtonText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.text.secondary,
-    },
-
-    // -- Insight cards --------------------------------------------------------
-    insightCard: {
-      backgroundColor: colors.card,
-      borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderLeftWidth: 4,
-      padding: spacing.lg,
-      marginBottom: spacing.sm,
-    },
-    insightContent: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      marginBottom: spacing.md,
-    },
-    insightIcon: {
-      fontSize: 20,
-      marginRight: spacing.md,
-      marginTop: 2,
-    },
-    insightText: {
-      flex: 1,
-      fontSize: 14,
-      color: colors.text.primary,
-      lineHeight: 20,
-    },
-    insightAction: {
-      alignSelf: 'flex-end',
-    },
-    insightActionText: {
-      fontSize: 13,
-      fontWeight: '600',
-    },
-
-    // -- Performance comparison ---------------------------------------------------
-    compPeriod: {
-      fontSize: 12,
-      color: colors.text.muted,
-      marginBottom: spacing.lg,
-    },
-    compRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: spacing.md,
-    },
-    compLabel: {
-      width: 80,
-      fontSize: 12,
-      fontWeight: '600',
-      color: colors.text.secondary,
-    },
-    compBarBg: {
-      flex: 1,
-      height: 8,
-      backgroundColor: colors.border,
-      borderRadius: 4,
-      overflow: 'hidden',
-      marginHorizontal: spacing.sm,
-    },
-    compBarFill: {
+    institutionDot: {
+      width: 8,
       height: 8,
       borderRadius: 4,
     },
-    compValue: {
-      width: 60,
+    institutionName: {
       fontSize: 12,
-      fontWeight: '700',
-      textAlign: 'right',
-      fontVariant: ['tabular-nums'],
-    },
-
-    // -- Goals preview ----------------------------------------------------------
-    sectionHeaderRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginTop: spacing.xl,
-      marginBottom: spacing.md,
-    },
-    viewAllLink: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.accent,
-    },
-    goalMiniCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.card,
-      borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      padding: spacing.lg,
-      marginBottom: spacing.sm,
-    },
-    goalMiniInfo: {
-      flex: 1,
-      marginLeft: spacing.md,
-    },
-    goalMiniName: {
-      fontSize: 14,
-      fontWeight: '600',
+      fontWeight: '500',
       color: colors.text.primary,
-      marginBottom: 2,
+      maxWidth: 80,
     },
-    goalMiniProgress: {
-      fontSize: 12,
-      color: colors.text.secondary,
-      fontVariant: ['tabular-nums'],
-    },
-    goalMiniPct: {
+    institutionPct: {
       fontSize: 11,
       fontWeight: '700',
+      color: colors.text.secondary,
+      fontVariant: ['tabular-nums'],
     },
 
-    // -- Tools grid (horizontal scroll) -------------------------------------------
-    toolsSection: {
-      marginBottom: spacing.md,
-      marginHorizontal: -spacing.xl,
-    },
-    toolsScrollContent: {
-      paddingHorizontal: spacing.xl,
-    },
-    toolsColumns: {
+    // -- Quick Actions --------------------------------------------------------
+    quickActions: {
       flexDirection: 'row',
-      gap: spacing.sm,
+      justifyContent: 'space-between',
+      marginBottom: spacing.xl,
     },
-    toolColumn: {
-      gap: spacing.sm,
+
+    // -- Sections -------------------------------------------------------------
+    section: {
+      marginBottom: spacing.xl,
     },
-    toolCard: {
-      width: (Dimensions.get('window').width - spacing.xl * 2 - spacing.sm * 2) / 3.5,
-      aspectRatio: 1,
+
+    // -- Goals horizontal scroll ----------------------------------------------
+    goalsScroll: {
+      paddingRight: spacing.xl,
+      gap: spacing.md,
+    },
+    goalCardWrap: {
+      width: 260,
+    },
+
+    // -- Cards row (side by side) ---------------------------------------------
+    cardsRow: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    miniCard: {
+      flex: 1,
       backgroundColor: colors.card,
       borderRadius: radius.lg,
       borderWidth: 1,
       borderColor: colors.border,
-      padding: spacing.sm + 2,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    toolEmoji: {
-      fontSize: 28,
-      marginBottom: spacing.xs,
-    },
-    toolTitle: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: colors.text.primary,
-      textAlign: 'center',
-    },
-
-    // -- Simulator CTA ----------------------------------------------------------
-    simulatorCta: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.card,
-      borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: colors.border,
       padding: spacing.lg,
-      marginTop: spacing.md,
-      gap: spacing.sm,
+      overflow: 'hidden',
     },
-    simulatorCtaText: {
-      flex: 1,
-      fontSize: 14,
+    miniCardStripe: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 3,
+    },
+    miniCardName: {
+      fontSize: 13,
       fontWeight: '600',
       color: colors.text.primary,
+      marginBottom: spacing.sm,
+    },
+    miniCardLabel: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text.primary,
+      fontVariant: ['tabular-nums'],
+      marginBottom: spacing.md,
+    },
+    usageBarBg: {
+      height: 6,
+      backgroundColor: colors.border,
+      borderRadius: 3,
+      overflow: 'hidden',
+      marginBottom: spacing.xs,
+    },
+    usageBarFill: {
+      height: 6,
+      borderRadius: 3,
+    },
+    miniCardUsage: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: colors.text.muted,
+      textAlign: 'right',
+      fontVariant: ['tabular-nums'],
     },
 
-    // -- Empty state -----------------------------------------------------------
+    // -- Transactions ---------------------------------------------------------
+    txDivider: {
+      height: 1,
+      backgroundColor: colors.border,
+    },
+
+    // -- Premium Banner -------------------------------------------------------
+    premiumBanner: {
+      marginTop: spacing.sm,
+      marginBottom: spacing.xl,
+      borderRadius: radius.lg,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: colors.accent + '25',
+    },
+    premiumGradient: {
+      padding: spacing.xl,
+    },
+    premiumContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    premiumText: {
+      flex: 1,
+    },
+    premiumTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.accent,
+      marginBottom: 2,
+    },
+    premiumDesc: {
+      fontSize: 12,
+      color: colors.text.secondary,
+      lineHeight: 16,
+    },
+
+    // -- Empty state ----------------------------------------------------------
     emptyState: {
       alignItems: 'center',
       paddingVertical: spacing.xl,

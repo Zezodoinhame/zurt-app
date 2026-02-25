@@ -23,7 +23,7 @@ export default function CashFlowScreen() {
   const { t } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
   const currency = useSettingsStore((s) => s.currency);
-  const { valuesHidden } = useAuthStore();
+  const { valuesHidden, isDemoMode } = useAuthStore();
   const { forecast, isLoading, totalProjectedSavings, loadForecast } = useCashFlowStore();
   const { width: screenWidth } = useWindowDimensions();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -90,9 +90,9 @@ export default function CashFlowScreen() {
         </View>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingTop: 60 }}>
           <Text style={{ fontSize: 40, marginBottom: 16 }}>{'\uD83D\uDCB8'}</Text>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, textAlign: 'center', marginBottom: 8 }}>Fluxo de Caixa</Text>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, textAlign: 'center', marginBottom: 8 }}>{t('cashFlow.title')}</Text>
           <Text style={{ fontSize: 14, color: colors.text.secondary, textAlign: 'center', lineHeight: 20 }}>
-            Nenhuma transa\u00e7\u00e3o encontrada. Conecte seu banco para ver o fluxo de caixa mensal (receitas vs despesas).
+            {t('cashFlow.emptyDesc')}
           </Text>
         </View>
       </View>
@@ -113,6 +113,12 @@ export default function CashFlowScreen() {
         <Text style={styles.headerTitle}>{t('cashFlow.title')}</Text>
         <View style={{ width: 24 }} />
       </View>
+
+      {!isDemoMode && (
+        <View style={{ backgroundColor: colors.elevated, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.md, marginHorizontal: spacing.xl, marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <Text style={{ fontSize: 13, color: colors.text.secondary }}>{'\uD83D\uDD1C'} {t('common.featureInDevelopment')}</Text>
+        </View>
+      )}
 
       <ScrollView
         showsVerticalScrollIndicator={false}

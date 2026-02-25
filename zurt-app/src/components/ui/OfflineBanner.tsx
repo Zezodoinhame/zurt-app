@@ -32,13 +32,13 @@ export function OfflineBanner() {
             outputRange: [-50, 0],
           }),
           opacity: heightAnim,
-          backgroundColor: '#F97316',
+          backgroundColor: colors.warning,
         },
       ]}
       pointerEvents={isOnline ? 'none' : 'auto'}
     >
       <View style={[styles.content, { paddingTop: 6 }]}>
-        <AppIcon name="wifiOff" size={16} color="#FFF" />
+        <AppIcon name="wifiOff" size={16} color={colors.background} />
         <Text style={styles.text}>{t('offline.banner')}</Text>
         {lastSyncTime && (
           <Text style={styles.syncText}>
@@ -64,12 +64,12 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   text: {
-    color: '#FFF',
+    color: '#1A1A1A',
     fontSize: 13,
     fontWeight: '600',
   },
   syncText: {
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(26,26,26,0.7)',
     fontSize: 11,
   },
 });

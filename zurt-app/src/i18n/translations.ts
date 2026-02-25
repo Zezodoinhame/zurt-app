@@ -28,6 +28,25 @@ export const translations: Record<Language, Record<string, string>> = {
     'home.12m': '12M',
     'home.emptyTitle': 'Conecte sua primeira instituição financeira para visualizar seu patrimônio',
     'home.emptyButton': '+ Conectar via Open Finance',
+    'home.greeting': 'Olá',
+    'home.goodMorning': 'Bom dia',
+    'home.goodAfternoon': 'Boa tarde',
+    'home.goodEvening': 'Boa noite',
+    'home.myPatrimony': 'Meu patrimônio',
+    'home.consolidatedPatrimony': 'Patrimônio consolidado',
+    'home.thisMonth': 'Este mês',
+    'home.available': 'Disponível',
+    'home.connectBank': 'Conectar banco',
+    'home.generateReport': 'Gerar relatório',
+    'home.syncData': 'Sincronizar',
+    'home.inviteFriends': 'Convidar amigos',
+    'home.viewAll': 'Ver todos',
+    'home.goals': 'Metas',
+    'home.newGoal': 'Nova meta',
+    'home.cards': 'Cartões',
+    'home.transactions': 'Transações',
+    'home.premium': 'Premium',
+    'home.premiumDescription': 'Desbloqueie insights avançados e relatórios ilimitados',
 
     // Greetings
     'greeting.morning': 'Bom dia',
@@ -124,6 +143,13 @@ export const translations: Record<Language, Record<string, string>> = {
     'profile.revenueShare': 'Participação na receita',
     'profile.nextDistribution': 'Próxima distribuição',
     'profile.about': 'Sobre',
+    'profile.accountSection': 'Conta',
+    'profile.subscription': 'Assinatura',
+    'profile.currentPlan': 'Plano atual',
+    'profile.freePlan': 'Gratuito',
+    'profile.upgradePlan': 'Fazer upgrade',
+    'profile.managePlan': 'Gerenciar plano',
+    'profile.appVersion': 'Versão do app',
     'profile.terms': 'Termos de uso',
     'profile.privacy': 'Política de privacidade',
     'profile.help': 'Ajuda',
@@ -227,6 +253,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'common.error': 'Erro',
     'common.retry': 'Tentar novamente',
     'common.close': 'Fechar',
+    'common.seeAll': 'Ver todos',
     'common.save': 'Salvar',
     'common.cancel': 'Cancelar',
     'common.ok': 'OK',
@@ -314,6 +341,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'agent.suggestPortfolio': 'Analise meu portfólio',
     'agent.suggestDollar': 'Cotação do dólar',
     'agent.suggestSelic': 'Impacto da Selic',
+    'agent.online': 'Online',
 
     // Alerts - AI
     'alerts.aiSection': 'Alertas inteligentes',
@@ -339,6 +367,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'asset.sector': 'Setor',
     'asset.industry': 'Indústria',
     'asset.employees': 'Funcionários',
+    'asset.noChartData': 'Sem dados',
+    'asset.perShare': '/ação',
 
     // Cards - Transactions
     'cards.recentTransactions': 'Últimas transações',
@@ -861,6 +891,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'cashFlow.basedOn': 'Baseado nos últimos 6 meses',
     'cashFlow.disclaimer': 'Valores projetados com base no histórico',
     'cashFlow.noData': 'Dados insuficientes para projeção',
+    'cashFlow.emptyDesc': 'Nenhuma transação encontrada. Conecte seu banco para ver o fluxo de caixa mensal (receitas vs despesas).',
 
     // Spending Insights
     'spendingInsights.title': 'Insights de Gastos',
@@ -1145,6 +1176,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'netWorth.milestoneDate': 'Data',
     'netWorth.milestoneValue': 'Valor',
     'netWorth.projection': 'Projeção 12m',
+    'netWorth.emptyDesc': 'O Patrimônio Líquido consolida seus ativos, investimentos e dívidas. Conecte seu banco ou adicione manualmente.',
 
     // Debt Manager
     'debt.title': 'Gestor de Dívidas',
@@ -1171,6 +1203,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'debt.student_loan': 'Estud. financiamento',
     'debt.other': 'Outro',
     'debt.delete': 'Excluir dívida',
+    'debt.emptyDesc': 'Nenhuma dívida cadastrada. Adicione suas dívidas para acompanhar e otimizar o pagamento.',
+    'debt.monthsUnit': 'meses',
+    'debt.annualRateSuffix': '% a.a.',
 
     // Retirement
     'retirement.title': 'Aposentadoria',
@@ -1504,6 +1539,25 @@ export const translations: Record<Language, Record<string, string>> = {
     'home.12m': '12M',
     'home.emptyTitle': 'Connect your first financial institution to view your patrimony',
     'home.emptyButton': '+ Connect via Open Finance',
+    'home.greeting': 'Hello',
+    'home.goodMorning': 'Good morning',
+    'home.goodAfternoon': 'Good afternoon',
+    'home.goodEvening': 'Good evening',
+    'home.myPatrimony': 'My patrimony',
+    'home.consolidatedPatrimony': 'Consolidated patrimony',
+    'home.thisMonth': 'This month',
+    'home.available': 'Available',
+    'home.connectBank': 'Connect bank',
+    'home.generateReport': 'Generate report',
+    'home.syncData': 'Sync data',
+    'home.inviteFriends': 'Invite friends',
+    'home.viewAll': 'View all',
+    'home.goals': 'Goals',
+    'home.newGoal': 'New goal',
+    'home.cards': 'Cards',
+    'home.transactions': 'Transactions',
+    'home.premium': 'Premium',
+    'home.premiumDescription': 'Unlock advanced insights and unlimited reports',
 
     // Greetings
     'greeting.morning': 'Good morning',
@@ -1600,6 +1654,13 @@ export const translations: Record<Language, Record<string, string>> = {
     'profile.revenueShare': 'Revenue share',
     'profile.nextDistribution': 'Next distribution',
     'profile.about': 'About',
+    'profile.accountSection': 'Account',
+    'profile.subscription': 'Subscription',
+    'profile.currentPlan': 'Current plan',
+    'profile.freePlan': 'Free',
+    'profile.upgradePlan': 'Upgrade',
+    'profile.managePlan': 'Manage plan',
+    'profile.appVersion': 'App version',
     'profile.terms': 'Terms of use',
     'profile.privacy': 'Privacy policy',
     'profile.help': 'Help',
@@ -1703,6 +1764,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'common.error': 'Error',
     'common.retry': 'Try again',
     'common.close': 'Close',
+    'common.seeAll': 'See all',
     'common.save': 'Save',
     'common.cancel': 'Cancel',
     'common.ok': 'OK',
@@ -1790,6 +1852,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'agent.suggestPortfolio': 'Analyze my portfolio',
     'agent.suggestDollar': 'Dollar exchange rate',
     'agent.suggestSelic': 'Selic rate impact',
+    'agent.online': 'Online',
 
     // Alerts - AI
     'alerts.aiSection': 'Smart alerts',
@@ -1815,6 +1878,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'asset.sector': 'Sector',
     'asset.industry': 'Industry',
     'asset.employees': 'Employees',
+    'asset.noChartData': 'No data',
+    'asset.perShare': '/share',
 
     // Cards - Transactions
     'cards.recentTransactions': 'Recent transactions',
@@ -2339,6 +2404,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'cashFlow.basedOn': 'Based on last 6 months',
     'cashFlow.disclaimer': 'Projected values based on history',
     'cashFlow.noData': 'Insufficient data for projection',
+    'cashFlow.emptyDesc': 'No transactions found. Connect your bank to see monthly cash flow (income vs expenses).',
 
     // Spending Insights
     'spendingInsights.title': 'Spending Insights',
@@ -2623,6 +2689,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'netWorth.milestoneDate': 'Date',
     'netWorth.milestoneValue': 'Value',
     'netWorth.projection': '12m projection',
+    'netWorth.emptyDesc': 'Net Worth consolidates your assets, investments and debts. Connect your bank or add manually.',
 
     // Debt Manager
     'debt.title': 'Debt Manager',
@@ -2649,6 +2716,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'debt.student_loan': 'Student loan',
     'debt.other': 'Other',
     'debt.delete': 'Delete debt',
+    'debt.emptyDesc': 'No debts registered. Add your debts to track and optimize payments.',
+    'debt.monthsUnit': 'months',
+    'debt.annualRateSuffix': '% p.a.',
 
     // Retirement
     'retirement.title': 'Retirement',
@@ -2982,6 +3052,25 @@ export const translations: Record<Language, Record<string, string>> = {
     'home.12m': '12月',
     'home.emptyTitle': '连接您的第一个金融机构以查看您的资产',
     'home.emptyButton': '+ 通过Open Finance连接',
+    'home.greeting': '你好',
+    'home.goodMorning': '早上好',
+    'home.goodAfternoon': '下午好',
+    'home.goodEvening': '晚上好',
+    'home.myPatrimony': '我的资产',
+    'home.consolidatedPatrimony': '综合资产',
+    'home.thisMonth': '本月',
+    'home.available': '可用',
+    'home.connectBank': '连接银行',
+    'home.generateReport': '生成报告',
+    'home.syncData': '同步数据',
+    'home.inviteFriends': '邀请朋友',
+    'home.viewAll': '查看全部',
+    'home.goals': '目标',
+    'home.newGoal': '新目标',
+    'home.cards': '卡片',
+    'home.transactions': '交易',
+    'home.premium': '高级版',
+    'home.premiumDescription': '解锁高级洞察和无限报告',
 
     // Greetings
     'greeting.morning': '早上好',
@@ -3078,6 +3167,13 @@ export const translations: Record<Language, Record<string, string>> = {
     'profile.revenueShare': '收益分享',
     'profile.nextDistribution': '下次分配',
     'profile.about': '关于',
+    'profile.accountSection': '账户',
+    'profile.subscription': '订阅',
+    'profile.currentPlan': '当前方案',
+    'profile.freePlan': '免费',
+    'profile.upgradePlan': '升级',
+    'profile.managePlan': '管理方案',
+    'profile.appVersion': '应用版本',
     'profile.terms': '使用条款',
     'profile.privacy': '隐私政策',
     'profile.help': '帮助',
@@ -3181,6 +3277,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'common.error': '错误',
     'common.retry': '重试',
     'common.close': '关闭',
+    'common.seeAll': '查看全部',
     'common.save': '保存',
     'common.cancel': '取消',
     'common.ok': '确定',
@@ -3268,6 +3365,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'agent.suggestPortfolio': '分析我的投资组合',
     'agent.suggestDollar': '美元汇率',
     'agent.suggestSelic': 'Selic利率影响',
+    'agent.online': '在线',
 
     // Alerts - AI
     'alerts.aiSection': '智能提醒',
@@ -3293,6 +3391,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'asset.sector': '行业',
     'asset.industry': '细分行业',
     'asset.employees': '员工数',
+    'asset.noChartData': '无数据',
+    'asset.perShare': '/股',
 
     // Cards - Transactions
     'cards.recentTransactions': '最近交易',
@@ -3817,6 +3917,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'cashFlow.basedOn': '基于最近6个月',
     'cashFlow.disclaimer': '基于历史数据的预测值',
     'cashFlow.noData': '数据不足以进行预测',
+    'cashFlow.emptyDesc': '未找到交易记录。连接您的银行以查看每月现金流（收入与支出）。',
 
     // Spending Insights
     'spendingInsights.title': '消费洞察',
@@ -4101,6 +4202,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'netWorth.milestoneDate': '日期',
     'netWorth.milestoneValue': '金额',
     'netWorth.projection': '12个月预测',
+    'netWorth.emptyDesc': '净资产整合您的资产、投资和债务。连接银行或手动添加。',
 
     // Debt Manager
     'debt.title': '债务管理',
@@ -4127,6 +4229,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'debt.student_loan': '学生贷款',
     'debt.other': '其他',
     'debt.delete': '删除债务',
+    'debt.emptyDesc': '未登记债务。添加您的债务以跟踪和优化还款。',
+    'debt.monthsUnit': '个月',
+    'debt.annualRateSuffix': '% 年利率',
 
     // Retirement
     'retirement.title': '退休计算',
@@ -4460,6 +4565,25 @@ export const translations: Record<Language, Record<string, string>> = {
     'home.12m': '12 شهر',
     'home.emptyTitle': 'قم بربط مؤسستك المالية الأولى لعرض أصولك',
     'home.emptyButton': '+ الاتصال عبر Open Finance',
+    'home.greeting': 'مرحبا',
+    'home.goodMorning': 'صباح الخير',
+    'home.goodAfternoon': 'مساء الخير',
+    'home.goodEvening': 'مساء الخير',
+    'home.myPatrimony': 'أصولي',
+    'home.consolidatedPatrimony': 'الأصول الموحدة',
+    'home.thisMonth': 'هذا الشهر',
+    'home.available': 'متاح',
+    'home.connectBank': 'ربط بنك',
+    'home.generateReport': 'إنشاء تقرير',
+    'home.syncData': 'مزامنة البيانات',
+    'home.inviteFriends': 'دعوة أصدقاء',
+    'home.viewAll': 'عرض الكل',
+    'home.goals': 'الأهداف',
+    'home.newGoal': 'هدف جديد',
+    'home.cards': 'البطاقات',
+    'home.transactions': 'المعاملات',
+    'home.premium': 'بريميوم',
+    'home.premiumDescription': 'افتح الرؤى المتقدمة والتقارير غير المحدودة',
 
     // Greetings
     'greeting.morning': 'صباح الخير',
@@ -4556,6 +4680,13 @@ export const translations: Record<Language, Record<string, string>> = {
     'profile.revenueShare': 'حصة الإيرادات',
     'profile.nextDistribution': 'التوزيع القادم',
     'profile.about': 'حول',
+    'profile.accountSection': 'الحساب',
+    'profile.subscription': 'الاشتراك',
+    'profile.currentPlan': 'الخطة الحالية',
+    'profile.freePlan': 'مجاني',
+    'profile.upgradePlan': 'ترقية',
+    'profile.managePlan': 'إدارة الخطة',
+    'profile.appVersion': 'إصدار التطبيق',
     'profile.terms': 'شروط الاستخدام',
     'profile.privacy': 'سياسة الخصوصية',
     'profile.help': 'مساعدة',
@@ -4659,6 +4790,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'common.error': 'خطأ',
     'common.retry': 'إعادة المحاولة',
     'common.close': 'إغلاق',
+    'common.seeAll': 'عرض الكل',
     'common.save': 'حفظ',
     'common.cancel': 'إلغاء',
     'common.ok': 'موافق',
@@ -4746,6 +4878,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'agent.suggestPortfolio': 'حلل محفظتي',
     'agent.suggestDollar': 'سعر صرف الدولار',
     'agent.suggestSelic': 'تأثير معدل Selic',
+    'agent.online': 'متصل',
 
     // Alerts - AI
     'alerts.aiSection': 'تنبيهات ذكية',
@@ -4771,6 +4904,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'asset.sector': 'القطاع',
     'asset.industry': 'الصناعة',
     'asset.employees': 'الموظفون',
+    'asset.noChartData': 'لا توجد بيانات',
+    'asset.perShare': '/سهم',
 
     // Cards - Transactions
     'cards.recentTransactions': 'المعاملات الأخيرة',
@@ -5295,6 +5430,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'cashFlow.basedOn': 'بناءً على آخر 6 أشهر',
     'cashFlow.disclaimer': 'قيم متوقعة بناءً على التاريخ',
     'cashFlow.noData': 'بيانات غير كافية للتوقع',
+    'cashFlow.emptyDesc': 'لم يتم العثور على معاملات. قم بتوصيل البنك لعرض التدفق النقدي الشهري (الإيرادات مقابل المصروفات).',
 
     // Spending Insights
     'spendingInsights.title': 'رؤى الإنفاق',
@@ -5579,6 +5715,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'netWorth.milestoneDate': 'التاريخ',
     'netWorth.milestoneValue': 'القيمة',
     'netWorth.projection': 'توقعات 12 شهر',
+    'netWorth.emptyDesc': 'صافي الثروة يجمع أصولك واستثماراتك وديونك. قم بتوصيل البنك أو أضف يدويًا.',
 
     // Debt Manager
     'debt.title': 'مدير الديون',
@@ -5605,6 +5742,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'debt.student_loan': 'قرض طلابي',
     'debt.other': 'أخرى',
     'debt.delete': 'حذف الدين',
+    'debt.emptyDesc': 'لا توجد ديون مسجلة. أضف ديونك لتتبع المدفوعات وتحسينها.',
+    'debt.monthsUnit': 'أشهر',
+    'debt.annualRateSuffix': '% سنويًا',
 
     // Retirement
     'retirement.title': 'التقاعد',

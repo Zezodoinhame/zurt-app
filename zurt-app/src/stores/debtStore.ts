@@ -42,7 +42,7 @@ export const useDebtStore = create<DebtState>((set, get) => ({
       const debts = stored ? JSON.parse(stored) : [];
       set({ debts, isLoading: false });
     } catch (err: any) {
-      set({ isLoading: false, error: err?.message ?? 'Error loading debts' });
+      set({ isLoading: false, error: err?.message ?? 'Erro ao carregar dívidas' });
     }
   },
 

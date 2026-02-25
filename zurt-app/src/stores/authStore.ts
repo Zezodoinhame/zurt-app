@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { User } from '../types';
 import { demoUser } from '../data/demo';
 import {
@@ -13,6 +14,75 @@ import {
 import { clearSession } from '../services/auth';
 import { logger } from '../utils/logger';
 import { usePushStore } from './pushStore';
+
+// ---------------------------------------------------------------------------
+// All AsyncStorage keys that hold user-specific data.
+// Settings keys (theme, language, currency, accentColor, iconStyle) are
+// intentionally excluded — they are device preferences, not user data.
+// ---------------------------------------------------------------------------
+const USER_DATA_STORAGE_KEYS = [
+  // Backend-synced stores (also cleared in-memory below)
+  '@zurt:agent_messages',
+  // Local-only user data
+  '@zurt:badges_earned',
+  '@zurt:bills',
+  '@zurt:budget',
+  '@zurt:calendar',
+  '@zurt:challenges',
+  '@zurt:crypto',
+  '@zurt:debts',
+  '@zurt:diary',
+  '@zurt:emergency',
+  '@zurt:learn',
+  '@zurt:networth',
+  '@zurt:priceAlerts',
+  '@zurt:recurringInvestments',
+  '@zurt:subscriptions',
+  '@zurt:watchlist',
+  // Zustand persist
+  'zurt-family-storage',
+  // API response cache
+  'cache:user:profile',
+  'cache:dashboard:finance',
+  'cache:finance:investments',
+  'cache:finance:accounts',
+  'cache:finance:cards',
+  'cache:notifications',
+  'cache:connections',
+  'cache:goals',
+  'cache:subscription:current',
+  'cache:subscription:history',
+  'cache:reports',
+  'cache:customer:conversations',
+  'cache:customer:invitations',
+  'cache:plans',
+  'cache:investments:holdings',
+  'cache:investments:summary',
+  // Offline queue
+  'zurt:pendingActions',
+];
+
+/** Reset data stores to prevent leaking data between accounts */
+function resetDataStores() {
+  // 1. Clear in-memory state of backend-synced stores
+  try {
+    const { usePortfolioStore } = require('./portfolioStore');
+    const { useCardsStore } = require('./cardsStore');
+    const { useGoalsStore } = require('./goalsStore');
+    const { useAgentStore } = require('./agentStore');
+    const { useNotificationStore } = require('./notificationStore');
+    usePortfolioStore.setState({ summary: null, institutions: [], assets: [], allocations: [], insights: [], benchmarks: null, isLoading: false, isRefreshing: false, error: null });
+    useCardsStore.setState({ cards: [], categorySpending: [], dashboardTransactions: [], selectedCardIndex: 0, isLoading: false, isRefreshing: false, error: null, _loadedFromDashboard: false, _transactionsLoaded: false });
+    useGoalsStore.setState({ goals: [], isLoading: false, error: null });
+    useAgentStore.setState({ messages: [], conversationId: null, isLoading: false, error: null, rateLimited: false, _initialized: false });
+    useNotificationStore.setState({ notifications: [], smartAlerts: [], isLoading: false, isRefreshing: false, error: null, filter: 'all' });
+  } catch {
+    // Stores may not be loaded yet
+  }
+
+  // 2. Clear all user-specific AsyncStorage data + API cache
+  AsyncStorage.multiRemove(USER_DATA_STORAGE_KEYS).catch(() => {});
+}
 
 interface AuthState {
   user: User | null;
@@ -43,6 +113,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
   setOnUnauthorized(() => {
     const state = get();
     if (state.isAuthenticated && !state.isDemoMode) {
+      // Best-effort push token unregister (token already cleared by api.ts)
+      try { usePushStore.getState().unregisterPushToken(); } catch {}
       set({
         user: null,
         isAuthenticated: false,
@@ -50,6 +122,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         valuesHidden: false,
       });
       setDemoMode(false);
+      resetDataStores();
     }
   });
 
@@ -62,12 +135,14 @@ export const useAuthStore = create<AuthState>((set, get) => {
     error: null,
 
     login: async (email: string, password: string) => {
-      logger.log('[ZURT Auth] login() called with email:', email);
+      logger.log('[ZURT Auth] login() called');
       set({ isLoading: true, error: null });
+      // Preventive cleanup: clear stale data from any previous session
+      resetDataStores();
 
       try {
         const { user } = await loginApi(email, password);
-        logger.log('[ZURT Auth] login() success, user:', user?.name);
+        logger.log('[ZURT Auth] login() success');
         setDemoMode(false);
         set({
           user,
@@ -95,7 +170,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         const message =
           err?.message?.includes('401') || err?.message?.includes('Unauthorized')
             ? 'Email ou senha incorretos'
-            : 'Erro de conexao. Tente novamente.';
+            : 'Erro de conexão. Tente novamente.';
         set({ isLoading: false, error: message });
         return false;
       }
@@ -108,6 +183,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
       invitationToken?: string,
     ) => {
       set({ isLoading: true, error: null });
+      // Preventive cleanup: clear stale data from any previous session
+      resetDataStores();
 
       try {
         // Clear any previous session before registering
@@ -125,7 +202,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
       } catch (err: any) {
         const message =
           err?.message?.includes('409') || err?.message?.includes('already')
-            ? 'Email ja cadastrado'
+            ? 'Email já cadastrado'
             : 'Erro ao criar conta. Tente novamente.';
         set({ isLoading: false, error: message });
         return false;
@@ -133,6 +210,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
     },
 
     loginDemo: () => {
+      // Preventive cleanup: clear stale data from any previous session
+      resetDataStores();
       setDemoMode(true);
       set({
         user: demoUser,
@@ -151,7 +230,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
       try {
         const user = await fetchUserProfile();
-        logger.log('[ZURT Auth] restoreSession() success, user:', user?.name);
+        logger.log('[ZURT Auth] restoreSession() success');
         setDemoMode(false);
         set({
           user,
@@ -182,6 +261,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         valuesHidden: false,
         error: null,
       });
+      resetDataStores();
     },
 
     setLoading: (loading: boolean) => set({ isLoading: loading }),

@@ -365,7 +365,7 @@ function EditProfileModal({
       return;
     }
     if (isDemoMode) {
-      Alert.alert('Demo', t('profile.demoUnavailable'));
+      Alert.alert(t('common.demo'), t('profile.demoUnavailable'));
       return;
     }
     setIsLoading(true);
@@ -634,7 +634,7 @@ export default function ProfileScreen() {
 
   const handleChangePassword = useCallback(() => {
     if (isDemoMode) {
-      Alert.alert('Demo', t('profile.demoUnavailable'));
+      Alert.alert(t('common.demo'), t('profile.demoUnavailable'));
       return;
     }
     setShowPasswordModal(true);
@@ -642,7 +642,7 @@ export default function ProfileScreen() {
 
   const handleConnectBank = useCallback(() => {
     if (isDemoMode) {
-      Alert.alert('Demo', t('profile.demoUnavailable'));
+      Alert.alert(t('common.demo'), t('profile.demoUnavailable'));
       return;
     }
     router.push('/connect-bank');
@@ -798,7 +798,7 @@ export default function ProfileScreen() {
   // -- Edit profile handler -------------------------------------------------
   const handleEditProfile = useCallback(() => {
     if (isDemoMode) {
-      Alert.alert('Demo', t('profile.demoUnavailable'));
+      Alert.alert(t('common.demo'), t('profile.demoUnavailable'));
       return;
     }
     setShowEditProfileModal(true);
@@ -819,37 +819,32 @@ export default function ProfileScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      {/* User card */}
-      <Card variant="glow" delay={0}>
-        <View style={styles.userCard}>
+      {/* ── Profile Header ── */}
+      <View style={styles.profileHeader}>
+        <TouchableOpacity onPress={handleEditProfile} activeOpacity={0.8}>
           <UserAvatar
-            size={80}
+            size={88}
             initials={user.initials}
             customUri={avatarState.customUri}
             presetId={avatarState.presetId}
             accentColor={colors.accent}
           />
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>{user.name}</Text>
-            <Text style={styles.userEmail}>{user.email}</Text>
-            {isDemoMode && (
-              <Text style={styles.demoLabel}>{t('profile.demoMode')}</Text>
-            )}
-          </View>
-          <TouchableOpacity
-            style={styles.editButton}
-            accessibilityLabel={t('profile.editProfile')}
-            onPress={handleEditProfile}
-          >
-            <Text style={styles.editIcon}>{'\u270F\uFE0F'}</Text>
-          </TouchableOpacity>
+        </TouchableOpacity>
+        <Text style={styles.headerName}>{user.name}</Text>
+        <Text style={styles.headerEmail}>{user.email}</Text>
+        <View style={[styles.planBadge, { backgroundColor: colors.accent + '20', borderColor: colors.accent + '40' }]}>
+          <Text style={[styles.planBadgeText, { color: colors.accent }]}>
+            {isDemoMode ? t('profile.demoMode') : t('profile.freePlan')}
+          </Text>
         </View>
-      </Card>
+      </View>
 
-      {/* Security */}
-      <SectionTitle title={t('profile.security')} iconName="biometric" />
+      {/* ── Conta ── */}
+      <SectionTitle title={t('profile.accountSection')} iconName="person" />
       <View>
         <View style={styles.section}>
+          <SettingRow iconName="person" label={t('profile.editProfile')} onPress={handleEditProfile} />
+          <SettingRow iconName="password" label={t('profile.changePassword')} onPress={handleChangePassword} />
           <SettingRow
             iconName="biometric"
             label={t('profile.biometric')}
@@ -861,12 +856,97 @@ export default function ProfileScreen() {
               />
             }
           />
-          <SettingRow iconName="password" label={t('profile.changePassword')} onPress={handleChangePassword} />
         </View>
       </View>
 
-      {/* Preferences */}
+      {/* ── Prefer\u00EAncias ── */}
       <SectionTitle title={t('profile.preferences')} iconName="settings" />
+      <View>
+        <View style={styles.section}>
+          <SettingRow
+            iconName="globe"
+            label={t('profile.language')}
+            value={currentLanguageLabel}
+            onPress={() => setShowLanguagePicker(true)}
+          />
+
+          {/* Theme selector */}
+          <View style={styles.inlineLabel}>
+            <View style={styles.settingIcon}><AppIcon name="theme" size={16} color={colors.text.secondary} /></View>
+            <Text style={styles.settingLabel}>{t('profile.appearance')}</Text>
+          </View>
+          <View style={styles.themeRow}>
+            {themeOptions.map((opt) => {
+              const isSelected = theme === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[styles.themeButton, isSelected && styles.themeButtonSelected]}
+                  onPress={() => handleThemeSelect(opt.key)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.themeEmoji}>{opt.emoji}</Text>
+                  <Text style={[styles.themeLabel, isSelected && styles.themeLabelSelected]}>
+                    {t(opt.labelKey)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Accent color */}
+          <Text style={styles.iconStyleLabel}>{t('profile.accentColor')}</Text>
+          <View style={styles.accentColorRow}>
+            {ACCENT_COLORS.map((opt) => {
+              const isSelected = accentColor === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[styles.accentColorButton, { borderColor: isSelected ? opt.key : colors.border }]}
+                  onPress={() => handleAccentColorSelect(opt.key)}
+                  activeOpacity={0.7}
+                  accessibilityLabel={t(opt.label)}
+                >
+                  <View style={[styles.accentColorSwatch, { backgroundColor: opt.key }]} />
+                  {isSelected && (
+                    <Text style={[styles.accentColorCheck, { color: opt.key }]}>{'\u2713'}</Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <SettingRow
+            iconName="wallet"
+            label={t('profile.defaultCurrency')}
+            value={currentCurrencyLabel}
+            onPress={() => setShowCurrencyPicker(true)}
+          />
+
+          {/* Icon style */}
+          <Text style={styles.iconStyleLabel}>{t('profile.iconStyle')}</Text>
+          <View style={styles.themeRow}>
+            {iconStyleOptions.map((opt) => {
+              const isSelected = iconStyle === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[styles.themeButton, isSelected && styles.themeButtonSelected]}
+                  onPress={() => handleIconStyleSelect(opt.key)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.themeEmoji}>{opt.emoji}</Text>
+                  <Text style={[styles.themeLabel, isSelected && styles.themeLabelSelected]}>
+                    {t(opt.labelKey)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </View>
+
+      {/* Notifications & privacy toggles */}
       <View>
         <View style={styles.section}>
           <SettingRow
@@ -891,57 +971,27 @@ export default function ProfileScreen() {
               <SettingRow
                 iconName="token"
                 label={t('push.distribution')}
-                rightElement={
-                  <Toggle
-                    value={pushPreferences.distribution}
-                    onValueChange={(v) => togglePushType('distribution', v)}
-                    accessibilityLabel={t('push.distribution')}
-                  />
-                }
+                rightElement={<Toggle value={pushPreferences.distribution} onValueChange={(v) => togglePushType('distribution', v)} accessibilityLabel={t('push.distribution')} />}
               />
               <SettingRow
                 iconName="warning"
                 label={t('push.maturity')}
-                rightElement={
-                  <Toggle
-                    value={pushPreferences.maturity}
-                    onValueChange={(v) => togglePushType('maturity', v)}
-                    accessibilityLabel={t('push.maturity')}
-                  />
-                }
+                rightElement={<Toggle value={pushPreferences.maturity} onValueChange={(v) => togglePushType('maturity', v)} accessibilityLabel={t('push.maturity')} />}
               />
               <SettingRow
                 iconName="card"
                 label={t('push.invoice')}
-                rightElement={
-                  <Toggle
-                    value={pushPreferences.invoice}
-                    onValueChange={(v) => togglePushType('invoice', v)}
-                    accessibilityLabel={t('push.invoice')}
-                  />
-                }
+                rightElement={<Toggle value={pushPreferences.invoice} onValueChange={(v) => togglePushType('invoice', v)} accessibilityLabel={t('push.invoice')} />}
               />
               <SettingRow
                 iconName="idea"
                 label={t('push.insight')}
-                rightElement={
-                  <Toggle
-                    value={pushPreferences.insight}
-                    onValueChange={(v) => togglePushType('insight', v)}
-                    accessibilityLabel={t('push.insight')}
-                  />
-                }
+                rightElement={<Toggle value={pushPreferences.insight} onValueChange={(v) => togglePushType('insight', v)} accessibilityLabel={t('push.insight')} />}
               />
               <SettingRow
                 iconName="notification"
                 label={t('push.system')}
-                rightElement={
-                  <Toggle
-                    value={pushPreferences.system}
-                    onValueChange={(v) => togglePushType('system', v)}
-                    accessibilityLabel={t('push.system')}
-                  />
-                }
+                rightElement={<Toggle value={pushPreferences.system} onValueChange={(v) => togglePushType('system', v)} accessibilityLabel={t('push.system')} />}
               />
             </>
           )}
@@ -967,107 +1017,54 @@ export default function ProfileScreen() {
               />
             }
           />
-          <SettingRow
-            iconName="globe"
-            label={t('profile.language')}
-            value={currentLanguageLabel}
-            onPress={() => setShowLanguagePicker(true)}
-          />
-          <SettingRow
-            iconName="wallet"
-            label={t('profile.defaultCurrency')}
-            value={currentCurrencyLabel}
-            onPress={() => setShowCurrencyPicker(true)}
-          />
         </View>
       </View>
 
-      {/* Appearance (Theme Selector) */}
-      <SectionTitle title={t('profile.appearance')} iconName="theme" />
-      <View>
-        <View style={styles.section}>
-          <View style={styles.themeRow}>
-            {themeOptions.map((opt) => {
-              const isSelected = theme === opt.key;
-              return (
-                <TouchableOpacity
-                  key={opt.key}
-                  style={[
-                    styles.themeButton,
-                    isSelected && styles.themeButtonSelected,
-                  ]}
-                  onPress={() => handleThemeSelect(opt.key)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.themeEmoji}>{opt.emoji}</Text>
-                  <Text
-                    style={[
-                      styles.themeLabel,
-                      isSelected && styles.themeLabelSelected,
-                    ]}
-                  >
-                    {t(opt.labelKey)}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+      {/* ── Assinatura ── */}
+      <SectionTitle title={t('profile.subscription')} iconName="token" />
+      <Card variant="elevated" delay={300}>
+        <View style={styles.subscriptionHeader}>
+          <View>
+            <Text style={styles.subscriptionPlanLabel}>{t('profile.currentPlan')}</Text>
+            <Text style={styles.subscriptionPlanName}>
+              {isDemoMode ? t('profile.demoMode') : t('profile.freePlan')}
+            </Text>
           </View>
-
-          {/* Icon style selector */}
-          <Text style={styles.iconStyleLabel}>{t('profile.iconStyle')}</Text>
-          <View style={styles.themeRow}>
-            {iconStyleOptions.map((opt) => {
-              const isSelected = iconStyle === opt.key;
-              return (
-                <TouchableOpacity
-                  key={opt.key}
-                  style={[
-                    styles.themeButton,
-                    isSelected && styles.themeButtonSelected,
-                  ]}
-                  onPress={() => handleIconStyleSelect(opt.key)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.themeEmoji}>{opt.emoji}</Text>
-                  <Text
-                    style={[
-                      styles.themeLabel,
-                      isSelected && styles.themeLabelSelected,
-                    ]}
-                  >
-                    {t(opt.labelKey)}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+          {!isDemoMode && (
+            <TouchableOpacity
+              style={[styles.upgradeButton, { backgroundColor: colors.accent }]}
+              onPress={() => router.push('/premium')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.upgradeButtonText, { color: colors.background }]}>
+                {t('profile.upgradePlan')}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <View style={styles.tokenDivider} />
+        <View style={styles.tokenRow}>
+          <View style={styles.tokenItem}>
+            <Text style={styles.tokenLabel}>{t('profile.tokenBalance')}</Text>
+            <Text style={styles.tokenValue}>
+              {user.zurtTokens.toLocaleString('pt-BR')} ZURT
+            </Text>
           </View>
-
-          {/* Accent color selector */}
-          <Text style={styles.iconStyleLabel}>{t('profile.accentColor')}</Text>
-          <View style={styles.accentColorRow}>
-            {ACCENT_COLORS.map((opt) => {
-              const isSelected = accentColor === opt.key;
-              return (
-                <TouchableOpacity
-                  key={opt.key}
-                  style={[
-                    styles.accentColorButton,
-                    { borderColor: isSelected ? opt.key : colors.border },
-                  ]}
-                  onPress={() => handleAccentColorSelect(opt.key)}
-                  activeOpacity={0.7}
-                  accessibilityLabel={t(opt.label)}
-                >
-                  <View style={[styles.accentColorSwatch, { backgroundColor: opt.key }]} />
-                  {isSelected && (
-                    <Text style={[styles.accentColorCheck, { color: opt.key }]}>{'\u2713'}</Text>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
+          <View style={styles.tokenItem}>
+            <Text style={styles.tokenLabel}>{t('profile.revenueShare')}</Text>
+            <Text style={[styles.tokenValue, { color: colors.accent }]}>
+              {formatCurrency(user.revenueShareReceived, currency)}
+            </Text>
           </View>
         </View>
-      </View>
+        <View style={styles.tokenDivider} />
+        <View style={styles.tokenDistribution}>
+          <Text style={styles.tokenLabel}>{t('profile.nextDistribution')}</Text>
+          <Text style={styles.tokenDate}>
+            {user.nextDistribution ? formatDate(user.nextDistribution) : '-'}
+          </Text>
+        </View>
+      </Card>
 
       {/* Connected accounts */}
       <SectionTitle title={t('profile.connectedAccounts')} iconName="bank" />
@@ -1112,32 +1109,6 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* ZURT Token */}
-      <SectionTitle title={t('profile.zurtToken')} iconName="token" />
-      <Card variant="elevated" delay={450}>
-        <View style={styles.tokenRow}>
-          <View style={styles.tokenItem}>
-            <Text style={styles.tokenLabel}>{t('profile.tokenBalance')}</Text>
-            <Text style={styles.tokenValue}>
-              {user.zurtTokens.toLocaleString('pt-BR')} ZURT
-            </Text>
-          </View>
-          <View style={styles.tokenItem}>
-            <Text style={styles.tokenLabel}>{t('profile.revenueShare')}</Text>
-            <Text style={[styles.tokenValue, { color: colors.accent }]}>
-              {formatCurrency(user.revenueShareReceived, currency)}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.tokenDivider} />
-        <View style={styles.tokenDistribution}>
-          <Text style={styles.tokenLabel}>{t('profile.nextDistribution')}</Text>
-          <Text style={styles.tokenDate}>
-            {user.nextDistribution ? formatDate(user.nextDistribution) : '-'}
-          </Text>
-        </View>
-      </Card>
-
       {/* Tools */}
       <SectionTitle title={t('profile.tools')} iconName="tools" />
       <View>
@@ -1165,10 +1136,15 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* About */}
+      {/* ── Sobre ── */}
       <SectionTitle title={t('profile.about')} iconName="info" />
       <View>
         <View style={styles.section}>
+          <View style={styles.settingRow}>
+            <View style={styles.settingIcon}><AppIcon name="info" size={16} color={colors.text.secondary} /></View>
+            <Text style={styles.settingLabel}>{t('profile.appVersion')}</Text>
+            <Text style={styles.settingValue}>v1.0.0</Text>
+          </View>
           <SettingRow iconName="report" label={t('profile.terms')} onPress={handleTerms} />
           <SettingRow iconName="security" label={t('profile.privacy')} onPress={handlePrivacy} />
           <SettingRow iconName="info" label={t('profile.help')} onPress={handleHelp} />
@@ -1243,53 +1219,75 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingTop: spacing.xl,
     paddingBottom: 120,
   },
-  userCard: {
+  // ── Profile Header (centered) ──
+  profileHeader: {
+    alignItems: 'center',
+    paddingVertical: spacing.xxl,
+    paddingBottom: spacing.lg,
+  },
+  headerName: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.text.primary,
+    marginTop: spacing.md,
+    letterSpacing: -0.3,
+  },
+  headerEmail: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginTop: 4,
+  },
+  planBadge: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radius.full,
+    borderWidth: 1,
+  },
+  planBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+
+  // ── Inline section label (theme inside preferences) ──
+  inlineLabel: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: spacing.md + 2,
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border + '50',
   },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.accent,
+
+  // ── Subscription ──
+  subscriptionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
+    marginBottom: spacing.sm,
   },
-  avatarText: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.text.inverse,
+  subscriptionPlanLabel: {
+    fontSize: 11,
+    color: colors.text.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
   },
-  userInfo: {
-    flex: 1,
-    marginLeft: spacing.lg,
-  },
-  userName: {
+  subscriptionPlanName: {
     fontSize: 18,
     fontWeight: '700',
     color: colors.text.primary,
   },
-  userEmail: {
+  upgradeButton: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radius.md,
+  },
+  upgradeButtonText: {
     fontSize: 13,
-    color: colors.text.secondary,
-    marginTop: 2,
-  },
-  demoLabel: {
-    fontSize: 11,
-    color: colors.warning,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  editButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.elevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  editIcon: {
-    fontSize: 14,
+    fontWeight: '700',
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -1363,7 +1361,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   instIconText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: colors.background,
   },
   statusBadge: {
     flexDirection: 'row',

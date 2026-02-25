@@ -42,7 +42,7 @@ export const useLearnStore = create<LearnState>((set, get) => ({
       // Lessons and glossary are static educational content, not personal data
       set({ lessons: demoLessons, glossary: demoGlossary, progress, isLoading: false });
     } catch (err: any) {
-      set({ isLoading: false, error: err?.message ?? 'Error loading learn data' });
+      set({ isLoading: false, error: err?.message ?? 'Erro ao carregar conteúdo' });
     }
   },
 

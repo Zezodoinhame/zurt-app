@@ -23,6 +23,7 @@ import { fetchAIAlerts, type AIAlert } from '../../src/services/api';
 import type { NotificationType } from '../../src/types';
 import { AppIcon, type AppIconName } from '../../src/hooks/useIcon';
 import { SmartAlertCard } from '../../src/components/alerts/SmartAlertCard';
+import { AIMarkdown } from '../../src/components/shared/AIMarkdown';
 
 const filterOptions: Array<{ key: NotificationType | 'all'; labelKey: string; iconName?: AppIconName }> = [
   { key: 'all', labelKey: 'alerts.all' },
@@ -283,7 +284,7 @@ export default function AlertsScreen() {
                       <AppIcon name={config.iconName} size={18} color={config.color} />
                       <View style={styles.aiAlertContent}>
                         <Text style={styles.aiAlertTitle}>{alert.title}</Text>
-                        <Text style={styles.aiAlertMessage}>{alert.message}</Text>
+                        <AIMarkdown content={alert.message} />
                       </View>
                       <TouchableOpacity
                         onPress={() => dismissAIAlert(alert.id)}

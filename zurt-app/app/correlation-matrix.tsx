@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { type ThemeColors } from '../src/theme/colors';
 import { spacing, radius } from '../src/theme/spacing';
 import { useSettingsStore } from '../src/stores/settingsStore';
+import { useAuthStore } from '../src/stores/authStore';
 import { useCorrelationStore } from '../src/stores/correlationStore';
 import { Card } from '../src/components/ui/Card';
 import { CircularProgress } from '../src/components/charts/CircularProgress';
@@ -22,6 +23,7 @@ export default function CorrelationMatrixScreen() {
   const router = useRouter();
   const { t } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
+  const { isDemoMode } = useAuthStore();
 
   const { matrix, selectedPair, isLoading, loadMatrix, selectPair, clearPair } = useCorrelationStore();
 
@@ -70,6 +72,12 @@ export default function CorrelationMatrixScreen() {
         <Text style={styles.headerTitle}>{t('correlation.title')}</Text>
         <View style={{ width: 24 }} />
       </View>
+
+      {!isDemoMode && (
+        <View style={{ backgroundColor: colors.elevated, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.md, marginHorizontal: spacing.xl, marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <Text style={{ fontSize: 13, color: colors.text.secondary }}>{'\uD83D\uDD1C'} {t('common.featureInDevelopment')}</Text>
+        </View>
+      )}
 
       {isLoading ? (
         <View style={styles.loadingContainer}>

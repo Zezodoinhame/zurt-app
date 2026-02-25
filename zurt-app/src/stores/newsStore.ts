@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { NewsArticle, NewsCategory } from '../types';
 import { useAuthStore } from './authStore';
+import { useSettingsStore } from './settingsStore';
 import { demoNewsArticles } from '../data/demo';
 
 // =============================================================================
@@ -24,7 +25,7 @@ function parseRSSItems(xml: string): RSSItem[] {
       const m = content.match(
         new RegExp(`<${tag}[^>]*>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/${tag}>`, 's'),
       );
-      return m ? m[1].trim() : '';
+      return m ? m[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim() : '';
     };
     items.push({
       title: extract('title'),
@@ -136,7 +137,7 @@ export const useNewsStore = create<NewsState>((set, get) => ({
       const articles = await fetchRSSArticles();
       set({ articles, isLoading: false });
     } catch (err: any) {
-      set({ isLoading: false, error: err?.message ?? 'Error loading news' });
+      set({ isLoading: false, error: useSettingsStore.getState().t('news.loadError') });
     }
   },
 
@@ -151,7 +152,7 @@ export const useNewsStore = create<NewsState>((set, get) => ({
       const articles = await fetchRSSArticles();
       set({ articles, isRefreshing: false });
     } catch (err: any) {
-      set({ isRefreshing: false, error: err?.message ?? 'Error loading news' });
+      set({ isRefreshing: false, error: useSettingsStore.getState().t('news.loadError') });
     }
   },
 

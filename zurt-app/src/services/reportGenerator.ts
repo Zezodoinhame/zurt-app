@@ -311,10 +311,10 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
     <div class="cover-logo">ZURT</div>
     <div class="cover-tagline">Wealth Intelligence</div>
     <div class="cover-line"></div>
-    <div class="cover-title">Relatorio Patrimonial</div>
-    <div class="cover-subtitle">Visao completa dos seus investimentos</div>
+    <div class="cover-title">Relatório Patrimonial</div>
+    <div class="cover-subtitle">Visão completa dos seus investimentos</div>
     <div class="cover-value">${fmt(summary.totalValue)}</div>
-    <div class="cover-value-label">Patrimonio total</div>
+    <div class="cover-value-label">Patrimônio total</div>
     <div class="cover-user">${user.name}</div>
     <div class="cover-date">${dateStr}</div>
   </div>
@@ -330,11 +330,11 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
       <div class="section-title">${sec()}. Resumo Patrimonial</div>
       <div class="hero-grid">
         <div class="hero-box">
-          <div class="hero-label">Patrimonio Total</div>
+          <div class="hero-label">Patrimônio Total</div>
           <div class="hero-value accent">${fmt(summary.totalValue)}</div>
           <div>
             <span class="badge ${summary.variation1m >= 0 ? 'badge-positive' : 'badge-negative'}">
-              Mes: ${fmtPct(summary.variation1m)}
+              Mês: ${fmtPct(summary.variation1m)}
             </span>
             <span class="badge ${summary.variation12m >= 0 ? 'badge-positive' : 'badge-negative'}" style="margin-left:4px">
               12M: ${fmtPct(summary.variation12m)}
@@ -346,7 +346,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
           <div class="hero-value">${fmt(summary.investedValue)}</div>
         </div>
         <div class="hero-box">
-          <div class="hero-label">Lucro / Prejuizo</div>
+          <div class="hero-label">Lucro / Prejuízo</div>
           <div class="hero-value ${summary.profit >= 0 ? 'positive' : 'negative'}">
             ${fmt(summary.profit)}
           </div>
@@ -356,7 +356,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
       <div class="kpi-row">
         <div class="kpi-card">
           <div class="kpi-value">${institutions.length}</div>
-          <div class="kpi-label">Instituicoes</div>
+          <div class="kpi-label">Instituições</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-value">${assets.length}</div>
@@ -368,13 +368,13 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
         </div>
         <div class="kpi-card">
           <div class="kpi-value">${cards.length}</div>
-          <div class="kpi-label">Cartoes</div>
+          <div class="kpi-label">Cartões</div>
         </div>
       </div>
     </div>
 
     <div class="section">
-      <div class="section-title">${sec()}. Alocacao por Classe</div>
+      <div class="section-title">${sec()}. Alocação por Classe</div>
       <div class="alloc-bar">
         ${allocations.map((a) => `<div class="alloc-segment" style="width:${a.percentage}%;background:${a.color}"></div>`).join('')}
       </div>
@@ -408,7 +408,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
 
     <div class="footer">
       <div class="footer-brand">ZURT — Wealth Intelligence</div>
-      <div class="footer-date">Pagina 1 | ${dateStr} as ${timeStr}</div>
+      <div class="footer-date">Página 1 | ${dateStr} às ${timeStr}</div>
     </div>
   </div>
 
@@ -429,7 +429,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
             <th>Classe</th>
             <th>Investido</th>
             <th>Valor Atual</th>
-            <th>Variacao</th>
+            <th>Variação</th>
           </tr>
         </thead>
         <tbody>
@@ -451,7 +451,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
       <table>
         <thead>
           <tr>
-            <th>Instituicao</th>
+            <th>Instituição</th>
             <th>Ativos</th>
             <th>Status</th>
             <th>Valor Total</th>
@@ -475,11 +475,11 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
 
     ${cards.length > 0 ? `
     <div class="section">
-      <div class="section-title">${sec()}. Cartoes de Credito</div>
+      <div class="section-title">${sec()}. Cartões de Crédito</div>
       <table>
         <thead>
           <tr>
-            <th>Cartao</th>
+            <th>Cartão</th>
             <th>Bandeira</th>
             <th>Limite</th>
             <th>Fatura Atual</th>
@@ -505,7 +505,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
 
     <div class="footer">
       <div class="footer-brand">ZURT — Wealth Intelligence</div>
-      <div class="footer-date">Pagina 2 | ${dateStr} as ${timeStr}</div>
+      <div class="footer-date">Página 2 | ${dateStr} às ${timeStr}</div>
     </div>
   </div>
 
@@ -524,7 +524,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
           <tr>
             <th>Ativo</th>
             <th>Ticker</th>
-            <th>Instituicao</th>
+            <th>Instituição</th>
             <th>Valor</th>
             <th>Var.</th>
           </tr>
@@ -544,7 +544,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
 
     <div class="footer">
       <div class="footer-brand">ZURT — Wealth Intelligence</div>
-      <div class="footer-date">Pagina 3 | ${dateStr} as ${timeStr}</div>
+      <div class="footer-date">Página 3 | ${dateStr} às ${timeStr}</div>
     </div>
   </div>
   ` : ''}
@@ -559,18 +559,18 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
     <div class="section" style="margin-top: 40px;">
       <div class="section-title">Aviso Legal</div>
       <p style="font-size: 10px; color: #CBD5E1; line-height: 1.8;">
-        Este relatorio foi gerado automaticamente pelo ZURT com base nos dados sincronizados
-        das suas contas e instituicoes financeiras. Os valores apresentados sao meramente
-        informativos e nao constituem recomendacao de investimento. Rentabilidade passada nao
+        Este relatório foi gerado automaticamente pelo ZURT com base nos dados sincronizados
+        das suas contas e instituições financeiras. Os valores apresentados são meramente
+        informativos e não constituem recomendação de investimento. Rentabilidade passada não
         garante rentabilidade futura. Consulte sempre um profissional qualificado antes de
-        tomar decisoes de investimento. Os dados podem apresentar atraso ou divergencia em
-        relacao aos valores reais das instituicoes financeiras.
+        tomar decisões de investimento. Os dados podem apresentar atraso ou divergência em
+        relação aos valores reais das instituições financeiras.
       </p>
     </div>
 
     <div class="footer" style="margin-top: auto;">
       <div class="footer-brand">ZURT — Wealth Intelligence</div>
-      <div class="footer-date">Gerado em ${dateStr} as ${timeStr}</div>
+      <div class="footer-date">Gerado em ${dateStr} às ${timeStr}</div>
       <div style="font-size: 9px; color: #94A3B8; margin-top: 8px;">
         Documento confidencial. Uso exclusivo do titular.
       </div>
@@ -594,6 +594,6 @@ export async function generatePatrimonialReport(
   });
   await Sharing.shareAsync(uri, {
     mimeType: 'application/pdf',
-    dialogTitle: 'Relatorio Patrimonial ZURT',
+    dialogTitle: 'Relatório Patrimonial ZURT',
   });
 }

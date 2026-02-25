@@ -154,7 +154,7 @@ const createVariants = (colors: ThemeColors) => ({
       backgroundColor: colors.negative,
     } as ViewStyle,
     text: {
-      color: '#FFFFFF',
+      color: colors.background,
       fontWeight: '700' as const,
     } as TextStyle,
   },

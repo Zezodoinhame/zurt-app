@@ -39,7 +39,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
       const items = stored ? JSON.parse(stored) : [];
       set({ items, isLoading: false });
     } catch (err: any) {
-      set({ isLoading: false, error: err?.message ?? 'Error loading watchlist' });
+      set({ isLoading: false, error: err?.message ?? 'Erro ao carregar lista' });
     }
   },
 

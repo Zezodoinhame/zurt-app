@@ -67,12 +67,23 @@ export const useCardsStore = create<CardsState>((set, get) => ({
       }
     } catch (err: any) {
       logger.log('[CardsStore] loadTransactions error:', err?.message);
+      set({ error: err?.message ?? 'Erro ao carregar transações' });
     }
   },
 
   loadCards: async () => {
-    // If cards were already loaded from /dashboard/finance, skip
-    if (get()._loadedFromDashboard) return;
+    if (get()._loadedFromDashboard) {
+      // Dashboard loaded cards but not categorySpending — fetch it
+      if (get().categorySpending.length === 0) {
+        try {
+          const data = await fetchCardsApi();
+          set({ categorySpending: data.categorySpending });
+        } catch {
+          // Silently fail — spending analysis just won't show
+        }
+      }
+      return;
+    }
 
     set({ isLoading: true, error: null });
     try {
@@ -86,7 +97,7 @@ export const useCardsStore = create<CardsState>((set, get) => ({
     } catch (err: any) {
       set({
         isLoading: false,
-        error: err?.message ?? 'Erro ao carregar cartoes',
+        error: err?.message ?? 'Erro ao carregar cartões',
       });
     }
   },
@@ -105,7 +116,7 @@ export const useCardsStore = create<CardsState>((set, get) => ({
     } catch (err: any) {
       set({
         isRefreshing: false,
-        error: err?.message ?? 'Erro ao atualizar cartoes',
+        error: err?.message ?? 'Erro ao atualizar cartões',
       });
     }
   },

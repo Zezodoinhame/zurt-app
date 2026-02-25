@@ -162,10 +162,19 @@ async function apiRequest<T>(
       return apiRequest<T>(path, options, retryCount + 1, timeout);
     }
 
+    // Service Unavailable: retry with backoff (like 429)
+    if (response.status === 503 && retryCount < 3) {
+      const delay = Math.min(1000 * Math.pow(2, retryCount), 8000);
+      logger.log(`[ZURT API] 503 Service unavailable, retrying in ${delay}ms (attempt ${retryCount + 1}/3)`);
+      clearTimeout(timeoutId);
+      await new Promise((r) => setTimeout(r, delay));
+      return apiRequest<T>(path, options, retryCount + 1, timeout);
+    }
+
     if (response.status >= 500 && retryCount < MAX_RETRIES) {
       clearTimeout(timeoutId);
       await new Promise((r) => setTimeout(r, 1000));
-      return apiRequest<T>(path, options, retryCount + 1);
+      return apiRequest<T>(path, options, retryCount + 1, timeout);
     }
 
     if (!response.ok) {
@@ -173,7 +182,7 @@ async function apiRequest<T>(
       if (__DEV__) {
         logger.log(`[ZURT API] Error body: ${errorBody}`);
       }
-      throw new Error('Request failed. Please try again.');
+      throw new Error(`Falha na requisição (${response.status}). Tente novamente.`);
     }
 
     return await response.json();
@@ -200,6 +209,14 @@ async function apiRequest<T>(
           return {} as T; // Return empty response for queued actions
         }
       } catch { /* networkStore not available */ }
+    }
+
+    // Friendly Portuguese messages for common errors
+    if (err?.name === 'AbortError') {
+      throw new Error('Tempo esgotado. Verifique sua conexão.');
+    }
+    if (err?.message === 'Network request failed') {
+      throw new Error('Sem conexão com a internet.');
     }
 
     throw err;
@@ -315,7 +332,7 @@ export async function registerApi(
 export async function fetchUserProfile(): Promise<User> {
   return fetchWithFallback(
     'user:profile',
-    '/auth/me',
+    '/users/me',
     (data) => mapUser(data.user ?? data),
     demoUser,
   );
@@ -324,7 +341,7 @@ export async function fetchUserProfile(): Promise<User> {
 export async function updateUserProfile(
   updates: { full_name?: string; email?: string },
 ): Promise<User> {
-  const data = await apiRequest<any>('/users/profile', {
+  const data = await apiRequest<any>('/users/me', {
     method: 'PATCH',
     body: JSON.stringify(updates),
   });
@@ -337,7 +354,7 @@ export async function changePassword(
   current_password: string,
   new_password: string,
 ): Promise<void> {
-  await apiRequest('/users/profile/password', {
+  await apiRequest('/users/me/password', {
     method: 'PATCH',
     body: JSON.stringify({ current_password, new_password }),
   });
@@ -680,7 +697,7 @@ export async function fetchCardsApi(): Promise<{
 
   return fetchWithFallback(
     'finance:cards',
-    '/finance/cards',
+    '/cards',
     (data) => {
       const rawCards: any[] = data.cards ?? data ?? [];
       const cards: CreditCard[] = Array.isArray(rawCards)
@@ -972,7 +989,7 @@ export async function generateReportApi(period: string, language?: string): Prom
     };
     return {
       analysis: analyses[lang] || analyses.pt,
-      portfolio: { contas: [], investimentos: [], cartoes: [] },
+      portfolio: { contas: [], investimentos: [], cartões: [] },
       market: { ibovespa: { pontos: 190534, var: 1.06 }, dolar: { bid: '5.20' }, selic: '15%' },
       generatedAt: new Date().toISOString(),
       investorName: lang === 'en' ? 'Demo Investor' : lang === 'zh' ? '演示投资者' : lang === 'ar' ? 'مستثمر تجريبي' : 'Investidor Demo',
@@ -1067,7 +1084,7 @@ export async function fetchInvestmentSummary(): Promise<any> {
 // =============================================================================
 
 const BRAPI_URL = 'https://brapi.dev/api/quote';
-const BRAPI_TOKEN = '5kSd6kh79GgVf2X4ncFacn';
+const BRAPI_TOKEN = process.env.EXPO_PUBLIC_BRAPI_TOKEN || '';
 
 async function demoInsights(): Promise<{ message: string; suggestions: string[] }> {
   try {

@@ -188,11 +188,12 @@ export default function ConnectBankScreen() {
       await syncAllFinance();
     } catch (err: any) {
       logger.log('[ConnectBank] createConnection/sync error:', err);
+      Alert.alert(t('connect.connectionFailed'), err?.message ?? t('connect.somethingWentWrong'));
     } finally {
       setScreenState('list');
       loadConnections();
     }
-  }, [loadConnections]);
+  }, [loadConnections, t]);
 
   // ---------------------------------------------------------------------------
   // WebView message handler
@@ -601,7 +602,7 @@ export default function ConnectBankScreen() {
               onPress={handleConnectNew}
               activeOpacity={0.8}
             >
-              <AppIcon name="add" size={20} color="#FFF" />
+              <AppIcon name="add" size={20} color={colors.background} />
               <Text style={styles.fabText}>{t('connect.connectNewBank')}</Text>
             </TouchableOpacity>
           </View>
@@ -715,7 +716,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25, shadowRadius: 4,
   },
-  fabText: { fontSize: 15, fontWeight: '700', color: '#FFF' },
+  fabText: { fontSize: 15, fontWeight: '700', color: colors.background },
 
   // Center / loading
   centerContainer: {

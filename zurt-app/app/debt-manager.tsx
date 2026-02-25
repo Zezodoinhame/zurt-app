@@ -182,7 +182,7 @@ export default function DebtManagerScreen() {
           <Text style={{ fontSize: 40, marginBottom: 16 }}>{'\uD83D\uDCB3'}</Text>
           <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, textAlign: 'center', marginBottom: 8 }}>{t('debt.title')}</Text>
           <Text style={{ fontSize: 14, color: colors.text.secondary, textAlign: 'center', lineHeight: 20 }}>
-            Nenhuma d{'\u00ED'}vida cadastrada. Adicione suas d{'\u00ED'}vidas para acompanhar e otimizar o pagamento.
+            {t('debt.emptyDesc')}
           </Text>
         </View>
 
@@ -199,7 +199,7 @@ export default function DebtManagerScreen() {
                   onPress={() => setFormType(dt.key)}
                 >
                   <Text style={styles.typeIcon}>{dt.icon}</Text>
-                  <Text style={[styles.typeLabel, formType === dt.key && { color: '#FFF' }]}>{t(`debt.${dt.key}`)}</Text>
+                  <Text style={[styles.typeLabel, formType === dt.key && { color: colors.background }]}>{t(`debt.${dt.key}`)}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -255,7 +255,7 @@ export default function DebtManagerScreen() {
               style={[styles.pill, strategy === s && { backgroundColor: accentColor }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setStrategy(s); }}
             >
-              <Text style={[styles.pillText, strategy === s && { color: '#FFF' }]}>{t(`debt.${s}`)}</Text>
+              <Text style={[styles.pillText, strategy === s && { color: colors.background }]}>{t(`debt.${s}`)}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -269,7 +269,7 @@ export default function DebtManagerScreen() {
             </View>
             <View style={styles.compCol}>
               <Text style={styles.compLabel}>{t('debt.monthsSaved')}</Text>
-              <Text style={[styles.compValue, { color: colors.positive }]}>{comparison.monthsSaved} meses</Text>
+              <Text style={[styles.compValue, { color: colors.positive }]}>{comparison.monthsSaved} {t('debt.monthsUnit')}</Text>
             </View>
           </View>
         </Card>
@@ -295,7 +295,7 @@ export default function DebtManagerScreen() {
                       <View style={[styles.progressBarFill, { width: `${Math.round(progress * 100)}%`, backgroundColor: accentColor }]} />
                     </View>
                     <Text style={styles.debtMetaText}>{displayVal(debt.remainingAmount)} / {displayVal(debt.totalAmount)}</Text>
-                    <Text style={styles.debtRateText}>{debt.interestRate}% a.a.</Text>
+                    <Text style={styles.debtRateText}>{debt.interestRate}{t('debt.annualRateSuffix')}</Text>
                   </View>
                   <Text style={styles.debtPayment}>{displayVal(debt.minimumPayment)}/m</Text>
                 </View>
@@ -320,7 +320,7 @@ export default function DebtManagerScreen() {
                 onPress={() => setFormType(dt.key)}
               >
                 <Text style={styles.typeIcon}>{dt.icon}</Text>
-                <Text style={[styles.typeLabel, formType === dt.key && { color: '#FFF' }]}>{t(`debt.${dt.key}`)}</Text>
+                <Text style={[styles.typeLabel, formType === dt.key && { color: colors.background }]}>{t(`debt.${dt.key}`)}</Text>
               </TouchableOpacity>
             ))}
           </View>

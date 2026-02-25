@@ -7,6 +7,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -24,7 +25,7 @@ import { SkeletonList } from '../../src/components/skeletons/Skeleton';
 import { ErrorState } from '../../src/components/shared/ErrorState';
 import { formatPct, maskValue, formatCurrency } from '../../src/utils/formatters';
 import type { Asset, AssetClass, InstitutionId } from '../../src/types';
-import { AppIcon } from '../../src/hooks/useIcon';
+import { AppIcon, type AppIconName } from '../../src/hooks/useIcon';
 import { BankLogo } from '../../src/components/icons/BankLogo';
 import { logger } from '../../src/utils/logger';
 import { demoBenchmarks } from '../../src/data/demo';
@@ -43,6 +44,82 @@ const institutionNames: Record<InstitutionId, string> = {
   inter: 'Inter',
   binance: 'Binance',
 };
+
+// ---------------------------------------------------------------------------
+// Tools Hub
+// ---------------------------------------------------------------------------
+
+type ToolItem = {
+  icon: AppIconName;
+  labelKey: string;
+  route: string;
+  isTodo?: boolean;
+};
+
+type ToolCategory = {
+  titleKey: string;
+  emoji: string;
+  items: ToolItem[];
+};
+
+const TOOL_CATEGORIES: ToolCategory[] = [
+  {
+    titleKey: 'wallet.categoryAnalysis',
+    emoji: '\uD83D\uDCCA',
+    items: [
+      { icon: 'backtest', labelKey: 'tools.backtest', route: '/backtest', isTodo: true },
+      { icon: 'comparison', labelKey: 'tools.comparison', route: '/comparison', isTodo: true },
+      { icon: 'correlation', labelKey: 'tools.correlation', route: '/correlation-matrix', isTodo: true },
+      { icon: 'scenario', labelKey: 'tools.scenario', route: '/scenario-planner', isTodo: true },
+    ],
+  },
+  {
+    titleKey: 'wallet.categoryFinance',
+    emoji: '\uD83D\uDCB0',
+    items: [
+      { icon: 'budget', labelKey: 'tools.budget', route: '/budget' },
+      { icon: 'billReminder', labelKey: 'tools.bills', route: '/bills' },
+      { icon: 'debt', labelKey: 'tools.debt', route: '/debt-manager' },
+      { icon: 'cashFlow', labelKey: 'tools.cashFlow', route: '/cash-flow', isTodo: true },
+    ],
+  },
+  {
+    titleKey: 'wallet.categoryInvestments',
+    emoji: '\uD83D\uDCC8',
+    items: [
+      { icon: 'dividend', labelKey: 'tools.dividends', route: '/dividends', isTodo: true },
+      { icon: 'rebalance', labelKey: 'tools.rebalance', route: '/rebalance', isTodo: true },
+      { icon: 'crypto', labelKey: 'tools.crypto', route: '/crypto' },
+      { icon: 'priceAlert', labelKey: 'tools.priceAlerts', route: '/price-alerts' },
+    ],
+  },
+  {
+    titleKey: 'wallet.categoryPlanning',
+    emoji: '\uD83C\uDFE0',
+    items: [
+      { icon: 'fire', labelKey: 'tools.fire', route: '/fire' },
+      { icon: 'compound', labelKey: 'tools.compound', route: '/compound' },
+      { icon: 'realEstate', labelKey: 'tools.realEstate', route: '/real-estate' },
+      { icon: 'emergency', labelKey: 'tools.emergency', route: '/emergency-fund' },
+    ],
+  },
+  {
+    titleKey: 'wallet.categoryFamily',
+    emoji: '\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67',
+    items: [
+      { icon: 'family', labelKey: 'tools.family', route: '/family' },
+    ],
+  },
+  {
+    titleKey: 'wallet.categoryOther',
+    emoji: '\uD83D\uDCDD',
+    items: [
+      { icon: 'diary', labelKey: 'tools.diary', route: '/diary' },
+      { icon: 'challenge', labelKey: 'tools.challenges', route: '/savings-challenges' },
+      { icon: 'report', labelKey: 'tools.report', route: '/report' },
+    ],
+  },
+];
 
 // ---------------------------------------------------------------------------
 // Component
@@ -64,13 +141,18 @@ export default function WalletScreen() {
     loadPortfolio,
     refresh,
   } = usePortfolioStore();
-  const { valuesHidden } = useAuthStore();
+  const { valuesHidden, isDemoMode } = useAuthStore();
   const { t, currency } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
   const router = useRouter();
 
+  const { width: screenWidth } = useWindowDimensions();
+
   // Memoised styles
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  // 4 columns with 3 gaps
+  const toolCardWidth = (screenWidth - spacing.xl * 2 - spacing.sm * 3) / 4;
 
   // Local state
   const [viewMode, setViewMode] = useState<ViewMode>('class');
@@ -606,6 +688,41 @@ export default function WalletScreen() {
           </TouchableOpacity>
 
           {viewMode === 'class' ? renderClassView() : renderInstitutionView()}
+
+          {/* Tools Hub */}
+          <View style={styles.toolsSection}>
+            <Text style={styles.toolsSectionTitle}>{t('wallet.toolsHub')}</Text>
+            {TOOL_CATEGORIES.map((category) => (
+              <View key={category.titleKey} style={styles.toolsCategory}>
+                <Text style={styles.toolsCategoryTitle}>
+                  {category.emoji} {t(category.titleKey)}
+                </Text>
+                <View style={styles.toolsGrid}>
+                  {category.items.map((tool) => (
+                    <TouchableOpacity
+                      key={tool.route}
+                      style={[styles.toolCard, { width: toolCardWidth }]}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        router.push(tool.route as any);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <AppIcon name={tool.icon} size={22} color={colors.accent} />
+                      <Text style={styles.toolName} numberOfLines={2}>
+                        {t(tool.labelKey)}
+                      </Text>
+                      {tool.isTodo && !isDemoMode && (
+                        <View style={styles.toolBadge}>
+                          <Text style={styles.toolBadgeText}>{t('common.comingSoon')}</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ))}
+          </View>
         </ScrollView>
       )}
 
@@ -718,7 +835,7 @@ const createStyles = (colors: ThemeColors) =>
     institutionIconText: {
       fontSize: 16,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: colors.background,
     },
     groupHeaderInfo: {
       flex: 1,
@@ -918,6 +1035,61 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 14,
       fontWeight: '600',
       color: colors.text.primary,
+    },
+
+    // Tools Hub
+    toolsSection: {
+      marginTop: spacing.xxl,
+      paddingTop: spacing.xl,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    toolsSectionTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text.primary,
+      marginBottom: spacing.xl,
+    },
+    toolsCategory: {
+      marginBottom: spacing.xl,
+    },
+    toolsCategoryTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text.secondary,
+      marginBottom: spacing.md,
+    },
+    toolsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+    },
+    toolCard: {
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.md,
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    toolName: {
+      fontSize: 11,
+      fontWeight: '500',
+      color: colors.text.primary,
+      textAlign: 'center',
+      lineHeight: 14,
+    },
+    toolBadge: {
+      backgroundColor: colors.warning + '20',
+      paddingHorizontal: spacing.xs + 2,
+      paddingVertical: 1,
+      borderRadius: radius.sm,
+    },
+    toolBadgeText: {
+      fontSize: 8,
+      fontWeight: '600',
+      color: colors.warning,
     },
 
     // Empty state

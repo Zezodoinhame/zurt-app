@@ -168,7 +168,7 @@ export default function SavingsChallengesScreen() {
       startDate: defaults.startDate,
       endDate: defaults.endDate,
       emoji: typeInfo?.emoji ?? '\u2728',
-      color: '#00D4AA',
+      color: colors.accent,
       totalItems: defaults.totalItems,
     });
 

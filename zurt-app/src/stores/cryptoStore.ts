@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { CryptoPortfolio, CryptoHolding } from '../types';
 import { useAuthStore } from './authStore';
 import { demoCryptoPortfolio } from '../data/demo';
+import { logger } from '../utils/logger';
 
 const STORAGE_KEY = '@zurt:crypto';
 
@@ -114,7 +115,7 @@ export const useCryptoStore = create<CryptoState>((set, get) => ({
       set({ marketData: coins });
       return coins;
     } catch (err) {
-      console.warn('CoinGecko fetch failed, using stored data:', err);
+      logger.warn('CoinGecko fetch failed, using stored data:', err);
       return [];
     }
   },

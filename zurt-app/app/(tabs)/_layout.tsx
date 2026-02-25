@@ -1,12 +1,17 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotificationStore } from '../../src/stores/notificationStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import type { ThemeColors } from '../../src/theme/colors';
+
+// ---------------------------------------------------------------------------
+// Standard tab icon
+// ---------------------------------------------------------------------------
 
 interface TabIconProps {
   iconFocused: string;
@@ -23,7 +28,7 @@ function TabIcon({ iconFocused, iconDefault, label, focused, badge, colors }: Ta
       <View style={tabStyles.iconContainer}>
         <Ionicons
           name={(focused ? iconFocused : iconDefault) as any}
-          size={24}
+          size={22}
           color={focused ? colors.accent : colors.text.muted}
         />
         {badge !== undefined && badge > 0 && (
@@ -34,12 +39,45 @@ function TabIcon({ iconFocused, iconDefault, label, focused, badge, colors }: Ta
           </View>
         )}
       </View>
+      {focused && <View style={[tabStyles.activeDot, { backgroundColor: colors.accent }]} />}
       <Text style={[tabStyles.label, { color: colors.text.muted }, focused && { color: colors.accent, fontWeight: '600' as const }]}>
         {label}
       </Text>
     </View>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Agent tab icon (gradient highlight)
+// ---------------------------------------------------------------------------
+
+function AgentTabIcon({ focused, label, colors }: { focused: boolean; label: string; colors: ThemeColors }) {
+  return (
+    <View style={tabStyles.tabItem}>
+      <View style={tabStyles.agentIconOuter}>
+        <LinearGradient
+          colors={focused ? [colors.accent, colors.info] : [colors.text.muted + '30', colors.text.muted + '20']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={tabStyles.agentIconGradient}
+        >
+          <Ionicons
+            name={focused ? 'sparkles' : 'sparkles-outline'}
+            size={18}
+            color={focused ? colors.background : colors.text.muted}
+          />
+        </LinearGradient>
+      </View>
+      <Text style={[tabStyles.label, { color: colors.text.muted }, focused && { color: colors.accent, fontWeight: '600' as const }]}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tab Layout
+// ---------------------------------------------------------------------------
 
 export default function TabLayout() {
   const getUnreadCount = useNotificationStore((s) => s.getUnreadCount);
@@ -52,14 +90,18 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.tabBar,
+          backgroundColor: colors.tabBar + 'F2',
           borderTopColor: colors.tabBarBorder,
-          borderTopWidth: 0.5,
-          height: 60 + (insets.bottom || 0),
-          paddingTop: 8,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          height: 64 + (insets.bottom || 0),
+          paddingTop: 6,
           paddingBottom: insets.bottom || 8,
           elevation: 0,
-          shadowOpacity: 0,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+          ...(Platform.OS === 'android' && { elevation: 8 }),
         },
         tabBarShowLabel: false,
         tabBarActiveTintColor: colors.accent,
@@ -91,7 +133,7 @@ export default function TabLayout() {
         name="agent"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon iconFocused="sparkles" iconDefault="sparkles-outline" label={t('tab.agent')} focused={focused} colors={colors} />
+            <AgentTabIcon focused={focused} label={t('tab.agent')} colors={colors} />
           ),
         }}
       />
@@ -130,6 +172,10 @@ export default function TabLayout() {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
+
 const tabStyles = StyleSheet.create({
   tabItem: {
     alignItems: 'center',
@@ -143,9 +189,16 @@ const tabStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  activeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    marginTop: 3,
+    marginBottom: -1,
+  },
   label: {
     fontSize: 10,
-    marginTop: 4,
+    marginTop: 3,
     fontWeight: '500',
   },
   badge: {
@@ -163,5 +216,21 @@ const tabStyles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 9,
     fontWeight: '700',
+  },
+
+  // Agent special icon
+  agentIconOuter: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -4,
+  },
+  agentIconGradient: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
