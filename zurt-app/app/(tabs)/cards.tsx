@@ -1,286 +1,137 @@
-import React, { useEffect, useRef, useCallback, useMemo, useState } from 'react';
+// app/(tabs)/cards.tsx
+// Tela principal de Cartões — estilo Apple Wallet
+// Stack empilhado → toque expande → painel de detalhes
+
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   StyleSheet,
-  Dimensions,
-  RefreshControl,
+  ScrollView,
   TouchableOpacity,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
+  Dimensions,
+  StatusBar,
+  RefreshControl,
   Modal,
   ActivityIndicator,
 } from 'react-native';
-import Svg, { Path, Circle as SvgCircle } from 'react-native-svg';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
-import { type ThemeColors } from '../../src/theme/colors';
-import { spacing, radius } from '../../src/theme/spacing';
+import CreditCardVisual from '../../src/components/cards/CreditCardVisual';
+import CardDetailPanel from '../../src/components/cards/CardDetailPanel';
+import MiniCardRow from '../../src/components/cards/MiniCardRow';
+import SpendingCategories from '../../src/components/cards/SpendingCategories';
+import { DEMO_CARDS, DEMO_SPENDING, adaptStoreCard, adaptCategorySpending } from '../../src/data/cardsData';
+import type { CreditCard as VisualCreditCard, SpendingCategory as VisualSpendingCategory } from '../../src/data/cardsData';
 import { useCardsStore } from '../../src/stores/cardsStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { useAgentStore } from '../../src/stores/agentStore';
-import { AppIcon } from '../../src/hooks/useIcon';
-import { CreditCardVisual } from '../../src/components/cards/CreditCardVisual';
+import { type ThemeColors } from '../../src/theme/colors';
+import { spacing, radius } from '../../src/theme/spacing';
+import { formatCurrency, maskValue } from '../../src/utils/formatters';
 import { SkeletonCard, SkeletonList } from '../../src/components/skeletons/Skeleton';
 import { ErrorState } from '../../src/components/shared/ErrorState';
-import { formatShortDate, formatDate, maskValue, formatCurrency } from '../../src/utils/formatters';
-import { categorizeTransaction } from '../../src/utils/transactionCategories';
-import type { TransactionCategory, CategorySpending } from '../../src/types';
-import type { DashboardTransaction } from '../../src/services/api';
-import { logger } from '../../src/utils/logger';
+import { AIMarkdown } from '../../src/components/shared/AIMarkdown';
+import { AppIcon } from '../../src/hooks/useIcon';
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
+const { width: SCREEN_W } = Dimensions.get('window');
+const CARD_H = 210;
+const COLLAPSED_VISIBLE = 72;
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = SCREEN_WIDTH - 64;
-const CARD_SNAP_INTERVAL = CARD_WIDTH + 16;
-
-// ===========================================================================
-// DonutChart (SVG)
-// ===========================================================================
-
-function DonutChart({
-  data,
-  size = 160,
-  strokeWidth = 28,
-  totalLabel,
-  totalValue,
-  colors: themeColors,
-}: {
-  data: { percentage: number; color: string }[];
-  size?: number;
-  strokeWidth?: number;
-  totalLabel?: string;
-  totalValue?: string;
-  colors: ThemeColors;
-}) {
-  const center = size / 2;
-  const r = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * r;
-
-  let accumulated = 0;
-  const segments = data
-    .filter((d) => d.percentage > 0)
-    .map((d) => {
-      const dashLength = (d.percentage / 100) * circumference;
-      const dashOffset = circumference - ((accumulated / 100) * circumference);
-      accumulated += d.percentage;
-      return { ...d, dashLength, dashOffset };
-    });
-
-  return (
-    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-      <Svg width={size} height={size}>
-        {/* Background circle */}
-        <SvgCircle
-          cx={center}
-          cy={center}
-          r={r}
-          stroke={themeColors.border}
-          strokeWidth={strokeWidth}
-          fill="none"
-        />
-        {/* Data segments */}
-        {segments.map((seg, i) => (
-          <SvgCircle
-            key={i}
-            cx={center}
-            cy={center}
-            r={r}
-            stroke={seg.color}
-            strokeWidth={strokeWidth}
-            fill="none"
-            strokeDasharray={`${seg.dashLength} ${circumference - seg.dashLength}`}
-            strokeDashoffset={seg.dashOffset}
-            strokeLinecap="butt"
-            rotation={-90}
-            origin={`${center}, ${center}`}
-          />
-        ))}
-      </Svg>
-      {/* Center text */}
-      {totalLabel && totalValue && (
-        <View style={{ position: 'absolute', alignItems: 'center' }}>
-          <Text style={{ fontSize: 10, color: themeColors.text.muted, marginBottom: 2 }}>
-            {totalLabel}
-          </Text>
-          <Text style={{ fontSize: 16, fontWeight: '700', color: themeColors.text.primary }}>
-            {totalValue}
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-}
-
-// ===========================================================================
-// CardsScreen
-// ===========================================================================
+type Tab = 'cartoes' | 'categorias';
 
 export default function CardsScreen() {
   const insets = useSafeAreaInsets();
-  const carouselRef = useRef<ScrollView>(null);
+  const router = useRouter();
+  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>('cartoes');
+  const scrollRef = useRef<ScrollView>(null);
 
-  // ---- Stores -------------------------------------------------------------
+  // ── Stores ──
   const {
-    cards,
-    categorySpending,
-    dashboardTransactions,
+    cards: storeCards,
+    categorySpending: storeSpending,
     isLoading,
     isRefreshing,
     error,
     loadCards,
     loadTransactions,
     refresh,
-    selectedCardIndex,
-    setSelectedCardIndex,
-    getSelectedCard,
   } = useCardsStore();
-
-  const { valuesHidden } = useAuthStore();
+  const { valuesHidden, isDemoMode } = useAuthStore();
   const { t, currency } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const router = useRouter();
   const { sendMessage } = useAgentStore();
+
+  // ── AI modal ──
   const [showAiModal, setShowAiModal] = useState(false);
   const [aiResponse, setAiResponse] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
 
-  // ---- Effects ------------------------------------------------------------
+  // ── Effects ──
   useEffect(() => {
     loadCards();
   }, []);
 
-  // Fetch transactions from /finance/transactions if dashboard didn't provide them
   useEffect(() => {
-    if (cards.length > 0) {
-      logger.log('[Cards] dashboardTransactions:', dashboardTransactions.length);
-      if (dashboardTransactions.length === 0) {
-        logger.log('[Cards] No dashboard TX, fetching from /finance/transactions...');
-        loadTransactions();
-      }
+    if (storeCards.length > 0) {
+      loadTransactions();
     }
-  }, [cards.length, dashboardTransactions.length]);
+  }, [storeCards.length]);
 
-  // ---- Derived values -----------------------------------------------------
-  const selectedCard = getSelectedCard();
+  // ── Adapt data: store → visual format ──
+  const visualCards: VisualCreditCard[] = useMemo(() => {
+    if (isDemoMode || storeCards.length === 0) return DEMO_CARDS;
+    return storeCards.map(adaptStoreCard);
+  }, [isDemoMode, storeCards]);
 
-  // All transactions (card-embedded + dashboard) unified and grouped by date
-  const allTransactions = useMemo(() => {
-    // Collect card-embedded transactions
-    const cardTx: DashboardTransaction[] = (selectedCard?.transactions ?? []).map((tx) => ({
-      id: tx.id,
-      date: tx.date,
-      amount: tx.amount,
-      description: tx.description,
-      merchant: '',
-      account_name: selectedCard?.name ?? '',
-      institution_name: selectedCard?.name ?? '',
-      category: tx.category ?? '',
-    }));
+  const visualSpending: VisualSpendingCategory[] = useMemo(() => {
+    if (isDemoMode || storeSpending.length === 0) return DEMO_SPENDING;
+    return adaptCategorySpending(storeSpending);
+  }, [isDemoMode, storeSpending]);
 
-    // Dashboard transactions (filtered to selected card if possible)
-    let dashTx: DashboardTransaction[] = [];
-    if (dashboardTransactions.length > 0) {
-      if (selectedCard) {
-        const cardName = (selectedCard.name ?? '').toLowerCase();
-        const cardLast4 = selectedCard.lastFour;
-        const matched = dashboardTransactions.filter((tx) => {
-          const instName = (tx.institution_name ?? '').toLowerCase();
-          const accName = (tx.account_name ?? '').toLowerCase();
-          return (
-            (cardName && (instName.includes(cardName) || accName.includes(cardName))) ||
-            (cardLast4 && (accName.includes(cardLast4) || instName.includes(cardLast4)))
-          );
-        });
-        dashTx = matched.length > 0 ? matched : dashboardTransactions;
-      } else {
-        dashTx = dashboardTransactions;
-      }
+  // ── Calculations ──
+  const totalFaturas = visualCards.reduce((s, c) => s + c.faturaAtual, 0);
+  const totalLimite = visualCards.reduce((s, c) => s + c.limiteTotal, 0);
+  const totalUsado = visualCards.reduce((s, c) => s + c.limiteUsado, 0);
+  const totalDisponivel = totalLimite - totalUsado;
+  const pctGeral = totalLimite > 0 ? totalUsado / totalLimite : 0;
+
+  // ── Handlers ──
+  const handleCardPress = useCallback((cardId: string) => {
+    if (expandedCardId === cardId) {
+      setExpandedCardId(null);
+    } else {
+      setExpandedCardId(cardId);
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ y: 0, animated: true });
+      }, 100);
     }
-
-    // Merge: card-embedded first, then dashboard (dedup by id)
-    const seenIds = new Set(cardTx.map((t) => t.id));
-    const merged = [...cardTx];
-    for (const tx of dashTx) {
-      if (!seenIds.has(tx.id)) {
-        merged.push(tx);
-        seenIds.add(tx.id);
-      }
-    }
-
-    // Sort by date descending
-    merged.sort((a, b) => {
-      const da = new Date(a.date).getTime() || 0;
-      const db = new Date(b.date).getTime() || 0;
-      return db - da;
-    });
-
-    // Limit to 30
-    return merged.slice(0, 30);
-  }, [selectedCard, dashboardTransactions]);
-
-  // Group transactions by date
-  const groupedAllTransactions = useMemo(() => {
-    if (allTransactions.length === 0) return [];
-
-    const groups: { date: string; transactions: DashboardTransaction[] }[] = [];
-    const map = new Map<string, DashboardTransaction[]>();
-
-    for (const tx of allTransactions) {
-      // Normalize date to YYYY-MM-DD
-      const dateKey = tx.date ? tx.date.substring(0, 10) : 'unknown';
-      if (!map.has(dateKey)) map.set(dateKey, []);
-      map.get(dateKey)!.push(tx);
-    }
-
-    for (const [date, transactions] of map) {
-      groups.push({ date, transactions });
-    }
-
-    return groups;
-  }, [allTransactions]);
-
-  // ---- Handlers -----------------------------------------------------------
-  const handleScrollEnd = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const offsetX = e.nativeEvent.contentOffset.x;
-      const index = Math.round(offsetX / CARD_SNAP_INTERVAL);
-      if (index !== selectedCardIndex && index >= 0 && index < cards.length) {
-        setSelectedCardIndex(index);
-      }
-    },
-    [selectedCardIndex, cards.length, setSelectedCardIndex],
-  );
+  }, [expandedCardId]);
 
   const handleRefresh = useCallback(() => {
     refresh();
   }, [refresh]);
 
   const handleAnalyzeWithAI = useCallback(async () => {
-    if (categorySpending.length === 0) return;
+    if (visualSpending.length === 0) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setShowAiModal(true);
     setAiLoading(true);
     setAiResponse('');
 
-    const spendingSummary = categorySpending
-      .filter((c) => c.total > 0)
-      .map((c) => `${c.label}: R$ ${c.total.toLocaleString('pt-BR')}`)
+    const spendingSummary = visualSpending
+      .map((c) => `${c.nome}: ${formatCurrency(c.valor, currency)}`)
       .join(', ');
 
     try {
-      await sendMessage(
-        `${t('cards.aiAnalyzePrompt')}: ${spendingSummary}`,
-      );
-      // Get the latest assistant message
+      await sendMessage(`${t('cards.aiAnalyzePrompt')}: ${spendingSummary}`);
       const msgs = useAgentStore.getState().messages;
       const lastAssistant = [...msgs].reverse().find((m) => m.role === 'assistant');
       setAiResponse(lastAssistant?.content ?? t('cards.aiNoResponse'));
@@ -289,11 +140,72 @@ export default function CardsScreen() {
     } finally {
       setAiLoading(false);
     }
-  }, [categorySpending, sendMessage]);
+  }, [visualSpending, sendMessage, t, currency]);
 
-  // ---- Value display helpers ----------------------------------------------
-  const displayValue = (value: number) =>
-    valuesHidden ? maskValue('') : formatCurrency(value, currency);
+  // ── Value display ──
+  const displayValue = useCallback((value: number) =>
+    valuesHidden ? maskValue('', currency) : formatCurrency(value, currency),
+  [valuesHidden, currency]);
+
+  const mask = useCallback((val: string) =>
+    valuesHidden ? maskValue('', currency) : val,
+  [valuesHidden, currency]);
+
+  // ── Render Stack View (Apple Wallet) ──
+  const renderStackView = () => (
+    <View style={styles.stackContainer}>
+      {visualCards.map((card, index) => {
+        const marginTop = index === 0 ? 0 : -(CARD_H - COLLAPSED_VISIBLE);
+        return (
+          <TouchableOpacity
+            key={card.id}
+            activeOpacity={0.9}
+            onPress={() => handleCardPress(card.id)}
+            style={[styles.stackCard, { marginTop, zIndex: index + 1 }]}
+          >
+            <CreditCardVisual card={card} />
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+
+  // ── Render Expanded View ──
+  const renderExpandedView = () => {
+    const selectedCard = visualCards.find(c => c.id === expandedCardId);
+    if (!selectedCard) return null;
+    const otherCards = visualCards.filter(c => c.id !== expandedCardId);
+
+    return (
+      <View>
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => setExpandedCardId(null)}
+          style={styles.expandedCard}
+        >
+          <CreditCardVisual card={selectedCard} />
+        </TouchableOpacity>
+
+        <View style={styles.detailPanelWrapper}>
+          <CardDetailPanel card={selectedCard} hideValues={valuesHidden} />
+        </View>
+
+        {otherCards.length > 0 && (
+          <View style={styles.otherCardsSection}>
+            <Text style={styles.otherCardsTitle}>{t('cards.otherCards')}</Text>
+            {otherCards.map((card) => (
+              <MiniCardRow
+                key={card.id}
+                card={card}
+                onPress={() => handleCardPress(card.id)}
+                hideValues={valuesHidden}
+              />
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
 
   // =========================================================================
   // Render
@@ -301,9 +213,13 @@ export default function CardsScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <StatusBar barStyle="light-content" />
+
       <ScrollView
+        ref={scrollRef}
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -314,21 +230,46 @@ export default function CardsScreen() {
           />
         }
       >
-        {/* Header */}
+        {/* ── Header ── */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>{t('cards.title')}</Text>
+          <View>
+            <Text style={styles.headerTitle}>{t('cards.title')}</Text>
+            <Text style={styles.headerSubtitle}>
+              {visualCards.length} {t('cards.title').toLowerCase()} {'\u2022'} {mask(formatCurrency(totalFaturas, currency))} {t('cards.inInvoices')}
+            </Text>
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => useAuthStore.setState({ valuesHidden: !valuesHidden })}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={valuesHidden ? 'eye-outline' : 'eye-off-outline'}
+                size={18}
+                color={colors.text.primary}
+              />
+            </TouchableOpacity>
+            <LinearGradient
+              colors={['#0066FF', '#00AAFF']}
+              style={styles.zurtBadge}
+            >
+              <Text style={styles.zurtBadgeText}>Z</Text>
+            </LinearGradient>
+          </View>
         </View>
 
-        {/* Loading */}
+        {/* ── Loading state ── */}
         {isLoading ? (
           <View style={styles.contentPadding}>
             <SkeletonCard />
             <SkeletonCard />
-            <SkeletonList count={5} />
+            <SkeletonList count={3} />
           </View>
-        ) : error && cards.length === 0 ? (
+        ) : error && visualCards.length === 0 && !isDemoMode ? (
           <ErrorState message={error} onRetry={loadCards} />
-        ) : cards.length === 0 ? (
+        ) : visualCards.length === 0 ? (
+          /* ── Empty state ── */
           <View style={styles.emptyState}>
             <AppIcon name="card" size={48} color={colors.text.secondary} />
             <Text style={styles.emptyTitle}>{t('cards.emptyTitle')}</Text>
@@ -343,178 +284,123 @@ export default function CardsScreen() {
           </View>
         ) : (
           <>
-            {/* Card Carousel */}
-            {cards.length > 0 && (
-              <View>
-                <ScrollView
-                  ref={carouselRef}
-                  horizontal
-                  pagingEnabled={false}
-                  snapToInterval={CARD_SNAP_INTERVAL}
-                  decelerationRate="fast"
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.carouselContent}
-                  onMomentumScrollEnd={handleScrollEnd}
-                >
-                  {cards.map((card) => (
-                    <View key={card.id} style={styles.cardWrapper}>
-                      <CreditCardVisual card={card} />
-                    </View>
-                  ))}
-                </ScrollView>
-
-                {/* Page dots */}
-                <View style={styles.dotsRow}>
-                  {cards.map((card, index) => (
-                    <View
-                      key={card.id}
-                      style={[
-                        styles.dot,
-                        {
-                          backgroundColor:
-                            index === selectedCardIndex
-                              ? colors.accent
-                              : colors.border,
-                        },
-                      ]}
-                    />
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {/* Invoice Summary */}
-            {selectedCard && (
-              <View style={styles.contentPadding}>
-                <View style={styles.invoiceCard}>
-                  <View style={styles.invoiceColumns}>
-                    <View style={styles.invoiceColumn}>
-                      <Text style={styles.invoiceLabel}>{t('cards.currentInvoice')}</Text>
-                      <Text style={styles.invoiceValueLarge}>
-                        {displayValue(selectedCard.currentInvoice)}
-                      </Text>
-                    </View>
-                    <View style={styles.invoiceColumn}>
-                      <Text style={styles.invoiceLabel}>{t('cards.nextInvoice')}</Text>
-                      <Text style={styles.invoiceValueSecondary}>
-                        {displayValue(selectedCard.nextInvoice)}
-                      </Text>
-                    </View>
+            {/* ── Summary card ── */}
+            <View style={styles.summaryWrapper}>
+              <LinearGradient
+                colors={[colors.card, colors.elevated]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.summaryCard}
+              >
+                <View style={styles.summaryTop}>
+                  <View>
+                    <Text style={styles.summaryLabel}>{t('cards.totalInvoices')}</Text>
+                    <Text style={styles.summaryValue}>{mask(formatCurrency(totalFaturas, currency))}</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={styles.summaryLabel}>{t('cards.available')}</Text>
+                    <Text style={[styles.summarySecondary, { color: colors.positive }]}>
+                      {mask(formatCurrency(totalDisponivel, currency))}
+                    </Text>
                   </View>
                 </View>
-              </View>
-            )}
 
-            {/* Spending Analysis with Donut Chart */}
-            {categorySpending.length > 0 && categorySpending.some((c) => c.total > 0) && (
-              <View style={styles.contentPadding}>
-                <Text style={styles.sectionTitle}>{t('cards.spendingAnalysis')}</Text>
-
-                {/* Donut Chart */}
-                <View style={styles.donutSection}>
-                  <DonutChart
-                    data={categorySpending.filter((c) => c.total > 0)}
-                    size={160}
-                    strokeWidth={26}
-                    totalLabel={t('cards.totalSpending')}
-                    totalValue={
-                      valuesHidden
-                        ? '•••••'
-                        : formatCurrency(
-                            categorySpending.reduce((sum, c) => sum + c.total, 0),
-                            currency,
-                          )
-                    }
-                    colors={colors}
-                  />
+                {/* Usage bar */}
+                <View style={styles.summaryBarSection}>
+                  <View style={styles.summaryBarLabels}>
+                    <Text style={styles.summaryBarText}>
+                      {(pctGeral * 100).toFixed(0)}% {t('cards.ofTotalLimit')}
+                    </Text>
+                    <Text style={styles.summaryBarText}>
+                      {mask(formatCurrency(totalLimite, currency))}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryBarBg}>
+                    <LinearGradient
+                      colors={[colors.positive, colors.info]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={[styles.summaryBarFill, { width: `${Math.min(pctGeral * 100, 100)}%` }]}
+                    />
+                  </View>
                 </View>
 
-                {/* Category list with percentages */}
-                {categorySpending
-                  .filter((cat) => cat.total > 0)
-                  .map((cat) => (
-                    <View key={cat.category} style={styles.categoryRow}>
-                      <View style={[styles.catIconCircle, { backgroundColor: (cat.color ?? '#95A5A6') + '25' }]}>
-                        <Text style={styles.catEmoji}>{cat.icon}</Text>
-                      </View>
-                      <Text style={styles.categoryLabel}>{cat.label}</Text>
-                      <View style={styles.categoryBarTrack}>
-                        <View
-                          style={[
-                            styles.categoryBarFill,
-                            {
-                              width: `${cat.percentage}%` as any,
-                              backgroundColor: cat.color,
-                            },
-                          ]}
-                        />
-                      </View>
-                      <Text style={styles.categoryValue}>
-                        {displayValue(cat.total)}
+                {/* Bank badges */}
+                <View style={styles.bankBadges}>
+                  {visualCards.map((c) => (
+                    <TouchableOpacity
+                      key={c.id}
+                      style={styles.bankBadge}
+                      onPress={() => handleCardPress(c.id)}
+                      activeOpacity={0.7}
+                    >
+                      <LinearGradient
+                        colors={[c.gradientColors[0], c.gradientColors[1]]}
+                        style={styles.bankBadgeIcon}
+                      >
+                        <Text style={[styles.bankBadgeIconText, { color: c.textColor }]}>
+                          {c.bancoAbrev.slice(0, 1)}
+                        </Text>
+                      </LinearGradient>
+                      <Text style={styles.bankBadgeText}>
+                        {c.banco.split(' ')[0]}
                       </Text>
-                    </View>
+                    </TouchableOpacity>
                   ))}
+                </View>
+              </LinearGradient>
+            </View>
 
-                {/* Analyze with AI button */}
+            {/* ── Tabs ── */}
+            <View style={styles.tabsWrapper}>
+              <View style={styles.tabBar}>
                 <TouchableOpacity
-                  style={[styles.aiButton, { borderColor: colors.accent }]}
-                  onPress={handleAnalyzeWithAI}
+                  style={[styles.tab, activeTab === 'cartoes' && styles.tabActive]}
+                  onPress={() => setActiveTab('cartoes')}
                   activeOpacity={0.7}
                 >
-                  <AppIcon name="idea" size={16} color={colors.accent} />
-                  <Text style={[styles.aiButtonText, { color: colors.accent }]}>
-                    {t('cards.analyzeWithAI')}
+                  <Text style={[styles.tabText, activeTab === 'cartoes' && styles.tabTextActive]}>
+                    {t('cards.title')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tab, activeTab === 'categorias' && styles.tabActive]}
+                  onPress={() => setActiveTab('categorias')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.tabText, activeTab === 'categorias' && styles.tabTextActive]}>
+                    {t('cards.categories')}
                   </Text>
                 </TouchableOpacity>
               </View>
-            )}
+            </View>
 
-            {/* ============================================================= */}
-            {/* Transactions (unified: card-embedded + dashboard, grouped)     */}
-            {/* ============================================================= */}
-            <View style={styles.contentPadding}>
-              <Text style={styles.sectionTitle}>{t('cards.recentTransactions')}</Text>
+            {/* ── Content ── */}
+            <View style={styles.content}>
+              {activeTab === 'cartoes' && (
+                expandedCardId ? renderExpandedView() : renderStackView()
+              )}
 
-              {groupedAllTransactions.length === 0 ? (
-                <View style={styles.txEmptyState}>
-                  <AppIcon name="wallet" size={40} color={colors.text.secondary} />
-                  <Text style={styles.txEmptyText}>{t('cards.noTransactions')}</Text>
-                </View>
-              ) : (
-                groupedAllTransactions.map((group) => (
-                  <View key={group.date} style={styles.txGroup}>
-                    <Text style={styles.txDateHeader}>
-                      {group.date !== 'unknown' ? formatDate(group.date) : '-'}
-                    </Text>
-
-                    {group.transactions.map((tx) => {
-                      const cat = categorizeTransaction(
-                        tx.description || tx.merchant || tx.category || '',
-                      );
-                      return (
-                        <View key={tx.id} style={styles.txRow}>
-                          <View style={[styles.txIconCircle, { backgroundColor: cat.color + '25' }]}>
-                            <Text style={styles.txEmoji}>{cat.emoji}</Text>
-                          </View>
-                          <View style={styles.txInfo}>
-                            <Text style={styles.txDescription} numberOfLines={1}>
-                              {cleanDescription(tx.description || tx.merchant || '-')}
-                            </Text>
-                            <Text style={styles.txSubtext}>
-                              {cat.label}
-                              {tx.institution_name ? ` \u2022 ${tx.institution_name}` : ''}
-                            </Text>
-                          </View>
-                          <Text style={styles.txAmount}>
-                            {valuesHidden
-                              ? maskValue('')
-                              : formatCurrency(Math.abs(tx.amount), currency)}
-                          </Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-                ))
+              {activeTab === 'categorias' && (
+                <>
+                  <SpendingCategories
+                    categories={visualSpending}
+                    hideValues={valuesHidden}
+                  />
+                  {/* AI analysis button */}
+                  {visualSpending.length > 0 && (
+                    <TouchableOpacity
+                      style={[styles.aiButton, { borderColor: colors.accent }]}
+                      onPress={handleAnalyzeWithAI}
+                      activeOpacity={0.7}
+                    >
+                      <AppIcon name="idea" size={16} color={colors.accent} />
+                      <Text style={[styles.aiButtonText, { color: colors.accent }]}>
+                        {t('cards.analyzeWithAI')}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </>
               )}
             </View>
           </>
@@ -537,7 +423,7 @@ export default function CardsScreen() {
               </View>
             ) : (
               <ScrollView style={styles.aiResponseScroll} showsVerticalScrollIndicator={false}>
-                <Text style={styles.aiResponseText}>{aiResponse}</Text>
+                <AIMarkdown content={aiResponse} />
               </ScrollView>
             )}
             <TouchableOpacity style={styles.modalClose} onPress={() => setShowAiModal(false)}>
@@ -550,132 +436,319 @@ export default function CardsScreen() {
   );
 }
 
-// ===========================================================================
-// Helpers
-// ===========================================================================
-
-/** Remove internal codes and clean up transaction descriptions */
-function cleanDescription(desc: string): string {
-  // Remove common prefixes like "COMPRA CARTAO -", "PAG*", "PG *"
-  let cleaned = desc
-    .replace(/^(COMPRA CARTAO\s*-?\s*)/i, '')
-    .replace(/^(PAG\*|PG\s*\*|PAGTO\s*)/i, '')
-    .replace(/^(PIX\s*(ENVIADO|RECEBIDO)?\s*-?\s*)/i, 'PIX ')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-
-  // Capitalize first letter, lowercase the rest if ALL CAPS
-  if (cleaned === cleaned.toUpperCase() && cleaned.length > 3) {
-    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
-  }
-
-  return cleaned || desc;
-}
-
-// ===========================================================================
-// Styles
-// ===========================================================================
+// ─── Styles ─────────────────────────────────────────────────
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    screen: { flex: 1, backgroundColor: colors.background },
-    scrollContent: { paddingBottom: 100 },
-    contentPadding: { paddingHorizontal: spacing.xl },
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingBottom: 120,
+    },
+    contentPadding: {
+      paddingHorizontal: spacing.xl,
+    },
 
     // Header
-    header: { paddingTop: spacing.md, paddingBottom: spacing.xl, alignItems: 'center' },
-    headerTitle: { fontSize: 24, fontWeight: '700', color: colors.text.primary },
-
-    // Carousel
-    carouselContent: { paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2 },
-    cardWrapper: { width: CARD_WIDTH, marginHorizontal: 8 },
-
-    // Page dots
-    dotsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: spacing.md, marginBottom: spacing.xl },
-    dot: { width: 6, height: 6, borderRadius: 3, marginHorizontal: 4 },
-
-    // Invoice
-    invoiceCard: {
-      backgroundColor: colors.card, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
-      padding: spacing.xl, marginBottom: spacing.xl,
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 24,
+      paddingTop: 16,
+      paddingBottom: 8,
     },
-    invoiceColumns: { flexDirection: 'row', justifyContent: 'space-between' },
-    invoiceColumn: { flex: 1 },
-    invoiceLabel: { fontSize: 12, color: colors.text.secondary, marginBottom: spacing.xs },
-    invoiceValueLarge: { fontSize: 22, fontWeight: '700', color: colors.text.primary, fontVariant: ['tabular-nums'] },
-    invoiceValueSecondary: { fontSize: 18, fontWeight: '600', color: colors.text.secondary, fontVariant: ['tabular-nums'] },
-
-    // Section title
-    sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.text.primary, marginBottom: spacing.md, marginTop: spacing.sm },
-
-    // Category spending
-    categoryRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
-    catIconCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm },
-    catEmoji: { fontSize: 16 },
-    categoryLabel: { fontSize: 14, color: colors.text.primary, width: 90 },
-    categoryBarTrack: { flex: 1, height: 6, backgroundColor: colors.elevated, borderRadius: 3, marginHorizontal: spacing.sm, overflow: 'hidden' },
-    categoryBarFill: { height: '100%', borderRadius: 3 },
-    categoryValue: { fontSize: 13, fontWeight: '600', color: colors.text.secondary, fontVariant: ['tabular-nums'], textAlign: 'right', minWidth: 80 },
-
-    // Transactions
-    txGroup: { marginBottom: spacing.lg },
-    txDateHeader: { fontSize: 13, fontWeight: '600', color: colors.text.secondary, marginBottom: spacing.sm },
-    txRow: {
-      flexDirection: 'row', alignItems: 'center',
-      backgroundColor: colors.card, borderRadius: radius.md,
-      padding: spacing.md, marginBottom: spacing.xs,
-      borderWidth: 1, borderColor: colors.border,
+    headerTitle: {
+      fontSize: 28,
+      fontWeight: '800',
+      color: colors.text.primary,
+      letterSpacing: -0.5,
     },
-    txIconCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md },
-    txEmoji: { fontSize: 18 },
-    txInfo: { flex: 1 },
-    txDescription: { fontSize: 14, fontWeight: '500', color: colors.text.primary },
-    txSubtext: { fontSize: 12, color: colors.text.muted, marginTop: 2 },
-    txAmount: { fontSize: 14, fontWeight: '600', color: colors.negative, fontVariant: ['tabular-nums'], textAlign: 'right', minWidth: 80 },
+    headerSubtitle: {
+      fontSize: 13,
+      color: colors.text.secondary,
+      marginTop: 2,
+    },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    iconBtn: {
+      width: 38,
+      height: 38,
+      borderRadius: 12,
+      backgroundColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    zurtBadge: {
+      width: 38,
+      height: 38,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    zurtBadgeText: {
+      color: '#fff',
+      fontWeight: '800',
+      fontSize: 16,
+    },
 
-    // Transaction empty state
-    txEmptyState: { alignItems: 'center', paddingVertical: spacing.xxxl },
-    txEmptyIcon: { fontSize: 40, marginBottom: spacing.md },
-    txEmptyText: { fontSize: 14, color: colors.text.secondary, textAlign: 'center' },
+    // Summary Card
+    summaryWrapper: {
+      paddingHorizontal: 20,
+      paddingTop: 12,
+    },
+    summaryCard: {
+      borderRadius: 20,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    summaryTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 16,
+    },
+    summaryLabel: {
+      fontSize: 11,
+      color: colors.text.muted,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      marginBottom: 4,
+    },
+    summaryValue: {
+      fontSize: 26,
+      fontWeight: '700',
+      color: colors.text.primary,
+      letterSpacing: -0.5,
+      fontVariant: ['tabular-nums'],
+    },
+    summarySecondary: {
+      fontSize: 18,
+      fontWeight: '600',
+      fontVariant: ['tabular-nums'],
+    },
+    summaryBarSection: {
+      marginBottom: 14,
+    },
+    summaryBarLabels: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 6,
+    },
+    summaryBarText: {
+      fontSize: 11,
+      color: colors.text.muted,
+    },
+    summaryBarBg: {
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.border,
+      overflow: 'hidden',
+    },
+    summaryBarFill: {
+      height: '100%',
+      borderRadius: 3,
+    },
+    bankBadges: {
+      flexDirection: 'row',
+      gap: 8,
+      paddingTop: 14,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      flexWrap: 'wrap',
+    },
+    bankBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: colors.border,
+      borderRadius: 6,
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+    },
+    bankBadgeIcon: {
+      width: 14,
+      height: 14,
+      borderRadius: 4,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    bankBadgeIconText: {
+      fontSize: 7,
+      fontWeight: '700',
+    },
+    bankBadgeText: {
+      fontSize: 10,
+      color: colors.text.secondary,
+    },
+
+    // Tabs
+    tabsWrapper: {
+      paddingHorizontal: 20,
+      paddingTop: 16,
+      paddingBottom: 12,
+    },
+    tabBar: {
+      flexDirection: 'row',
+      backgroundColor: colors.border,
+      borderRadius: 12,
+      padding: 3,
+      gap: 2,
+    },
+    tab: {
+      flex: 1,
+      paddingVertical: 10,
+      alignItems: 'center',
+      borderRadius: 10,
+    },
+    tabActive: {
+      backgroundColor: colors.card,
+    },
+    tabText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.text.muted,
+    },
+    tabTextActive: {
+      color: colors.text.primary,
+      fontWeight: '600',
+    },
+
+    // Content
+    content: {
+      paddingHorizontal: 20,
+    },
+
+    // Stack
+    stackContainer: {
+      alignItems: 'center',
+    },
+    stackCard: {
+      alignSelf: 'center',
+    },
+
+    // Expanded
+    expandedCard: {
+      alignSelf: 'center',
+    },
+    detailPanelWrapper: {
+      marginTop: 0,
+      marginBottom: 16,
+    },
+    otherCardsSection: {
+      marginTop: 4,
+    },
+    otherCardsTitle: {
+      fontSize: 13,
+      color: colors.text.muted,
+      marginBottom: 12,
+      paddingLeft: 4,
+    },
 
     // Empty state
-    emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 80, paddingHorizontal: spacing.xl },
-    emptyIcon: { fontSize: 48, marginBottom: spacing.lg },
-    emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.text.primary, textAlign: 'center', marginBottom: spacing.sm },
-    emptyDescription: { fontSize: 14, color: colors.text.secondary, textAlign: 'center', marginBottom: spacing.xl },
-    emptyButton: { backgroundColor: colors.accent, paddingHorizontal: spacing.xxl, paddingVertical: spacing.md, borderRadius: radius.md },
-    emptyButtonText: { fontSize: 14, fontWeight: '600', color: colors.background },
-
-    // Donut chart section
-    donutSection: { alignItems: 'center', marginBottom: spacing.xl },
+    emptyState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 80,
+      paddingHorizontal: spacing.xl,
+    },
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text.primary,
+      textAlign: 'center',
+      marginBottom: spacing.sm,
+      marginTop: spacing.lg,
+    },
+    emptyDescription: {
+      fontSize: 14,
+      color: colors.text.secondary,
+      textAlign: 'center',
+      marginBottom: spacing.xl,
+    },
+    emptyButton: {
+      backgroundColor: colors.accent,
+      paddingHorizontal: spacing.xxl,
+      paddingVertical: spacing.md,
+      borderRadius: radius.md,
+    },
+    emptyButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.background,
+    },
 
     // AI button
     aiButton: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-      borderWidth: 1, borderRadius: radius.md,
-      paddingVertical: spacing.md, marginTop: spacing.md, gap: spacing.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderRadius: radius.md,
+      paddingVertical: spacing.md,
+      marginTop: spacing.lg,
+      gap: spacing.sm,
     },
-    aiButtonText: { fontSize: 14, fontWeight: '600' },
+    aiButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+    },
 
-    // AI Analysis Modal
+    // AI Modal
     modalOverlay: {
-      flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',
-      justifyContent: 'center', alignItems: 'center', padding: spacing.xl,
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: spacing.xl,
     },
     modalContent: {
-      backgroundColor: colors.card, borderRadius: radius.lg,
-      padding: spacing.xl, width: '100%', maxHeight: '70%',
-      borderWidth: 1, borderColor: colors.border,
+      backgroundColor: colors.card,
+      borderRadius: radius.lg,
+      padding: spacing.xl,
+      width: '100%',
+      maxHeight: '70%',
+      borderWidth: 1,
+      borderColor: colors.border,
     },
-    modalTitle: { fontSize: 18, fontWeight: '700', color: colors.text.primary, marginBottom: spacing.lg, textAlign: 'center' },
-    aiLoadingContainer: { alignItems: 'center', paddingVertical: spacing.xxxl },
-    aiLoadingText: { fontSize: 14, color: colors.text.secondary, marginTop: spacing.md },
-    aiResponseScroll: { maxHeight: 300 },
-    aiResponseText: { fontSize: 14, color: colors.text.primary, lineHeight: 22 },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text.primary,
+      marginBottom: spacing.lg,
+      textAlign: 'center',
+    },
+    aiLoadingContainer: {
+      alignItems: 'center',
+      paddingVertical: 40,
+    },
+    aiLoadingText: {
+      fontSize: 14,
+      color: colors.text.secondary,
+      marginTop: spacing.md,
+    },
+    aiResponseScroll: {
+      maxHeight: 300,
+    },
     modalClose: {
-      marginTop: spacing.lg, alignItems: 'center',
-      paddingVertical: spacing.md, backgroundColor: colors.elevated,
+      marginTop: spacing.lg,
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      backgroundColor: colors.elevated,
       borderRadius: radius.md,
     },
-    modalCloseText: { fontSize: 14, fontWeight: '600', color: colors.text.primary },
+    modalCloseText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text.primary,
+    },
   });

@@ -138,3 +138,13 @@ export function formatCurrencyInput(text: string, curr: Currency = 'BRL'): { dis
   return { display, raw: value };
 }
 
+/**
+ * Returns a color based on credit card usage percentage.
+ * Green < 50%, Orange 50-80%, Red > 80%
+ */
+export function getUsageColor(pct: number): string {
+  if (pct > 0.8) return '#FF4757';
+  if (pct > 0.5) return '#FFA502';
+  return '#2ED573';
+}
+
