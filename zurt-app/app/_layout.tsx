@@ -134,6 +134,10 @@ export default function RootLayout() {
             options={{ animation: 'fade' }}
           />
           <Stack.Screen
+            name="plans"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
             name="connect-bank"
             options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />

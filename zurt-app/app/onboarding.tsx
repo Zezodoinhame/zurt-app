@@ -29,10 +29,9 @@ interface OnboardingPage {
 }
 
 const PAGES: OnboardingPage[] = [
-  { id: '1', titleKey: 'onboarding.title1', descKey: 'onboarding.desc1', iconName: 'chart', accentColor: '#00D4AA' },
-  { id: '2', titleKey: 'onboarding.title2', descKey: 'onboarding.desc2', iconName: 'sparkle', accentColor: '#A855F7' },
-  { id: '3', titleKey: 'onboarding.title3', descKey: 'onboarding.desc3', iconName: 'family', accentColor: '#45B7D1' },
-  { id: '4', titleKey: 'onboarding.title4', descKey: 'onboarding.desc4', iconName: 'rocket', accentColor: '#00D4AA' },
+  { id: '1', titleKey: 'onboarding.slide1Title', descKey: 'onboarding.slide1Desc', iconName: 'chart', accentColor: '#00D4AA' },
+  { id: '2', titleKey: 'onboarding.slide2Title', descKey: 'onboarding.slide2Desc', iconName: 'sparkle', accentColor: '#A855F7' },
+  { id: '3', titleKey: 'onboarding.slide3Title', descKey: 'onboarding.slide3Desc', iconName: 'family', accentColor: '#45B7D1' },
 ];
 
 export default function OnboardingScreen() {
@@ -45,10 +44,8 @@ export default function OnboardingScreen() {
   const [activePage, setActivePage] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
-  // Animated values per page for fade-in + scale
   const pageAnims = useRef(PAGES.map(() => new Animated.Value(0))).current;
 
-  // Animate active page
   useEffect(() => {
     pageAnims.forEach((anim, i) => {
       if (i !== activePage) anim.setValue(0);
@@ -78,9 +75,9 @@ export default function OnboardingScreen() {
     }
   }, []);
 
-  const handleSkip = useCallback(async () => {
+  const goToPlans = useCallback(async () => {
     await markDone();
-    router.replace('/(auth)/login');
+    router.push('/plans');
   }, [markDone, router]);
 
   const handleNext = useCallback(() => {
@@ -88,16 +85,6 @@ export default function OnboardingScreen() {
       flatListRef.current?.scrollToIndex({ index: activePage + 1, animated: true });
     }
   }, [activePage]);
-
-  const handleCreateAccount = useCallback(async () => {
-    await markDone();
-    router.replace('/(auth)/login');
-  }, [markDone, router]);
-
-  const handleLogin = useCallback(async () => {
-    await markDone();
-    router.replace('/(auth)/login');
-  }, [markDone, router]);
 
   const isLastPage = activePage === PAGES.length - 1;
 
@@ -110,11 +97,9 @@ export default function OnboardingScreen() {
 
     return (
       <View style={styles.page}>
-        {/* Gradient overlay effect */}
         <View style={styles.gradientTop} />
 
         <View style={styles.pageContent}>
-          {/* Animated icon circle */}
           <Animated.View
             style={[
               styles.iconCircle,
@@ -125,18 +110,15 @@ export default function OnboardingScreen() {
             <AppIcon name={item.iconName} size={48} color={item.accentColor} />
           </Animated.View>
 
-          {/* Title */}
           <Animated.Text style={[styles.title, { opacity }]}>
             {t(item.titleKey)}
           </Animated.Text>
 
-          {/* Description */}
           <Animated.Text style={[styles.description, { opacity }]}>
             {t(item.descKey)}
           </Animated.Text>
         </View>
 
-        {/* Bottom section */}
         <View style={styles.bottomSection}>
           {/* Dots */}
           <View style={styles.dotsContainer}>
@@ -165,32 +147,20 @@ export default function OnboardingScreen() {
               </Text>
             </TouchableOpacity>
           ) : (
-            <View style={styles.lastPageButtons}>
-              <TouchableOpacity
-                style={[styles.createAccountButton, { backgroundColor: item.accentColor }]}
-                onPress={handleCreateAccount}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.createAccountText}>
-                  {t('onboarding.createAccount')}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={handleLogin}
-                activeOpacity={0.7}
-                style={styles.alreadyHaveAccountButton}
-              >
-                <Text style={[styles.alreadyHaveAccountText, { color: colors.accent }]}>
-                  {t('onboarding.alreadyHaveAccount')}
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={[styles.startButton, { backgroundColor: item.accentColor }]}
+              onPress={goToPlans}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.startButtonText}>
+                {t('onboarding.start')}
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
       </View>
     );
-  }, [colors, pageAnims, t, handleNext, handleCreateAccount, handleLogin, styles]);
+  }, [colors, pageAnims, t, handleNext, goToPlans, styles]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
@@ -198,7 +168,7 @@ export default function OnboardingScreen() {
       {!isLastPage && (
         <TouchableOpacity
           style={[styles.skipButton, { top: insets.top + spacing.sm }]}
-          onPress={handleSkip}
+          onPress={goToPlans}
           activeOpacity={0.7}
         >
           <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
@@ -315,28 +285,16 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 16,
       fontWeight: '700',
     },
-    lastPageButtons: {
-      width: '100%',
-      alignItems: 'center',
-    },
-    createAccountButton: {
+    startButton: {
       width: '100%',
       paddingVertical: spacing.lg,
       borderRadius: radius.lg,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    createAccountText: {
+    startButtonText: {
       color: colors.background,
       fontSize: 17,
       fontWeight: '800',
-    },
-    alreadyHaveAccountButton: {
-      marginTop: spacing.lg,
-      paddingVertical: spacing.sm,
-    },
-    alreadyHaveAccountText: {
-      fontSize: 15,
-      fontWeight: '600',
     },
   });

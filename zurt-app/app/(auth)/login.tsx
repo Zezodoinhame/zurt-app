@@ -24,8 +24,11 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { Button } from '../../src/components/ui/Button';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { Input } from '../../src/components/ui/Input';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { saveToken } from '../../src/services/api';
 import { logger } from '../../src/utils/logger';
+
+const PLAN_STORAGE_KEY = '@zurt:selected_plan';
 
 
 WebBrowser.maybeCompleteAuthSession();
@@ -41,6 +44,15 @@ const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/userinfo/v2/me';
 const GOOGLE_REDIRECT_URI = makeRedirectUri({ scheme: 'zurt', path: 'auth' });
 
 type Mode = 'login' | 'register';
+
+/** Check if user has selected a plan — if not, redirect to onboarding flow */
+async function getPostAuthRoute(): Promise<'/(tabs)' | '/onboarding'> {
+  try {
+    const plan = await AsyncStorage.getItem(PLAN_STORAGE_KEY);
+    if (plan) return '/(tabs)';
+  } catch { /* ignore */ }
+  return '/onboarding';
+}
 
 // ===========================================================================
 // LoginScreen
@@ -146,7 +158,8 @@ export default function LoginScreen() {
               const restored = await restoreSession();
               if (restored) {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                router.replace('/(tabs)');
+                const route = await getPostAuthRoute();
+                router.replace(route);
                 return;
               }
             }
@@ -198,7 +211,8 @@ export default function LoginScreen() {
               const restored = await restoreSession();
               if (restored) {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                router.replace('/(tabs)');
+                const route = await getPostAuthRoute();
+                router.replace(route);
                 return;
               }
             }
@@ -267,7 +281,8 @@ export default function LoginScreen() {
       const success = await login(email.trim(), password);
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace('/(tabs)');
+        const route = await getPostAuthRoute();
+        router.replace(route);
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
@@ -299,7 +314,8 @@ export default function LoginScreen() {
       const success = await register(fullName.trim(), email.trim(), password);
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace('/(tabs)');
+        const route = await getPostAuthRoute();
+        router.replace(route);
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }

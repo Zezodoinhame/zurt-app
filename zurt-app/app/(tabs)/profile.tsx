@@ -1033,7 +1033,7 @@ export default function ProfileScreen() {
           {!isDemoMode && (
             <TouchableOpacity
               style={[styles.upgradeButton, { backgroundColor: colors.accent }]}
-              onPress={() => router.push('/premium')}
+              onPress={() => router.push('/plans')}
               activeOpacity={0.7}
             >
               <Text style={[styles.upgradeButtonText, { color: colors.background }]}>

@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { Redirect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../src/stores/authStore';
-
-const ONBOARDING_KEY = '@zurt:onboarding_done';
+import { ONBOARDING_KEY } from './onboarding';
 
 export default function Index() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
