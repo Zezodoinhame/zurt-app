@@ -55,7 +55,7 @@ const BIOMETRIC_STORAGE_KEY = 'biometric_enabled';
 // ---------------------------------------------------------------------------
 
 const languageOptions: Array<{ key: Language; flag: string; label: string }> = [
-  { key: 'pt', flag: '\u{1F1E7}\u{1F1F7}', label: 'Portugu\u00EAs' },
+  { key: 'pt', flag: '\u{1F1E7}\u{1F1F7}', label: 'Português' },
   { key: 'en', flag: '\u{1F1FA}\u{1F1F8}', label: 'English' },
   { key: 'zh', flag: '\u{1F1E8}\u{1F1F3}', label: '\u4E2D\u6587' },
   { key: 'ar', flag: '\u{1F1F8}\u{1F1E6}', label: '\u0627\u0644\u0639\u0631\u0628\u064A\u0629' },
@@ -617,7 +617,7 @@ export default function ProfileScreen() {
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
 
-  const currentLanguageLabel = languageOptions.find((l) => l.key === language)?.label ?? 'Portugu\u00EAs';
+  const currentLanguageLabel = languageOptions.find((l) => l.key === language)?.label ?? 'Português';
   const currentCurrencyLabel = currencyOptions.find((c) => c.key === currency)?.label ?? 'BRL (R$)';
 
   const handleLogout = useCallback(() => {
@@ -863,7 +863,7 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* ── Prefer\u00EAncias ── */}
+      {/* ── Preferências ── */}
       <SectionTitle title={t('profile.preferences')} iconName="settings" />
       <View>
         <View style={styles.section}>

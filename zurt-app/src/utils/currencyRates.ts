@@ -79,18 +79,18 @@ export const CURRENCY_LABELS: Record<CurrencyCode, string> = {
   BRL: 'R$ Real',
   USD: '$ Dollar',
   EUR: '\u20AC Euro',
-  GBP: '\u00A3 Pound',
-  JPY: '\u00A5 Yen',
-  CNY: '\u00A5 Yuan',
+  GBP: '£ Pound',
+  JPY: '¥ Yen',
+  CNY: '¥ Yuan',
 };
 
 export const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
   BRL: 'R$',
   USD: '$',
   EUR: '\u20AC',
-  GBP: '\u00A3',
-  JPY: '\u00A5',
-  CNY: '\u00A5',
+  GBP: '£',
+  JPY: '¥',
+  CNY: '¥',
 };
 
 export const ALL_CURRENCIES: CurrencyCode[] = ['BRL', 'USD', 'EUR', 'GBP', 'JPY', 'CNY'];

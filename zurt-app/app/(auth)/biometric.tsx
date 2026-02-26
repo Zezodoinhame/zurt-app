@@ -80,7 +80,7 @@ export default function BiometricScreen() {
         </View>
 
         <Text style={styles.title}>
-          {user ? `${t('greeting.morning').split(' ')[0] || 'Ol\u00E1'}, ${user.name.split(' ')[0]}` : 'ZURT'}
+          {user ? `${t('greeting.morning').split(' ')[0] || 'Olá'}, ${user.name.split(' ')[0]}` : 'ZURT'}
         </Text>
 
         <TouchableOpacity

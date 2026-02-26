@@ -178,7 +178,7 @@ export default function HomeScreen() {
   }, [isSyncing, refresh]);
 
   // ---- Derived values -------------------------------------------------------
-  const firstName = user?.name?.split(' ')[0] ?? 'Usu\u00E1rio';
+  const firstName = user?.name?.split(' ')[0] ?? 'Usuário';
 
   const variation1m = summary?.variation1m ?? 0;
   const isPositive = variation1m >= 0;
@@ -223,12 +223,12 @@ export default function HomeScreen() {
 
   // ---- Transaction category label map ---------------------------------------
   const categoryLabelMap: Record<string, string> = {
-    food: 'Alimenta\u00E7\u00E3o',
+    food: 'Alimentação',
     transport: 'Transporte',
     subscriptions: 'Assinaturas',
     shopping: 'Compras',
-    fuel: 'Combust\u00EDvel',
-    health: 'Sa\u00FAde',
+    fuel: 'Combustível',
+    health: 'Saúde',
     travel: 'Viagens',
     tech: 'Tecnologia',
   };
@@ -328,7 +328,7 @@ export default function HomeScreen() {
         ) : (
           <>
             {/* -------------------------------------------------------------- */}
-            {/* 2. Hero Card \u2014 Patrim\u00F4nio Consolidado                        */}
+            {/* 2. Hero Card \u2014 Patrimônio Consolidado                        */}
             {/* -------------------------------------------------------------- */}
             {summary && (
               <View style={styles.heroCard}>
@@ -340,7 +340,7 @@ export default function HomeScreen() {
                   {/* Top row: label + sparkline */}
                   <View style={styles.heroTopRow}>
                     <Text style={styles.heroLabel}>
-                      PATRIM\u00D4NIO CONSOLIDADO
+                      PATRIMÔNIO CONSOLIDADO
                     </Text>
                     <HeroSparkline
                       data={sparklineData}
@@ -398,7 +398,7 @@ export default function HomeScreen() {
                     <Text style={styles.heroMonthly}>
                       {valuesHidden
                         ? '\u2022\u2022\u2022\u2022\u2022'
-                        : `${monthlyReturnValue >= 0 ? '+' : ''}${formatCurrency(monthlyReturnValue, currency)} este m\u00EAs`}
+                        : `${monthlyReturnValue >= 0 ? '+' : ''}${formatCurrency(monthlyReturnValue, currency)} este mês`}
                     </Text>
                   </View>
 
@@ -449,9 +449,9 @@ export default function HomeScreen() {
             <View style={styles.quickActions}>
               {[
                 { emoji: '\uD83C\uDFE6', label: 'Conectar\nbanco', accent: true, onPress: () => router.push('/connect-bank') },
-                { emoji: '\uD83D\uDCCA', label: 'Gerar\nrelat\u00F3rio', accent: false, onPress: () => router.push('/report') },
+                { emoji: '\uD83D\uDCCA', label: 'Gerar\nrelatório', accent: false, onPress: () => router.push('/report') },
                 { emoji: '\uD83D\uDD04', label: 'Sincronizar', accent: false, onPress: handleSync },
-                { emoji: '\uD83C\uDF81', label: 'Convidar\namigos', accent: false, onPress: () => Share.share({ message: 'Conhe\u00E7a o ZURT - intelig\u00EAncia patrimonial na palma da m\u00E3o! https://zurt.com.br' }) },
+                { emoji: '\uD83C\uDF81', label: 'Convidar\namigos', accent: false, onPress: () => Share.share({ message: 'Conheça o ZURT - inteligência patrimonial na palma da mão! https://zurt.com.br' }) },
               ].map((btn, i) => (
                 <TouchableOpacity
                   key={i}
@@ -489,7 +489,7 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* 5. Aloca\u00E7\u00E3o                                                    */}
+            {/* 5. Alocação                                                    */}
             {/* -------------------------------------------------------------- */}
             {validAllocations.length > 0 && (
               <View style={styles.section}>
@@ -542,7 +542,7 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* 7. Cart\u00F5es \u2014 2 side by side                                    */}
+            {/* 7. Cartões \u2014 2 side by side                                    */}
             {/* -------------------------------------------------------------- */}
             {topCards.length > 0 && (
               <View style={styles.section}>
@@ -592,7 +592,7 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* 8. Movimenta\u00E7\u00F5es \u2014 last 4                                      */}
+            {/* 8. Movimentações \u2014 last 4                                      */}
             {/* -------------------------------------------------------------- */}
             {recentTransactions.length > 0 && (
               <View style={styles.section}>
@@ -621,7 +621,7 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* 9. Not\u00EDcias do Mercado                                        */}
+            {/* 9. Notícias do Mercado                                        */}
             {/* -------------------------------------------------------------- */}
             {newsArticles.length > 0 && (
               <View style={styles.section}>
@@ -656,7 +656,7 @@ export default function HomeScreen() {
                             <Text style={styles.newsSource}>{article.source}</Text>
                             {timeAgo ? (
                               <>
-                                <Text style={styles.newsDot}>{' \u00B7 '}</Text>
+                                <Text style={styles.newsDot}>{' · '}</Text>
                                 <Text style={styles.newsTime}>{timeAgo}</Text>
                               </>
                             ) : null}
@@ -741,7 +741,7 @@ const createStyles = (colors: ThemeColors) =>
       overflow: 'hidden',
     },
 
-    // -- Hero Card (Patrim\u00F4nio) -----------------------------------------------
+    // -- Hero Card (Patrimônio) -----------------------------------------------
     heroCard: {
       borderRadius: 24,
       overflow: 'hidden',

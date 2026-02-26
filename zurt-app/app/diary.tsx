@@ -90,9 +90,9 @@ export default function DiaryScreen() {
         {filtered.length === 0 ? (
           <View style={{ alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingTop: 60 }}>
             <Text style={{ fontSize: 40, marginBottom: 16 }}>{'\uD83D\uDCD3'}</Text>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, textAlign: 'center', marginBottom: 8 }}>Di{'\u00E1'}rio de Investimentos</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, textAlign: 'center', marginBottom: 8 }}>Diário de Investimentos</Text>
             <Text style={{ fontSize: 14, color: colors.text.secondary, textAlign: 'center', lineHeight: 20 }}>
-              Registre suas decis{'\u00F5'}es de investimento, o racioc{'\u00ED'}nio por tr{'\u00E1'}s delas, e como voc{'\u00EA'} se sentiu. Acompanhe padr{'\u00F5'}es ao longo do tempo.
+              Registre suas decisões de investimento, o raciocínio por trás delas, e como você se sentiu. Acompanhe padrões ao longo do tempo.
             </Text>
           </View>
         ) : (

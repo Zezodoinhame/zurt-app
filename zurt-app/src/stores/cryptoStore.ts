@@ -16,7 +16,7 @@ const COIN_COLORS: Record<string, string> = {
 
 const COIN_ICONS: Record<string, string> = {
   BTC: '\u20BF', ETH: '\u039E', USDT: '\u20AE', BNB: 'B', SOL: '\u25CE',
-  XRP: 'X', USDC: '$', ADA: '\u20B3', DOGE: '\u00D0', AVAX: 'A',
+  XRP: 'X', USDC: '$', ADA: '\u20B3', DOGE: 'Ð', AVAX: 'A',
   TRX: 'T', DOT: '\u25CF', LINK: '\u26D3', MATIC: 'M', TON: '\u25C6',
   SHIB: 'S', LTC: '\u0141', UNI: '\u{1F984}', ATOM: '\u269B', XLM: '*',
 };

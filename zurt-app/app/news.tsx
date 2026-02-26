@@ -42,8 +42,8 @@ const HTML_NAMED_ENTITIES: Record<string, string> = {
   '&ndash;': '\u2013', '&mdash;': '\u2014',
   '&lsquo;': '\u2018', '&rsquo;': '\u2019',
   '&ldquo;': '\u201C', '&rdquo;': '\u201D',
-  '&hellip;': '\u2026', '&copy;': '\u00A9',
-  '&reg;': '\u00AE', '&trade;': '\u2122',
+  '&hellip;': '\u2026', '&copy;': '©',
+  '&reg;': '®', '&trade;': '\u2122',
 };
 
 function decodeHtmlEntities(text: string): string {
@@ -178,7 +178,7 @@ export default function NewsScreen() {
           {/* Source + time row */}
           <View style={styles.metaRow}>
             <Text style={styles.metaSource}>{item.source}</Text>
-            <Text style={styles.metaDot}>{' \u00B7 '}</Text>
+            <Text style={styles.metaDot}>{' · '}</Text>
             <Text style={styles.metaTime}>
               {getRelativeTime(item.date, t)}
             </Text>

@@ -98,7 +98,7 @@ const FALLBACK_CARDS: CardDisplay[] = [
   },
   {
     id: 'fb2',
-    name: 'Ita\u00FA',
+    name: 'Itaú',
     lastFour: '8834',
     brand: 'Visa',
     invoice: 21498.36,
@@ -111,7 +111,7 @@ const FALLBACK_CARDS: CardDisplay[] = [
 ];
 
 const FALLBACK_CATEGORIES: CategoryDisplay[] = [
-  { name: 'Alimenta\u00E7\u00E3o', icon: '\uD83C\uDF55', value: 2847.3, pct: 28, color: '#F59E0B' },
+  { name: 'Alimentação', icon: '\uD83C\uDF55', value: 2847.3, pct: 28, color: '#F59E0B' },
   { name: 'Transporte', icon: '\uD83D\uDE97', value: 1890.0, pct: 19, color: '#3B82F6' },
   { name: 'Assinaturas', icon: '\uD83D\uDCF1', value: 1245.6, pct: 12, color: '#8B5CF6' },
   { name: 'Compras', icon: '\uD83D\uDECD\uFE0F', value: 3100.0, pct: 31, color: '#EC4899' },
@@ -226,7 +226,7 @@ export default function CardsScreen() {
   const displayTx: TxDisplay[] = useMemo(() => {
     if (dashboardTransactions.length > 0) {
       return dashboardTransactions.slice(0, 5).map((tx) => ({
-        name: tx.description || tx.merchant || 'Transa\u00E7\u00E3o',
+        name: tx.description || tx.merchant || 'Transação',
         time: formatTxDate(tx.date),
         value: Math.abs(tx.amount),
         icon: CAT_EMOJI[tx.category || ''] || '\uD83D\uDCB3',
@@ -265,7 +265,7 @@ export default function CardsScreen() {
         {/* Header                                                           */}
         {/* ---------------------------------------------------------------- */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Cart\u00F5es</Text>
+          <Text style={styles.headerTitle}>Cartões</Text>
           <TouchableOpacity style={styles.addBtn} activeOpacity={0.7}>
             <AppIcon name="add" size={20} color={colors.text.secondary} />
           </TouchableOpacity>
@@ -295,7 +295,7 @@ export default function CardsScreen() {
                 <Text style={styles.summaryValue}>{fmtVal(totalInvoice)}</Text>
               </View>
               <View style={styles.summaryRight}>
-                <Text style={styles.summaryLabel}>Limite dispon\u00EDvel</Text>
+                <Text style={styles.summaryLabel}>Limite disponível</Text>
                 <Text style={styles.summaryLimitVal}>{fmtVal(availableLimit)}</Text>
               </View>
             </View>
@@ -401,7 +401,7 @@ export default function CardsScreen() {
               <View style={styles.secHeader}>
                 <Text style={styles.secTitle}>Gastos por categoria</Text>
                 <TouchableOpacity>
-                  <Text style={styles.secAction}>Este m\u00EAs \u203A</Text>
+                  <Text style={styles.secAction}>Este mês \u203A</Text>
                 </TouchableOpacity>
               </View>
 
@@ -430,10 +430,10 @@ export default function CardsScreen() {
             </View>
 
             {/* -------------------------------------------------------------- */}
-            {/* Transa\u00E7\u00F5es Recentes                                          */}
+            {/* Transações Recentes                                          */}
             {/* -------------------------------------------------------------- */}
             <View style={styles.txSection}>
-              <Text style={styles.txTitle}>Transa\u00E7\u00F5es recentes</Text>
+              <Text style={styles.txTitle}>Transações recentes</Text>
 
               {displayTx.map((tx, i) => (
                 <View key={i} style={styles.txRow}>

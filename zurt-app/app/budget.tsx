@@ -165,7 +165,7 @@ export default function BudgetScreen() {
           <Text style={{ fontSize: 40, marginBottom: 16 }}>{'\uD83D\uDCCA'}</Text>
           <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary, textAlign: 'center', marginBottom: 8 }}>{t('budget.title')}</Text>
           <Text style={{ fontSize: 14, color: colors.text.secondary, textAlign: 'center', lineHeight: 20 }}>
-            Nenhum or\u00e7amento configurado. Adicione categorias para come\u00e7ar.
+            Nenhum orçamento configurado. Adicione categorias para começar.
           </Text>
         </View>
       </View>
