@@ -24,7 +24,6 @@ import { usePortfolioStore } from '../../src/stores/portfolioStore';
 import { useGoalsStore } from '../../src/stores/goalsStore';
 import { useCardsStore } from '../../src/stores/cardsStore';
 import { useAgentStore } from '../../src/stores/agentStore';
-import { generatePatrimonialReport } from '../../src/services/reportGenerator';
 import { syncAllFinance } from '../../src/services/api';
 
 import { Card } from '../../src/components/ui/Card';
@@ -124,9 +123,7 @@ export default function HomeScreen() {
   const { articles: newsArticles, loadNews } = useNewsStore();
   const { t, currency } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
-  const accentColor = useSettingsStore((s) => s.accentColor);
 
-  const [isExporting, setIsExporting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
   // ---- Memoised styles ------------------------------------------------------
@@ -152,25 +149,6 @@ export default function HomeScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     refresh();
   }, [refresh]);
-
-  const handleExportPdf = useCallback(async () => {
-    if (!summary || !user || isExporting) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setIsExporting(true);
-    try {
-      const { assets, insights: portfolioInsights } = usePortfolioStore.getState();
-      const { dashboardTransactions } = useCardsStore.getState();
-      await generatePatrimonialReport(
-        { summary, institutions, allocations, cards, assets, transactions: dashboardTransactions, insights: portfolioInsights },
-        user,
-        accentColor,
-      );
-    } catch {
-      Alert.alert(t('common.error'), t('report.error'));
-    } finally {
-      setIsExporting(false);
-    }
-  }, [summary, user, institutions, allocations, cards, accentColor, isExporting, t]);
 
   const handleSync = useCallback(async () => {
     if (isSyncing) return;
@@ -408,9 +386,9 @@ export default function HomeScreen() {
                 onPress={() => router.push('/connect-bank')}
               />
               <QuickActionButton
-                icon="report"
-                label={t('home.generateReport')}
-                onPress={handleExportPdf}
+                icon="family"
+                label={t('family.title')}
+                onPress={() => router.push('/family')}
               />
               <QuickActionButton
                 icon="refresh"
