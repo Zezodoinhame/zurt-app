@@ -401,7 +401,7 @@ export default function CardsScreen() {
               <View style={styles.secHeader}>
                 <Text style={styles.secTitle}>Gastos por categoria</Text>
                 <TouchableOpacity>
-                  <Text style={styles.secAction}>Este mês \u203A</Text>
+                  <Text style={styles.secAction}>Este mês ›</Text>
                 </TouchableOpacity>
               </View>
 

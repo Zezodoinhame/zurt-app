@@ -55,7 +55,7 @@ const ICON_MAP: Record<string, { lib: 'ion' | 'mci'; name: string; emoji: string
   info:         { lib: 'ion', name: 'information-circle-outline', emoji: '\u2139\uFE0F' },
   close:        { lib: 'ion', name: 'close-circle-outline', emoji: '\u274C' },
   back:         { lib: 'ion', name: 'arrow-back-outline', emoji: '\u2190' },
-  chevron:      { lib: 'ion', name: 'chevron-forward-outline', emoji: '\u203A' },
+  chevron:      { lib: 'ion', name: 'chevron-forward-outline', emoji: '›' },
   taxes:        { lib: 'ion', name: 'calculator-outline', emoji: '\uD83E\uDDEE' },
   search:       { lib: 'ion', name: 'search-outline', emoji: '\uD83D\uDD0D' },
   diamond:      { lib: 'ion', name: 'diamond-outline', emoji: '\uD83D\uDC8E' },
