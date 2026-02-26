@@ -242,8 +242,21 @@ export const useAuthStore = create<AuthState>((set, get) => {
         });
         return true;
       } catch (err: any) {
-        logger.log('[ZURT Auth] restoreSession() failed:', err?.message ?? err);
+        const msg = err?.message ?? '';
+        const is401or404 = msg.includes('401') || msg.includes('404') || msg.includes('Unauthorized') || msg.includes('Route not found');
+        logger.log('[ZURT Auth] restoreSession() failed:', msg, is401or404 ? '→ silent logout' : '');
+        // Silent logout: clear token, reset state, no error shown
         await clearToken();
+        await clearSession().catch(() => {});
+        setDemoMode(false);
+        set({
+          user: null,
+          isAuthenticated: false,
+          isDemoMode: false,
+          valuesHidden: false,
+          error: null,
+        });
+        resetDataStores();
         return false;
       }
     },
