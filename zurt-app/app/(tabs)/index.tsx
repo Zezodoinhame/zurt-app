@@ -13,7 +13,6 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -42,6 +41,7 @@ import { InsightCard } from '../../src/components/shared/InsightCard';
 import { TransactionRow } from '../../src/components/shared/TransactionRow';
 import { GoalCard } from '../../src/components/shared/GoalCard';
 import { AllocationBar } from '../../src/components/shared/AllocationBar';
+import PlanCards from '../../src/components/home/PlanCards';
 
 import {
   formatCurrency,
@@ -627,29 +627,9 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* 10. Premium Banner                                             */}
+            {/* 10. Plan Cards                                                 */}
             {/* -------------------------------------------------------------- */}
-            <TouchableOpacity
-              style={styles.premiumBanner}
-              activeOpacity={0.8}
-              onPress={() => router.push('/profile' as any)}
-            >
-              <LinearGradient
-                colors={[colors.accent + '18', colors.accent + '08']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.premiumGradient}
-              >
-                <View style={styles.premiumContent}>
-                  <AppIcon name="diamond" size={22} color={colors.accent} />
-                  <View style={styles.premiumText}>
-                    <Text style={styles.premiumTitle}>{t('home.premium')}</Text>
-                    <Text style={styles.premiumDesc}>{t('home.premiumDescription')}</Text>
-                  </View>
-                  <AppIcon name="chevron" size={16} color={colors.text.muted} />
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
+            <PlanCards />
           </>
         )}
       </ScrollView>
@@ -896,38 +876,6 @@ const createStyles = (colors: ThemeColors) =>
     newsTime: {
       fontSize: 11,
       color: colors.text.secondary,
-    },
-
-    // -- Premium Banner -------------------------------------------------------
-    premiumBanner: {
-      marginTop: spacing.sm,
-      marginBottom: spacing.xl,
-      borderRadius: radius.lg,
-      overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: colors.accent + '25',
-    },
-    premiumGradient: {
-      padding: spacing.xl,
-    },
-    premiumContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.md,
-    },
-    premiumText: {
-      flex: 1,
-    },
-    premiumTitle: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: colors.accent,
-      marginBottom: 2,
-    },
-    premiumDesc: {
-      fontSize: 12,
-      color: colors.text.secondary,
-      lineHeight: 16,
     },
 
     // -- Empty state ----------------------------------------------------------
