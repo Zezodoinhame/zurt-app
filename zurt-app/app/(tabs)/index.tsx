@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Linking,
+  Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Rect, Text as SvgText, Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
@@ -42,6 +43,7 @@ import PlanCards from '../../src/components/home/PlanCards';
 import {
   formatCurrency,
   formatPct,
+  formatCompactNumber,
   maskValue,
 } from '../../src/utils/formatters';
 import { useSettingsStore } from '../../src/stores/settingsStore';
@@ -122,9 +124,10 @@ export default function HomeScreen() {
   const { getUnreadCount } = useNotificationStore();
   const {
     ibovespa,
-    currencies,
-    cryptos,
-    selic,
+    usdBrl,
+    eurBrl,
+    btcBrl,
+    currentSelic,
     loadMarketOverview,
   } = useMarketStore();
   const { t, currency } = useSettingsStore();
@@ -261,34 +264,16 @@ export default function HomeScreen() {
         }
       >
         {/* ---------------------------------------------------------------- */}
-        {/* 1. Header                                                        */}
+        {/* 1. Header — Greeting + Actions                                   */}
         {/* ---------------------------------------------------------------- */}
         <View style={styles.header}>
-          {/* Top row: ZURT logo + actions */}
           <View style={styles.headerTopRow}>
-            <View style={styles.headerBrand}>
-              <Svg width={30} height={30} viewBox="0 0 30 30">
-                <Defs>
-                  <SvgGradient id="zurt-logo-grad" x1="0" y1="0" x2="1" y2="1">
-                    <Stop offset="0%" stopColor={colors.accent} />
-                    <Stop offset="100%" stopColor={colors.accent + 'BB'} />
-                  </SvgGradient>
-                </Defs>
-                <Rect width={30} height={30} rx={8} fill="url(#zurt-logo-grad)" />
-                <SvgText
-                  x={15}
-                  y={21}
-                  textAnchor="middle"
-                  fill={colors.background}
-                  fontWeight="900"
-                  fontSize={18}
-                >
-                  Z
-                </SvgText>
-              </Svg>
-              <Text style={styles.brandText}>ZURT</Text>
+            {/* Greeting */}
+            <View style={styles.greetingCol}>
+              <Text style={styles.greeting}>{greeting}</Text>
             </View>
 
+            {/* Actions: eye + notifications + avatar */}
             <View style={styles.headerActions}>
               <TouchableOpacity
                 onPress={handleToggleValues}
@@ -306,93 +291,31 @@ export default function HomeScreen() {
                 <AppIcon name="notification" size={18} color={colors.text.secondary} />
                 {unreadCount > 0 && <View style={styles.notifBadge} />}
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => router.push('/(tabs)/profile')}
-                style={styles.headerIconBtn}
-                accessibilityLabel="Settings"
-              >
-                <AppIcon name="settings" size={18} color={colors.text.secondary} />
-              </TouchableOpacity>
+              {/* ZURT badge / avatar */}
+              <View style={styles.avatarBadge}>
+                <Svg width={32} height={32} viewBox="0 0 32 32">
+                  <Defs>
+                    <SvgGradient id="zurt-logo-grad" x1="0" y1="0" x2="1" y2="1">
+                      <Stop offset="0%" stopColor={colors.accent} />
+                      <Stop offset="100%" stopColor={colors.accent + 'BB'} />
+                    </SvgGradient>
+                  </Defs>
+                  <Rect width={32} height={32} rx={10} fill="url(#zurt-logo-grad)" />
+                  <SvgText
+                    x={16}
+                    y={22}
+                    textAnchor="middle"
+                    fill={colors.background}
+                    fontWeight="900"
+                    fontSize={18}
+                  >
+                    Z
+                  </SvgText>
+                </Svg>
+              </View>
             </View>
           </View>
-
-          {/* Greeting */}
-          <Text style={styles.greeting}>{greeting}</Text>
         </View>
-
-        {/* ---------------------------------------------------------------- */}
-        {/* Market Ticker — real BRAPI data                                  */}
-        {/* ---------------------------------------------------------------- */}
-        {(() => {
-          const usd = currencies?.find((c: any) => c.fromCurrency === 'USD' || c.name?.includes('Dólar') || c.name?.includes('Dollar'));
-          const eur = currencies?.find((c: any) => c.fromCurrency === 'EUR' || c.name?.includes('Euro'));
-          const btc = cryptos?.find((c: any) => c.coin === 'BTC');
-          const selicAtual = selic?.length > 0 ? selic[selic.length - 1] : null;
-
-          const tickers = [
-            ibovespa?.regularMarketPrice ? {
-              label: 'IBOV',
-              value: Math.round(ibovespa.regularMarketPrice).toLocaleString('pt-BR'),
-              change: ibovespa.regularMarketChangePercent ?? 0,
-            } : null,
-            usd ? {
-              label: 'USD',
-              value: `R$ ${Number(usd.bidPrice || 0).toFixed(2)}`,
-              change: Number(usd.regularMarketChangePercent || 0),
-            } : null,
-            eur ? {
-              label: 'EUR',
-              value: `R$ ${Number(eur.bidPrice || 0).toFixed(2)}`,
-              change: Number(eur.regularMarketChangePercent || 0),
-            } : null,
-            btc ? {
-              label: 'BTC',
-              value: `R$ ${(Number(btc.regularMarketPrice || 0) / 1000).toFixed(1)}k`,
-              change: btc.regularMarketChangePercent ?? 0,
-            } : null,
-            selicAtual ? {
-              label: 'SELIC',
-              value: `${Number(selicAtual.value).toFixed(2)}%`,
-              change: 0,
-            } : null,
-          ].filter(Boolean) as { label: string; value: string; change: number }[];
-
-          if (tickers.length === 0) return null;
-
-          return (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.tickerScroll}
-            >
-              {tickers.map((tk, index) => {
-                const isPositive = tk.change >= 0;
-                const isNeutral = tk.change === 0;
-                return (
-                  <TouchableOpacity
-                    key={`ticker-${tk.label}-${index}`}
-                    onPress={() => router.push('/market')}
-                    activeOpacity={0.7}
-                    style={styles.tickerChip}
-                  >
-                    <Text style={styles.tickerLabel}>{tk.label}</Text>
-                    <Text style={styles.tickerValue}>{tk.value}</Text>
-                    {!isNeutral && (
-                      <Text
-                        style={[
-                          styles.tickerChange,
-                          { color: isPositive ? '#00E99B' : '#EF4444' },
-                        ]}
-                      >
-                        {isPositive ? '▲' : '▼'} {Math.abs(tk.change).toFixed(2)}%
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          );
-        })()}
 
         {/* ---------------------------------------------------------------- */}
         {/* Loading / Error                                                  */}
@@ -409,61 +332,79 @@ export default function HomeScreen() {
         ) : (
           <>
             {/* -------------------------------------------------------------- */}
-            {/* 2. Hero Card — Patrimônio Total + Sparkline                    */}
+            {/* 2. Hero Card — Patrimônio Consolidado + Sparkline              */}
             {/* -------------------------------------------------------------- */}
             {summary && (
-              <Card variant="glow" delay={100}>
+              <View style={styles.heroCard}>
                 <View style={styles.heroTop}>
                   <View style={styles.heroTextCol}>
-                    <Text style={styles.heroLabel}>{t('home.totalPatrimony')}</Text>
+                    <Text style={styles.heroLabel}>{t('home.consolidatedPatrimony').toUpperCase()}</Text>
                     <Text style={styles.heroValue}>
                       {displayValue(summary.totalValue)}
                     </Text>
                     <View style={styles.heroBadgeRow}>
-                      <Badge
-                        value={`${displayPct(summary.variation1m)}  ${valuesHidden ? '' : formatCurrency(monthlyReturnValue, currency)}`}
-                        variant={variation1mVariant}
-                        size="sm"
-                      />
+                      <View style={[
+                        styles.heroBadge,
+                        { backgroundColor: (variation1mVariant === 'positive' ? colors.positive : colors.negative) + '18' },
+                      ]}>
+                        <Text style={[
+                          styles.heroBadgeText,
+                          { color: variation1mVariant === 'positive' ? colors.positive : colors.negative },
+                        ]}>
+                          {variation1mVariant === 'positive' ? '\u25B2' : '\u25BC'} {displayPct(summary.variation1m)}
+                        </Text>
+                      </View>
+                      <Text style={styles.heroMonthly}>
+                        {valuesHidden
+                          ? '\u2022\u2022\u2022\u2022\u2022'
+                          : `${monthlyReturnValue >= 0 ? '+' : ''}${formatCurrency(monthlyReturnValue, currency)} ${t('home.thisMonth').toLowerCase()}`}
+                      </Text>
                     </View>
                   </View>
                   {sparklineData.length >= 2 && (
                     <View style={styles.sparklineWrap}>
                       <Sparkline
                         data={sparklineData}
-                        width={100}
-                        height={48}
-                        color={colors.accent}
+                        width={90}
+                        height={40}
+                        color={variation1mVariant === 'positive' ? colors.positive : colors.negative}
                       />
                     </View>
                   )}
                 </View>
 
-                {/* Mini-badges: institutions */}
+                {/* Institution badges (horizontal scroll) */}
                 {institutions.length > 0 && (
                   <>
                     <View style={styles.heroDivider} />
-                    <View style={styles.institutionRow}>
-                      {institutions.slice(0, 4).map((inst) => {
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.institutionScroll}
+                    >
+                      {institutions.map((inst) => {
                         const pct = summary.totalValue > 0
                           ? (inst.totalValue / summary.totalValue) * 100
                           : 0;
+                        const initials = inst.name.substring(0, 2).toUpperCase();
                         return (
                           <View key={inst.id} style={styles.institutionChip}>
-                            <View style={[styles.institutionDot, { backgroundColor: inst.color }]} />
-                            <Text style={styles.institutionName} numberOfLines={1}>
-                              {inst.name}
+                            <View style={[styles.institutionIcon, { backgroundColor: inst.color + '30' }]}>
+                              <Text style={[styles.institutionInitials, { color: inst.color }]}>{initials}</Text>
+                            </View>
+                            <Text style={styles.institutionValue} numberOfLines={1}>
+                              {valuesHidden ? '\u2022\u2022' : `R$ ${formatCompactNumber(inst.totalValue)}`}
                             </Text>
                             <Text style={styles.institutionPct}>
-                              {valuesHidden ? '••' : `${pct.toFixed(0)}%`}
+                              {valuesHidden ? '\u2022\u2022' : `${pct.toFixed(1)}%`}
                             </Text>
                           </View>
                         );
                       })}
-                    </View>
+                    </ScrollView>
                   </>
                 )}
-              </Card>
+              </View>
             )}
 
             {/* -------------------------------------------------------------- */}
@@ -486,7 +427,82 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* 3. Quick Actions                                               */}
+            {/* Market Ticker — BRAPI data                                     */}
+            {/* -------------------------------------------------------------- */}
+            {(() => {
+              const tickers = [
+                ibovespa ? {
+                  label: 'IBOV',
+                  value: Number(ibovespa.regularMarketPrice || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 }),
+                  change: Number(ibovespa.regularMarketChangePercent || 0),
+                } : null,
+                usdBrl ? {
+                  label: 'USD',
+                  value: `R$ ${Number(usdBrl.bidPrice || 0).toFixed(2).replace('.', ',')}`,
+                  change: Number(usdBrl.regularMarketChangePercent || 0),
+                } : null,
+                eurBrl ? {
+                  label: 'EUR',
+                  value: `R$ ${Number(eurBrl.bidPrice || 0).toFixed(2).replace('.', ',')}`,
+                  change: Number(eurBrl.regularMarketChangePercent || 0),
+                } : null,
+                btcBrl ? {
+                  label: 'BTC',
+                  value: `R$ ${(Number(btcBrl.regularMarketPrice || 0) / 1000).toFixed(1).replace('.', ',')}K`,
+                  change: Number(btcBrl.regularMarketChangePercent || 0),
+                } : null,
+                currentSelic != null ? {
+                  label: 'SELIC',
+                  value: `${Number(currentSelic).toFixed(2).replace('.', ',')}%`,
+                  change: 0,
+                } : null,
+              ].filter(Boolean) as { label: string; value: string; change: number }[];
+
+              if (tickers.length === 0) {
+                return (
+                  <View style={styles.tickerSkeletonRow}>
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <View key={i} style={styles.tickerSkeleton} />
+                    ))}
+                  </View>
+                );
+              }
+
+              return (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.tickerScroll}
+                >
+                  {tickers.map((tk) => {
+                    const isPos = tk.change >= 0;
+                    const isNeutral = tk.change === 0;
+                    return (
+                      <TouchableOpacity
+                        key={tk.label}
+                        onPress={() => router.push('/market')}
+                        activeOpacity={0.7}
+                        style={styles.tickerChip}
+                      >
+                        <Text style={styles.tickerLabel}>{tk.label}</Text>
+                        <Text style={styles.tickerValue}>{tk.value}</Text>
+                        {!isNeutral && (
+                          <Text style={[styles.tickerChange, { color: isPos ? colors.positive : colors.negative }]}>
+                            {isPos ? '\u25B2' : '\u25BC'} {Math.abs(tk.change).toFixed(2)}%
+                          </Text>
+                        )}
+                        {isNeutral && tk.label === 'SELIC' && (
+                          <Text style={[styles.tickerChange, { color: colors.info }]}>a.a.</Text>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              );
+            })()}
+
+            {/* -------------------------------------------------------------- */}
+            {/* 3. Quick Actions (4 buttons)                                   */}
             {/* -------------------------------------------------------------- */}
             <View style={styles.quickActions}>
               <QuickActionButton
@@ -495,9 +511,9 @@ export default function HomeScreen() {
                 onPress={() => router.push('/connect-bank')}
               />
               <QuickActionButton
-                icon="family"
-                label={t('family.title')}
-                onPress={() => router.push('/family')}
+                icon="report"
+                label={t('home.generateReport')}
+                onPress={() => router.push('/report')}
               />
               <QuickActionButton
                 icon="refresh"
@@ -505,9 +521,9 @@ export default function HomeScreen() {
                 onPress={handleSync}
               />
               <QuickActionButton
-                icon="trending"
-                label="Mercado"
-                onPress={() => router.push('/market')}
+                icon="share"
+                label={t('home.inviteFriends')}
+                onPress={() => Share.share({ message: 'Conheça o ZURT - inteligência patrimonial na palma da mão! https://zurt.com.br' })}
               />
             </View>
 
@@ -743,30 +759,21 @@ const createStyles = (colors: ThemeColors) =>
     // -- Header ---------------------------------------------------------------
     header: {
       paddingTop: spacing.lg,
-      paddingBottom: spacing.lg,
+      paddingBottom: spacing.md,
     },
     headerTopRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: spacing.md,
     },
-    headerBrand: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 9,
-    },
-    brandText: {
-      color: colors.text.primary,
-      fontWeight: '800',
-      fontSize: 17,
-      letterSpacing: 3.5,
+    greetingCol: {
+      flex: 1,
     },
     greeting: {
-      fontSize: 24,
+      fontSize: 22,
       fontWeight: '700',
       color: colors.text.primary,
-      lineHeight: 30,
+      lineHeight: 28,
     },
     headerActions: {
       flexDirection: 'row',
@@ -774,8 +781,8 @@ const createStyles = (colors: ThemeColors) =>
       gap: spacing.sm,
     },
     headerIconBtn: {
-      width: 40,
-      height: 40,
+      width: 38,
+      height: 38,
       borderRadius: radius.md,
       backgroundColor: colors.card,
       borderWidth: 1,
@@ -783,52 +790,35 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
+    avatarBadge: {
+      width: 38,
+      height: 38,
+      borderRadius: radius.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
     notifBadge: {
       position: 'absolute',
-      top: 9,
-      right: 10,
-      width: 7,
-      height: 7,
-      borderRadius: 3.5,
+      top: 8,
+      right: 8,
+      width: 8,
+      height: 8,
+      borderRadius: 4,
       backgroundColor: '#f87171',
       borderWidth: 2,
       borderColor: colors.card,
     },
 
-    // -- Market Ticker --------------------------------------------------------
-    tickerScroll: {
-      paddingHorizontal: spacing.xl,
-      gap: 8,
-      paddingVertical: 8,
-    },
-    tickerChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
+    // -- Hero Card (Patrimônio) -----------------------------------------------
+    heroCard: {
       backgroundColor: colors.card,
-      borderRadius: 10,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      gap: 6,
+      borderRadius: radius.lg,
       borderWidth: 1,
       borderColor: colors.border,
+      padding: spacing.lg,
+      marginBottom: spacing.lg,
     },
-    tickerLabel: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: colors.text.secondary,
-      letterSpacing: 0.5,
-    },
-    tickerValue: {
-      fontSize: 13,
-      fontWeight: '800',
-      color: colors.text.primary,
-    },
-    tickerChange: {
-      fontSize: 11,
-      fontWeight: '700',
-    },
-
-    // -- Hero Card ------------------------------------------------------------
     heroTop: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -838,9 +828,11 @@ const createStyles = (colors: ThemeColors) =>
       flex: 1,
     },
     heroLabel: {
-      fontSize: 13,
-      color: colors.text.secondary,
-      marginBottom: spacing.xs,
+      fontSize: 10,
+      fontWeight: '700',
+      color: colors.text.muted,
+      letterSpacing: 1.2,
+      marginBottom: spacing.sm,
     },
     heroValue: {
       fontSize: 30,
@@ -852,6 +844,23 @@ const createStyles = (colors: ThemeColors) =>
     heroBadgeRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      gap: spacing.sm,
+      flexWrap: 'wrap',
+    },
+    heroBadge: {
+      paddingHorizontal: spacing.sm + 2,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.sm,
+    },
+    heroBadgeText: {
+      fontSize: 12,
+      fontWeight: '700',
+      fontVariant: ['tabular-nums'],
+    },
+    heroMonthly: {
+      fontSize: 12,
+      color: colors.text.secondary,
+      fontVariant: ['tabular-nums'],
     },
     sparklineWrap: {
       marginLeft: spacing.md,
@@ -860,37 +869,87 @@ const createStyles = (colors: ThemeColors) =>
     heroDivider: {
       height: 1,
       backgroundColor: colors.border,
-      marginVertical: spacing.lg,
+      marginVertical: spacing.md,
     },
-    institutionRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
+    institutionScroll: {
       gap: spacing.sm,
     },
     institutionChip: {
-      flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: colors.elevated,
-      borderRadius: radius.full,
+      borderRadius: radius.md,
       paddingHorizontal: spacing.md,
-      paddingVertical: spacing.xs + 2,
-      gap: 6,
+      paddingVertical: spacing.sm,
+      gap: 4,
+      minWidth: 72,
     },
-    institutionDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
+    institutionIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
-    institutionName: {
-      fontSize: 12,
-      fontWeight: '500',
+    institutionInitials: {
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    institutionValue: {
+      fontSize: 11,
+      fontWeight: '600',
       color: colors.text.primary,
-      maxWidth: 80,
+      fontVariant: ['tabular-nums'],
     },
     institutionPct: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: colors.text.muted,
+      fontVariant: ['tabular-nums'],
+    },
+
+    // -- Market Ticker --------------------------------------------------------
+    tickerScroll: {
+      gap: spacing.sm,
+      marginBottom: spacing.lg,
+    },
+    tickerSkeletonRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginBottom: spacing.lg,
+    },
+    tickerSkeleton: {
+      width: 90,
+      height: 56,
+      borderRadius: radius.md,
+      backgroundColor: colors.card,
+    },
+    tickerChip: {
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      minWidth: 85,
+    },
+    tickerLabel: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: colors.text.muted,
+      letterSpacing: 0.5,
+      marginBottom: 2,
+    },
+    tickerValue: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.text.primary,
+      fontVariant: ['tabular-nums'],
+      marginBottom: 2,
+    },
+    tickerChange: {
       fontSize: 11,
       fontWeight: '700',
-      color: colors.text.secondary,
       fontVariant: ['tabular-nums'],
     },
 
