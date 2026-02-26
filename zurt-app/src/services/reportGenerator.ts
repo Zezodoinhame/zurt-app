@@ -112,7 +112,6 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
 
   const pageFooter = (page: number) => `
     <div class="page-footer">
-      <div class="footer-line"></div>
       <div class="footer-content">
         <span class="footer-brand">ZURT Wealth Intelligence</span>
         <span class="footer-confidential">Confidencial</span>
@@ -567,17 +566,24 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
     /* ===== COVER ===== */
     .cover {
       width: 210mm;
-      min-height: 297mm;
+      height: 297mm;
       display: flex;
       flex-direction: column;
-      justify-content: center;
       align-items: center;
       background: linear-gradient(170deg, #080D14 0%, #0C1422 30%, #0A1018 60%, #080D14 100%);
       page-break-after: always;
-      page-break-inside: avoid;
       text-align: center;
       position: relative;
       box-sizing: border-box;
+      padding: 60px 50px;
+      overflow: hidden;
+    }
+    .cover-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
     .cover-top-line, .cover-bottom-line {
       position: absolute;
@@ -678,18 +684,18 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
     /* ===== PAGE LAYOUT ===== */
     .page {
       width: 210mm;
-      min-height: 297mm;
-      padding: 28px 32px;
+      height: 297mm;
+      padding: 40px 50px;
       page-break-after: always;
-      page-break-inside: avoid;
       position: relative;
       background: #080D14;
       display: flex;
       flex-direction: column;
       box-sizing: border-box;
+      overflow: hidden;
     }
     .page:last-child { page-break-after: avoid; }
-    .page-content { flex: 1; }
+    .page-content { flex: 1; overflow: hidden; }
     .page-header {
       display: flex;
       justify-content: space-between;
@@ -722,12 +728,8 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
     .page-footer {
       margin-top: auto;
       flex-shrink: 0;
-      padding-top: 8px;
-    }
-    .footer-line {
-      height: 1px;
-      background: ${gold}20;
-      margin-bottom: 8px;
+      padding-top: 12px;
+      border-top: 1px solid #1F2937;
     }
     .footer-content {
       display: flex;

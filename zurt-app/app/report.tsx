@@ -112,7 +112,6 @@ function buildReportHTML(opts: {
 
   const pageFooter = (page: number) => `
     <div class="pf">
-      <div class="pf-line"></div>
       <div class="pf-row">
         <span class="pf-brand">ZURT Wealth Intelligence</span>
         <span class="pf-conf">Confidencial</span>
@@ -314,13 +313,18 @@ function buildReportHTML(opts: {
 
   /* ===== COVER ===== */
   .cover {
-    width: 210mm; min-height: 297mm;
+    width: 210mm; height: 297mm;
     background: linear-gradient(180deg, #0A0F1C 0%, #111827 50%, #0A0F1C 100%);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    display: flex; flex-direction: column; align-items: center;
     text-align: center; position: relative;
     page-break-after: always;
-    page-break-inside: avoid;
     box-sizing: border-box;
+    padding: 60px 50px;
+    overflow: hidden;
+  }
+  .cover-body {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; z-index: 1;
   }
   .cover-accent-top, .cover-accent-bottom {
     position: absolute; left: 50%; transform: translateX(-50%);
@@ -359,23 +363,23 @@ function buildReportHTML(opts: {
   }
   .cover-date { font-size: 12px; color: #94A3B8; }
   .cover-footer {
-    position: absolute; bottom: 28px; font-size: 9px; color: #4A5568; letter-spacing: 0.5px;
+    margin-top: auto; font-size: 9px; color: #4A5568; letter-spacing: 0.5px; z-index: 1;
   }
 
   /* ===== PAGE ===== */
   .page {
-    width: 210mm; min-height: 297mm;
-    padding: 28px 32px;
+    width: 210mm; height: 297mm;
+    padding: 40px 50px;
     page-break-after: always;
-    page-break-inside: avoid;
     position: relative;
     background: #0A0F1C;
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
+    overflow: hidden;
   }
   .page:last-child { page-break-after: avoid; }
-  .page-content { flex: 1; }
+  .page-content { flex: 1; overflow: hidden; }
   .ph {
     display: flex; justify-content: space-between; align-items: center;
     padding-bottom: 10px; margin-bottom: 18px; border-bottom: 1px solid #C9A84C30;
@@ -387,9 +391,9 @@ function buildReportHTML(opts: {
   .ph-type { font-style: italic; color: #C9A84C; }
   .pf {
     margin-top: auto; flex-shrink: 0;
-    padding-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid #1F2937;
   }
-  .pf-line { height: 1px; background: #C9A84C20; margin-bottom: 6px; }
   .pf-row { display: flex; justify-content: space-between; font-size: 8px; color: #64748B; }
   .pf-brand { color: #C9A84C80; letter-spacing: 1px; }
   .pf-conf { font-style: italic; }
