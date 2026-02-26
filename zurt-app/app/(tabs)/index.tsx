@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
-  Share,
   Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -164,17 +163,6 @@ export default function HomeScreen() {
       setIsSyncing(false);
     }
   }, [isSyncing, refresh]);
-
-  const handleInvite = useCallback(async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    try {
-      await Share.share({
-        message: 'Conheça o ZURT — inteligência patrimonial para investidores. https://zurt.com.br',
-      });
-    } catch {
-      // cancelled
-    }
-  }, []);
 
   // ---- Derived values -------------------------------------------------------
   const firstName = user?.name?.split(' ')[0] ?? '';
@@ -438,9 +426,9 @@ export default function HomeScreen() {
                 onPress={handleSync}
               />
               <QuickActionButton
-                icon="send"
-                label={t('home.inviteFriends')}
-                onPress={handleInvite}
+                icon="trending"
+                label="Mercado"
+                onPress={() => router.push('/market')}
               />
             </View>
 

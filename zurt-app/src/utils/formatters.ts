@@ -148,3 +148,30 @@ export function getUsageColor(pct: number): string {
   return '#2ED573';
 }
 
+/**
+ * Format large numbers with suffix: 27,6M, 416,4B, 1,2T
+ */
+export function formatCompactNumber(value: number): string {
+  const abs = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+  if (abs >= 1e12) return `${sign}${(abs / 1e12).toFixed(1).replace('.', ',')}T`;
+  if (abs >= 1e9) return `${sign}${(abs / 1e9).toFixed(1).replace('.', ',')}B`;
+  if (abs >= 1e6) return `${sign}${(abs / 1e6).toFixed(1).replace('.', ',')}M`;
+  if (abs >= 1e3) return `${sign}${(abs / 1e3).toFixed(1).replace('.', ',')}K`;
+  return `${sign}${abs.toFixed(0)}`;
+}
+
+/**
+ * Format market cap: R$ 416,4B
+ */
+export function formatMarketCap(value: number): string {
+  return `R$ ${formatCompactNumber(value)}`;
+}
+
+/**
+ * Format volume: 27,6M
+ */
+export function formatVolume(value: number): string {
+  return formatCompactNumber(value);
+}
+
