@@ -20,6 +20,7 @@ interface AssetCardProps {
   index: number;
   onPress?: (asset: Asset) => void;
   showInstitution?: boolean;
+  dailyChange?: number;
 }
 
 export function AssetCard({
@@ -27,6 +28,7 @@ export function AssetCard({
   index,
   onPress,
   showInstitution = true,
+  dailyChange,
 }: AssetCardProps) {
   const colors = useSettingsStore((s) => s.colors);
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -74,6 +76,16 @@ export function AssetCard({
           >
             {formatPct(asset.variation)}
           </Text>
+          {dailyChange !== undefined && (
+            <Text
+              style={[
+                styles.dailyChange,
+                { color: dailyChange >= 0 ? colors.positive : colors.negative },
+              ]}
+            >
+              Hoje {formatPct(dailyChange)}
+            </Text>
+          )}
         </View>
       </TouchableOpacity>
     </View>
@@ -139,5 +151,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
     fontVariant: ['tabular-nums'],
+  },
+  dailyChange: {
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 1,
+    fontVariant: ['tabular-nums'] as any,
   },
 });

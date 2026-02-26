@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchAIInsights, sendAIChat, isDemoMode } from '../services/api';
 import { useSettingsStore } from './settingsStore';
+import { useMarketStore } from './marketStore';
 import { logger } from '../utils/logger';
 
 const STORAGE_KEY = '@zurt:agent_messages';
@@ -32,6 +33,30 @@ interface AgentState {
 let _msgCounter = 0;
 function nextId() {
   return `msg_${Date.now()}_${++_msgCounter}`;
+}
+
+function buildMarketContext(): string {
+  const { ibovespa, currencies, selic, cryptos } = useMarketStore.getState();
+  const parts: string[] = [];
+
+  if (ibovespa) {
+    const chg = ibovespa.regularMarketChangePercent;
+    parts.push(`IBOV: ${ibovespa.regularMarketPrice?.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} (${chg >= 0 ? '+' : ''}${chg?.toFixed(2)}%)`);
+  }
+
+  const usd = currencies.find((c) => c.fromCurrency === 'USD');
+  if (usd) parts.push(`USD/BRL: R$ ${Number(usd.bidPrice).toFixed(2)}`);
+
+  const eur = currencies.find((c) => c.fromCurrency === 'EUR');
+  if (eur) parts.push(`EUR/BRL: R$ ${Number(eur.bidPrice).toFixed(2)}`);
+
+  if (selic.length > 0) parts.push(`SELIC: ${Number(selic[0].value).toFixed(2)}%`);
+
+  const btc = cryptos.find((c) => c.coin === 'BTC');
+  if (btc) parts.push(`BTC: R$ ${btc.regularMarketPrice?.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`);
+
+  if (parts.length === 0) return '';
+  return `[Dados de mercado atuais: ${parts.join(' | ')}]\n\n`;
 }
 
 async function persistMessages(messages: ChatMessage[]) {
@@ -127,8 +152,10 @@ export const useAgentStore = create<AgentState>((set, get) => ({
 
     try {
       const { language } = useSettingsStore.getState();
-      logger.log('[AGENT] sendMessage: calling sendAIChat, language:', language);
-      const data = await sendAIChat(message, conversationId ?? undefined, language);
+      const marketCtx = buildMarketContext();
+      const enrichedMessage = marketCtx ? `${marketCtx}${message}` : message;
+      logger.log('[AGENT] sendMessage: calling sendAIChat, language:', language, 'marketCtx:', marketCtx.length > 0);
+      const data = await sendAIChat(enrichedMessage, conversationId ?? undefined, language);
       logger.log('[AGENT] sendMessage: got response, length:', data?.message?.length);
       const aiMsg: ChatMessage = {
         id: nextId(),

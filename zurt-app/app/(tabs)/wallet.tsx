@@ -30,6 +30,7 @@ import { BankLogo } from '../../src/components/icons/BankLogo';
 import { logger } from '../../src/utils/logger';
 import { demoBenchmarks } from '../../src/data/demo';
 import type { BenchmarkData } from '../../src/services/benchmarks';
+import { brapiService } from '../../src/services/brapiService';
 
 // ---------------------------------------------------------------------------
 // Label Maps
@@ -91,6 +92,8 @@ const TOOL_CATEGORIES: ToolCategory[] = [
       { icon: 'rebalance', labelKey: 'tools.rebalance', route: '/rebalance', isTodo: true },
       { icon: 'crypto', labelKey: 'tools.crypto', route: '/crypto' },
       { icon: 'priceAlert', labelKey: 'tools.priceAlerts', route: '/price-alerts' },
+      { icon: 'trending', labelKey: 'tools.market', route: '/market' },
+      { icon: 'currency', labelKey: 'tools.exchange', route: '/market' },
     ],
   },
   {
@@ -165,6 +168,7 @@ export default function WalletScreen() {
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [sheetVisible, setSheetVisible] = useState(false);
   const [benchmarkPeriod, setBenchmarkPeriod] = useState<'1M' | '3M' | '6M' | '12M'>('1M');
+  const [dailyChanges, setDailyChanges] = useState<Record<string, number>>({});
 
   const summary = usePortfolioStore((s) => s.summary);
 
@@ -172,6 +176,31 @@ export default function WalletScreen() {
   useEffect(() => {
     loadPortfolio();
   }, []);
+
+  // Fetch BRAPI daily changes for portfolio tickers
+  useEffect(() => {
+    if (assets.length === 0) return;
+    const tickers = assets
+      .filter((a) => a.ticker && (a.class === 'stocks' || a.class === 'fiis'))
+      .map((a) => a.ticker);
+    if (tickers.length === 0) return;
+
+    const unique = [...new Set(tickers)];
+    brapiService
+      .getQuote(unique.slice(0, 20))
+      .then((quotes) => {
+        const map: Record<string, number> = {};
+        for (const q of quotes) {
+          if (q.symbol && q.regularMarketChangePercent != null) {
+            map[q.symbol] = q.regularMarketChangePercent;
+          }
+        }
+        setDailyChanges(map);
+      })
+      .catch(() => {
+        // silently fail — daily changes are optional enrichment
+      });
+  }, [assets]);
 
   // When allocations load, expand the first class group
   useEffect(() => {
@@ -381,6 +410,7 @@ export default function WalletScreen() {
                 index={index}
                 onPress={handleAssetPress}
                 showInstitution
+                dailyChange={dailyChanges[asset.ticker]}
               />
             ))}
         </View>
@@ -436,6 +466,7 @@ export default function WalletScreen() {
                 index={index}
                 onPress={handleAssetPress}
                 showInstitution={false}
+                dailyChange={dailyChanges[asset.ticker]}
               />
             ))}
         </View>

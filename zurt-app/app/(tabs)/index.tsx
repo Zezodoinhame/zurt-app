@@ -47,6 +47,7 @@ import {
 } from '../../src/utils/formatters';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { useNewsStore } from '../../src/stores/newsStore';
+import { useMarketStore } from '../../src/stores/marketStore';
 import { AppIcon } from '../../src/hooks/useIcon';
 
 // ---------------------------------------------------------------------------
@@ -120,6 +121,13 @@ export default function HomeScreen() {
   const { loadInitialInsights } = useAgentStore();
   const { articles: newsArticles, loadNews } = useNewsStore();
   const { getUnreadCount } = useNotificationStore();
+  const {
+    ibovespa,
+    currencies,
+    selic,
+    cryptos,
+    loadMarketOverview,
+  } = useMarketStore();
   const { t, currency } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
   const unreadCount = getUnreadCount();
@@ -137,6 +145,7 @@ export default function HomeScreen() {
     loadTransactions();
     loadInitialInsights();
     loadNews();
+    loadMarketOverview();
   }, []);
 
   // ---- Handlers -------------------------------------------------------------
@@ -217,6 +226,55 @@ export default function HomeScreen() {
     travel: 'Viagens',
     tech: 'Tecnologia',
   };
+
+  // ---- Market indicators for strip ------------------------------------------
+  const marketIndicators = useMemo(() => {
+    const items: { label: string; value: string; change?: number }[] = [];
+
+    if (ibovespa) {
+      items.push({
+        label: 'IBOV',
+        value: ibovespa.regularMarketPrice?.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) ?? '---',
+        change: ibovespa.regularMarketChangePercent,
+      });
+    }
+
+    const usd = currencies.find((c) => c.fromCurrency === 'USD');
+    if (usd) {
+      items.push({
+        label: 'USD/BRL',
+        value: `R$ ${Number(usd.bidPrice).toFixed(2).replace('.', ',')}`,
+        change: usd.regularMarketChangePercent,
+      });
+    }
+
+    const eur = currencies.find((c) => c.fromCurrency === 'EUR');
+    if (eur) {
+      items.push({
+        label: 'EUR/BRL',
+        value: `R$ ${Number(eur.bidPrice).toFixed(2).replace('.', ',')}`,
+        change: eur.regularMarketChangePercent,
+      });
+    }
+
+    const btc = cryptos.find((c) => c.coin === 'BTC');
+    if (btc) {
+      items.push({
+        label: 'BTC',
+        value: `R$ ${(btc.regularMarketPrice / 1000).toFixed(0)}K`,
+        change: btc.regularMarketChangePercent,
+      });
+    }
+
+    if (selic.length > 0) {
+      items.push({
+        label: 'SELIC',
+        value: `${Number(selic[0].value).toFixed(2).replace('.', ',')}%`,
+      });
+    }
+
+    return items;
+  }, [ibovespa, currencies, cryptos, selic]);
 
   // ---- Valid allocations (> 0) ----------------------------------------------
   const validAllocations = useMemo(
@@ -586,7 +644,46 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* 9. Not\u00EDcias do Mercado                                         */}
+            {/* 9. Market Indicators Strip                                  */}
+            {/* -------------------------------------------------------------- */}
+            {marketIndicators.length > 0 && (
+              <View style={styles.section}>
+                <SectionHeader
+                  title="Indicadores"
+                  onAction={() => router.push('/market')}
+                />
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.indicatorsScroll}
+                >
+                  {marketIndicators.map((item) => (
+                    <TouchableOpacity
+                      key={item.label}
+                      style={styles.indicatorCard}
+                      activeOpacity={0.7}
+                      onPress={() => router.push('/market')}
+                    >
+                      <Text style={styles.indicatorLabel}>{item.label}</Text>
+                      <Text style={styles.indicatorValue}>{item.value}</Text>
+                      {item.change !== undefined && (
+                        <Text
+                          style={[
+                            styles.indicatorChange,
+                            { color: item.change >= 0 ? colors.positive : colors.negative },
+                          ]}
+                        >
+                          {item.change >= 0 ? '+' : ''}{item.change.toFixed(2).replace('.', ',')}%
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* -------------------------------------------------------------- */}
+            {/* 10. Not\u00EDcias do Mercado                                        */}
             {/* -------------------------------------------------------------- */}
             {newsArticles.length > 0 && (
               <View style={styles.section}>
@@ -861,6 +958,39 @@ const createStyles = (colors: ThemeColors) =>
     txDivider: {
       height: 1,
       backgroundColor: colors.border,
+    },
+
+    // -- Indicators strip -----------------------------------------------------
+    indicatorsScroll: {
+      gap: spacing.sm,
+    },
+    indicatorCard: {
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      minWidth: 110,
+      alignItems: 'center',
+    },
+    indicatorLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: colors.text.muted,
+      marginBottom: spacing.xs,
+    },
+    indicatorValue: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.text.primary,
+      fontVariant: ['tabular-nums'] as any,
+    },
+    indicatorChange: {
+      fontSize: 11,
+      fontWeight: '700',
+      fontVariant: ['tabular-nums'] as any,
+      marginTop: 2,
     },
 
     // -- News section ---------------------------------------------------------
