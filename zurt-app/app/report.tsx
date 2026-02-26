@@ -370,12 +370,11 @@ function buildReportHTML(opts: {
 
   /* ===== PAGE ===== */
   .page {
-    padding: 40px 50px;
+    padding: 40px 50px 500px 50px;
     background: #0A0F1C;
     page-break-after: always;
     page-break-inside: avoid;
     box-sizing: border-box;
-    min-height: 100vh;
   }
   .page:last-child {
     page-break-after: auto;
