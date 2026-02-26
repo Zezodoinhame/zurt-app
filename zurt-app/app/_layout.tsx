@@ -195,10 +195,6 @@ export default function RootLayout() {
             options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
-            name="watchlist"
-            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-          />
-          <Stack.Screen
             name="news"
             options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
@@ -243,10 +239,6 @@ export default function RootLayout() {
             options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
-            name="recurring-investments"
-            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-          />
-          <Stack.Screen
             name="net-worth"
             options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
@@ -256,10 +248,6 @@ export default function RootLayout() {
           />
           <Stack.Screen
             name="retirement"
-            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-          />
-          <Stack.Screen
-            name="monte-carlo"
             options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
