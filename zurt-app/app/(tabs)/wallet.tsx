@@ -93,7 +93,6 @@ const TOOL_CATEGORIES: ToolCategory[] = [
       { icon: 'crypto', labelKey: 'tools.crypto', route: '/crypto' },
       { icon: 'priceAlert', labelKey: 'tools.priceAlerts', route: '/price-alerts' },
       { icon: 'trending', labelKey: 'tools.market', route: '/market' },
-      { icon: 'currency', labelKey: 'tools.exchange', route: '/market' },
     ],
   },
   {
@@ -731,7 +730,7 @@ export default function WalletScreen() {
                 <View style={styles.toolsGrid}>
                   {category.items.map((tool) => (
                     <TouchableOpacity
-                      key={tool.route}
+                      key={tool.labelKey}
                       style={[styles.toolCard, { width: toolCardWidth }]}
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const BRAPI_BASE = 'https://brapi.dev';
-const BRAPI_TOKEN = ''; // TODO: adicionar token em .env
+const BRAPI_TOKEN = 'oGyA32WeSm3GvWhsLjKHxX';
 
 const brapi = axios.create({
   baseURL: BRAPI_BASE,

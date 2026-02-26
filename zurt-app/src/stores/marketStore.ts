@@ -131,13 +131,26 @@ export const useMarketStore = create<MarketState>((set, get) => ({
   },
 
   loadMarketOverview: async () => {
-    const { loadWatchlist, loadIbovespa, loadCurrencies, loadCryptos } = get();
-    await Promise.allSettled([
-      loadWatchlist(),
-      loadIbovespa(),
-      loadCurrencies(),
-      loadCryptos(),
+    set({ loading: true, error: null });
+
+    const results = await Promise.allSettled([
+      brapiService.getQuote(['PETR4', 'VALE3', 'ITUB4', 'BBAS3', 'WEGE3', 'MGLU3'], { fundamental: true }),
+      brapiService.getQuote('^BVSP', { range: '1d' }),
+      brapiService.getCurrency('USD-BRL,EUR-BRL,GBP-BRL,BTC-BRL'),
+      brapiService.getCrypto('BTC,ETH,SOL,BNB,XRP', 'BRL'),
+      brapiService.getPrimeRate('brazil', { historical: true }),
+      brapiService.getInflation('brazil', { historical: true }),
     ]);
+
+    if (results[0].status === 'fulfilled') set({ watchlist: results[0].value || [] });
+    if (results[1].status === 'fulfilled') set({ ibovespa: results[1].value?.[0] || null });
+    if (results[2].status === 'fulfilled') set({ currencies: results[2].value || [] });
+    if (results[3].status === 'fulfilled') set({ cryptos: results[3].value || [] });
+    if (results[4].status === 'fulfilled') set({ selic: results[4].value || [] });
+    if (results[5].status === 'fulfilled') set({ inflation: results[5].value || [] });
+
+    set({ loading: false });
+    console.log('[Market] Overview loaded successfully');
   },
 
   addToWatchlist: (ticker: string) => {

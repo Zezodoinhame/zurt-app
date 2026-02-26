@@ -124,6 +124,7 @@ export default function HomeScreen() {
     ibovespa,
     currencies,
     cryptos,
+    selic,
     loadMarketOverview,
   } = useMarketStore();
   const { t, currency } = useSettingsStore();
@@ -323,34 +324,40 @@ export default function HomeScreen() {
         {/* Market Ticker — real BRAPI data                                  */}
         {/* ---------------------------------------------------------------- */}
         {(() => {
-          const usd = currencies?.find((c: any) => c.fromCurrency === 'USD' || c.name?.includes('Dólar'));
+          const usd = currencies?.find((c: any) => c.fromCurrency === 'USD' || c.name?.includes('Dólar') || c.name?.includes('Dollar'));
           const eur = currencies?.find((c: any) => c.fromCurrency === 'EUR' || c.name?.includes('Euro'));
           const btc = cryptos?.find((c: any) => c.coin === 'BTC');
+          const selicAtual = selic?.length > 0 ? selic[selic.length - 1] : null;
 
           const tickers = [
-            {
+            ibovespa?.regularMarketPrice ? {
               label: 'IBOV',
-              value: ibovespa?.regularMarketPrice ? Math.round(ibovespa.regularMarketPrice).toLocaleString('pt-BR') : '—',
-              change: ibovespa?.regularMarketChangePercent ?? 0,
-            },
-            {
+              value: Math.round(ibovespa.regularMarketPrice).toLocaleString('pt-BR'),
+              change: ibovespa.regularMarketChangePercent ?? 0,
+            } : null,
+            usd ? {
               label: 'USD',
-              value: usd?.bidPrice ? `R$ ${Number(usd.bidPrice).toFixed(2)}` : '—',
-              change: usd?.regularMarketChangePercent ?? 0,
-            },
-            {
+              value: `R$ ${Number(usd.bidPrice || 0).toFixed(2)}`,
+              change: Number(usd.regularMarketChangePercent || 0),
+            } : null,
+            eur ? {
               label: 'EUR',
-              value: eur?.bidPrice ? `R$ ${Number(eur.bidPrice).toFixed(2)}` : '—',
-              change: eur?.regularMarketChangePercent ?? 0,
-            },
-            {
+              value: `R$ ${Number(eur.bidPrice || 0).toFixed(2)}`,
+              change: Number(eur.regularMarketChangePercent || 0),
+            } : null,
+            btc ? {
               label: 'BTC',
-              value: btc?.regularMarketPrice ? `R$ ${(btc.regularMarketPrice / 1000).toFixed(1)}k` : '—',
-              change: btc?.regularMarketChangePercent ?? 0,
-            },
-          ];
+              value: `R$ ${(Number(btc.regularMarketPrice || 0) / 1000).toFixed(1)}k`,
+              change: btc.regularMarketChangePercent ?? 0,
+            } : null,
+            selicAtual ? {
+              label: 'SELIC',
+              value: `${Number(selicAtual.value).toFixed(2)}%`,
+              change: 0,
+            } : null,
+          ].filter(Boolean) as { label: string; value: string; change: number }[];
 
-          if (!ibovespa && !usd && !eur && !btc) return null;
+          if (tickers.length === 0) return null;
 
           return (
             <ScrollView
@@ -358,25 +365,28 @@ export default function HomeScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.tickerScroll}
             >
-              {tickers.map((tk) => {
+              {tickers.map((tk, index) => {
                 const isPositive = tk.change >= 0;
+                const isNeutral = tk.change === 0;
                 return (
                   <TouchableOpacity
-                    key={tk.label}
+                    key={`ticker-${tk.label}-${index}`}
                     onPress={() => router.push('/market')}
                     activeOpacity={0.7}
                     style={styles.tickerChip}
                   >
                     <Text style={styles.tickerLabel}>{tk.label}</Text>
                     <Text style={styles.tickerValue}>{tk.value}</Text>
-                    <Text
-                      style={[
-                        styles.tickerChange,
-                        { color: isPositive ? '#00E99B' : '#EF4444' },
-                      ]}
-                    >
-                      {isPositive ? '▲' : '▼'} {Math.abs(tk.change).toFixed(2)}%
-                    </Text>
+                    {!isNeutral && (
+                      <Text
+                        style={[
+                          styles.tickerChange,
+                          { color: isPositive ? '#00E99B' : '#EF4444' },
+                        ]}
+                      >
+                        {isPositive ? '▲' : '▼'} {Math.abs(tk.change).toFixed(2)}%
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 );
               })}
