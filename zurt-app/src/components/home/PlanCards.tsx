@@ -14,6 +14,7 @@ import Svg, {
   LinearGradient,
   Stop,
   Rect,
+  G,
   Ellipse,
 } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
@@ -130,6 +131,47 @@ const UnlimitedSvg = () => (
   </Svg>
 );
 
+// Enterprise — golden luxury with diamond geometry
+const EnterpriseSvg = () => (
+  <Svg width={CARD_WIDTH} height={CARD_HEIGHT} style={StyleSheet.absoluteFill}>
+    <Defs>
+      <LinearGradient id="bgEnterprise" x1="0" y1="0" x2="1" y2="1">
+        <Stop offset="0" stopColor="#3D2E0A" />
+        <Stop offset="1" stopColor="#1A1206" />
+      </LinearGradient>
+      <LinearGradient id="goldShine" x1="0" y1="0" x2="1" y2="1">
+        <Stop offset="0" stopColor="#F59E0B" stopOpacity={0.25} />
+        <Stop offset="0.5" stopColor="#FBBF24" stopOpacity={0.1} />
+        <Stop offset="1" stopColor="#F59E0B" stopOpacity={0} />
+      </LinearGradient>
+      <LinearGradient id="goldLine" x1="0" y1="0" x2="1" y2="0">
+        <Stop offset="0" stopColor="#F59E0B" stopOpacity={0} />
+        <Stop offset="0.5" stopColor="#FBBF24" stopOpacity={0.4} />
+        <Stop offset="1" stopColor="#F59E0B" stopOpacity={0} />
+      </LinearGradient>
+    </Defs>
+    <Rect width={CARD_WIDTH} height={CARD_HEIGHT} rx={20} fill="url(#bgEnterprise)" />
+    {/* Gold diamond shape top-right */}
+    <G opacity={0.15}>
+      <Path d={`M${CARD_WIDTH - 60},10 L${CARD_WIDTH - 30},40 L${CARD_WIDTH - 60},70 L${CARD_WIDTH - 90},40 Z`} stroke="#F59E0B" strokeWidth={1.2} fill="none" />
+      <Path d={`M${CARD_WIDTH - 60},20 L${CARD_WIDTH - 40},40 L${CARD_WIDTH - 60},60 L${CARD_WIDTH - 80},40 Z`} stroke="#FBBF24" strokeWidth={0.8} fill="none" />
+    </G>
+    {/* Subtle golden glow */}
+    <Ellipse cx={CARD_WIDTH * 0.65} cy={-15} rx={130} ry={75} fill="url(#goldShine)" />
+    {/* Horizontal gold lines */}
+    <Rect x={0} y={CARD_HEIGHT * 0.45} width={CARD_WIDTH} height={0.8} fill="url(#goldLine)" />
+    <Rect x={0} y={CARD_HEIGHT * 0.55} width={CARD_WIDTH} height={0.5} fill="url(#goldLine)" opacity={0.5} />
+    {/* Gold particles */}
+    <Circle cx={40} cy={25} r={1.5} fill="#FBBF24" opacity={0.5} />
+    <Circle cx={CARD_WIDTH * 0.5} cy={CARD_HEIGHT - 30} r={2} fill="#F59E0B" opacity={0.4} />
+    <Circle cx={CARD_WIDTH - 25} cy={CARD_HEIGHT - 45} r={1.2} fill="#FBBF24" opacity={0.35} />
+    <Circle cx={CARD_WIDTH * 0.25} cy={CARD_HEIGHT - 20} r={1.8} fill="#F59E0B" opacity={0.3} />
+    {/* Bottom-left corner accent */}
+    <Path d={`M0,${CARD_HEIGHT - 50} Q${CARD_WIDTH * 0.15},${CARD_HEIGHT - 30} 0,${CARD_HEIGHT - 10}`} stroke="#F59E0B" strokeWidth={1} opacity={0.12} fill="none" />
+    <Path d={`M10,${CARD_HEIGHT - 45} Q${CARD_WIDTH * 0.12},${CARD_HEIGHT - 28} 10,${CARD_HEIGHT - 10}`} stroke="#FBBF24" strokeWidth={0.6} opacity={0.08} fill="none" />
+  </Svg>
+);
+
 // ---------------------------------------------------------------------------
 // Plan card data (matches PLAN_INFO from planStore)
 // ---------------------------------------------------------------------------
@@ -162,6 +204,15 @@ const PLANS = [
     accentColor: '#A855F7',
     featuresKey: 'plans.features.unlimitedSummary',
     SvgBg: UnlimitedSvg,
+  },
+  {
+    id: 'enterprise' as const,
+    nameKey: 'plans.enterprise',
+    priceLabel: `R$ ${PLAN_INFO.find((p) => p.tier === 'enterprise')?.price.toFixed(2).replace('.', ',') ?? '499,90'}`,
+    periodKey: 'plans.perMonth',
+    accentColor: '#F59E0B',
+    featuresKey: 'plans.features.enterpriseSummary',
+    SvgBg: EnterpriseSvg,
   },
 ];
 
