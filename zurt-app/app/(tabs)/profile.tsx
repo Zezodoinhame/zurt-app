@@ -33,8 +33,9 @@ import { UserAvatar, AVATAR_CHARACTER_LIST, useAvatarState, type AvatarPresetId 
 import { AVATAR_ICON_MAP } from '../../src/components/ui/AvatarIcons';
 import { formatDate, formatCurrency } from '../../src/utils/formatters';
 import { changePassword, updateUserProfile } from '../../src/services/api';
-import { usePlanStore } from '../../src/stores/planStore';
+import { usePlanStore, type PlanTier } from '../../src/stores/planStore';
 import { UsageBadge } from '../../src/components/shared/UsageBadge';
+import { PLANS, PLAN_HIERARCHY, type PlanId } from '../../src/config/plans';
 import { AppIcon, type AppIconName } from '../../src/hooks/useIcon';
 import { BankLogo } from '../../src/components/icons/BankLogo';
 import * as ImagePicker from 'expo-image-picker';
@@ -592,6 +593,11 @@ export default function ProfileScreen() {
   const avatarState = useAvatarState();
   const { cards } = useCardsStore();
   const planTier = usePlanStore((s) => s.plan);
+  const isAdminUser = usePlanStore((s) => s.isAdmin());
+  const allOverrides = usePlanStore((s) => s.getAllOverrides());
+  const setPlanOverride = usePlanStore((s) => s.setPlanOverride);
+  const removePlanOverride = usePlanStore((s) => s.removePlanOverride);
+  const planUsage = usePlanStore((s) => s.usage);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [analyticsOptOut, setAnalyticsOptOutState] = useState(false);
 
@@ -616,6 +622,9 @@ export default function ProfileScreen() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showAddTesterModal, setShowAddTesterModal] = useState(false);
+  const [newTesterEmail, setNewTesterEmail] = useState('');
+  const [newTesterPlan, setNewTesterPlan] = useState<PlanTier>('pro');
 
   const currentLanguageLabel = languageOptions.find((l) => l.key === language)?.label ?? 'Português';
   const currentCurrencyLabel = currencyOptions.find((c) => c.key === currency)?.label ?? 'BRL (R$)';
@@ -814,6 +823,31 @@ export default function ProfileScreen() {
     },
     [updateUser]
   );
+
+  // -- Admin handlers -------------------------------------------------------
+  const handleAddTester = useCallback(async () => {
+    const email = newTesterEmail.trim().toLowerCase();
+    if (!email || !email.includes('@')) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    await setPlanOverride(email, newTesterPlan);
+    setNewTesterEmail('');
+    setNewTesterPlan('pro');
+    setShowAddTesterModal(false);
+  }, [newTesterEmail, newTesterPlan, setPlanOverride]);
+
+  const handleRemoveTester = useCallback(async (email: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert('Remover tester', `Remover override de ${email}?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Remover',
+        style: 'destructive',
+        onPress: async () => {
+          await removePlanOverride(email);
+        },
+      },
+    ]);
+  }, [removePlanOverride]);
 
   if (!user) return null;
 
@@ -1080,6 +1114,65 @@ export default function ProfileScreen() {
         </View>
       </Card>
 
+      {/* ── Admin Panel (visible only to admins) ── */}
+      {isAdminUser && (
+        <>
+          <SectionTitle title="Administracao" iconName="settings" />
+          <Card variant="elevated" delay={350}>
+            {/* Admin header */}
+            <View style={styles.adminHeader}>
+              <Text style={styles.adminTitle}>Gerenciar Testers</Text>
+              <View style={[styles.adminBadge, { backgroundColor: colors.warning + '20' }]}>
+                <Text style={[styles.adminBadgeText, { color: colors.warning }]}>ADMIN</Text>
+              </View>
+            </View>
+
+            {/* Override list */}
+            {Object.entries(allOverrides).map(([email, plan]) => {
+              const planConfig = PLANS[plan as PlanId];
+              const planColor = planConfig?.color || colors.accent;
+              const planName = planConfig?.name || plan;
+              return (
+                <View key={email} style={styles.testerRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.testerEmail} numberOfLines={1}>{email}</Text>
+                  </View>
+                  <View style={[styles.testerPlanBadge, { backgroundColor: planColor + '20', borderColor: planColor + '40' }]}>
+                    <Text style={[styles.testerPlanText, { color: planColor }]}>{planName}</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => handleRemoveTester(email)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={styles.testerRemove}
+                  >
+                    <AppIcon name="close" size={16} color={colors.negative} />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+
+            {/* Add tester button */}
+            <TouchableOpacity
+              style={styles.addTesterButton}
+              onPress={() => setShowAddTesterModal(true)}
+              activeOpacity={0.7}
+            >
+              <AppIcon name="add" size={16} color={colors.accent} />
+              <Text style={[styles.addTesterText, { color: colors.accent }]}>Adicionar tester</Text>
+            </TouchableOpacity>
+
+            {/* Current user usage */}
+            <View style={styles.tokenDivider} />
+            <Text style={styles.adminUsageTitle}>Seu uso hoje</Text>
+            <View style={styles.adminUsageRow}>
+              <Text style={styles.adminUsageItem}>IA: {planUsage.aiQueriesToday}</Text>
+              <Text style={styles.adminUsageItem}>Relatorios: {planUsage.reportsThisMonth}</Text>
+              <Text style={styles.adminUsageItem}>Conexoes: {planUsage.connectionsCount}</Text>
+            </View>
+          </Card>
+        </>
+      )}
+
       {/* Connected accounts */}
       <SectionTitle title={t('profile.connectedAccounts')} iconName="bank" />
       <View>
@@ -1215,6 +1308,76 @@ export default function ProfileScreen() {
         onClose={() => setShowHelpModal(false)}
         t={t}
       />
+
+      {/* Add Tester Modal */}
+      <Modal
+        visible={showAddTesterModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAddTesterModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowAddTesterModal(false)}
+        >
+          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+            <Text style={styles.modalTitle}>Adicionar Tester</Text>
+
+            <Text style={styles.inputLabel}>Email</Text>
+            <TextInput
+              style={styles.passwordInput}
+              value={newTesterEmail}
+              onChangeText={setNewTesterEmail}
+              placeholder="email@exemplo.com"
+              placeholderTextColor={colors.text.muted}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            <Text style={styles.inputLabel}>Plano</Text>
+            <View style={styles.adminPlanSelector}>
+              {(['basic', 'pro', 'unlimited', 'enterprise'] as PlanTier[]).map((planId) => {
+                const cfg = PLANS[planId as PlanId];
+                const isSelected = newTesterPlan === planId;
+                return (
+                  <TouchableOpacity
+                    key={planId}
+                    style={[
+                      styles.adminPlanOption,
+                      isSelected && { borderColor: cfg?.color || colors.accent, backgroundColor: (cfg?.color || colors.accent) + '15' },
+                    ]}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setNewTesterPlan(planId);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[
+                      styles.adminPlanOptionText,
+                      isSelected && { color: cfg?.color || colors.accent, fontWeight: '700' },
+                    ]}>
+                      {cfg?.name || planId}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <TouchableOpacity
+              style={[styles.saveButton, !newTesterEmail.includes('@') && styles.saveButtonDisabled]}
+              onPress={handleAddTester}
+              disabled={!newTesterEmail.includes('@')}
+            >
+              <Text style={styles.saveButtonText}>Salvar</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.modalClose} onPress={() => setShowAddTesterModal(false)}>
+              <Text style={styles.modalCloseText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </ScrollView>
   );
 }
@@ -1672,6 +1835,107 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontWeight: '700',
     marginTop: 3,
     textAlign: 'center',
+  },
+
+  // -- Admin styles --------------------------------------------------------
+  adminHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
+  },
+  adminTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text.primary,
+  },
+  adminBadge: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+  },
+  adminBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  testerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border + '50',
+    gap: spacing.sm,
+  },
+  testerEmail: {
+    fontSize: 13,
+    color: colors.text.primary,
+  },
+  testerPlanBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+  },
+  testerPlanText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  testerRemove: {
+    padding: spacing.xs,
+  },
+  addTesterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    borderStyle: 'dashed',
+    marginTop: spacing.sm,
+  },
+  addTesterText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  adminUsageTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing.sm,
+  },
+  adminUsageRow: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+  },
+  adminUsageItem: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text.secondary,
+  },
+  adminPlanSelector: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  adminPlanOption: {
+    flex: 1,
+    minWidth: '40%',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  adminPlanOptionText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.text.secondary,
   },
 
   // -- FAQ styles ----------------------------------------------------------

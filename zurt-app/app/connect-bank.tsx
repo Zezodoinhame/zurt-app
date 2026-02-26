@@ -207,6 +207,7 @@ export default function ConnectBankScreen() {
   const [syncingId, setSyncingId] = useState<string | null>(null);
 
   const checkLimit = usePlanStore((s) => s.checkLimit);
+  const incrementUsage = usePlanStore((s) => s.incrementUsage);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const completedRef = useRef(false);
@@ -272,6 +273,8 @@ export default function ConnectBankScreen() {
     try {
       await createConnection(itemId);
       await syncAllFinance();
+      // Track connection usage
+      incrementUsage('connections');
     } catch (err: any) {
       logger.log('[ConnectBank] createConnection/sync error:', err);
       Alert.alert(t('connect.connectionFailed'), err?.message ?? t('connect.somethingWentWrong'));
@@ -279,7 +282,7 @@ export default function ConnectBankScreen() {
       setScreenState('list');
       loadConnections();
     }
-  }, [loadConnections, t]);
+  }, [loadConnections, t, incrementUsage]);
 
   // ---------------------------------------------------------------------------
   // WebView message handler

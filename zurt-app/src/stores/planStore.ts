@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchSubscription, isDemoMode } from '../services/api';
 import { logger } from '../utils/logger';
+import { PLANS, PLAN_HIERARCHY, type PlanId, isAtLeastPlan, getPlanIndex } from '../config/plans';
 
 // =============================================================================
 // Types
@@ -38,6 +39,20 @@ export interface PlanUsage {
 }
 
 // =============================================================================
+// Admin overrides for controlled testing
+// =============================================================================
+
+const ADMIN_EMAILS = ['diego@damainvestimentos.com.br'];
+
+const DEFAULT_OVERRIDES: Record<string, PlanTier> = {
+  'diego@damainvestimentos.com.br': 'enterprise',
+  'marcelo@damainvestimentos.com.br': 'enterprise',
+  'andre@damainvestimentos.com.br': 'enterprise',
+};
+
+const OVERRIDES_STORAGE_KEY = '@zurt_plan_overrides';
+
+// =============================================================================
 // Plan limits configuration
 // =============================================================================
 
@@ -54,25 +69,25 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     canExportData: false,
   },
   basic: {
-    maxConnections: 3,
+    maxConnections: 2,
     maxAiQueriesPerDay: 10,
-    maxReportsPerMonth: 5,
-    maxAlerts: 10,
+    maxReportsPerMonth: 3,
+    maxAlerts: 3,
     canUseTools: true,
     canUseFamilyGroup: false,
     canExportData: false,
   },
   pro: {
-    maxConnections: 10,
-    maxAiQueriesPerDay: 50,
-    maxReportsPerMonth: UNLIMITED,
-    maxAlerts: UNLIMITED,
+    maxConnections: 5,
+    maxAiQueriesPerDay: 25,
+    maxReportsPerMonth: 5,
+    maxAlerts: 10,
     canUseTools: true,
     canUseFamilyGroup: true,
     canExportData: true,
   },
   unlimited: {
-    maxConnections: 99,
+    maxConnections: UNLIMITED,
     maxAiQueriesPerDay: UNLIMITED,
     maxReportsPerMonth: UNLIMITED,
     maxAlerts: UNLIMITED,
@@ -111,12 +126,12 @@ export interface PlanInfo {
 }
 
 export const PLAN_INFO: PlanInfo[] = [
-  { tier: 'free', price: 0, features: ['1 conexão', 'Dashboard básico', 'Cotações'] },
-  { tier: 'basic', price: 14.90, features: ['3 conexões', 'Relatórios mensais', 'Suporte email'] },
-  { tier: 'pro', price: 19.90, features: ['10 conexões', 'IA Financeira', 'Relatórios ilimitados', 'Alertas', 'Grupo familiar'] },
-  { tier: 'unlimited', price: 49.90, features: ['Conexões ilimitadas', 'Tudo do Pro'] },
-  { tier: 'consultant', price: 299.90, features: ['Área do cliente', 'Relatórios personalizados'] },
-  { tier: 'enterprise', price: 99.90, features: ['Acesso à API', 'Tudo ilimitado'] },
+  { tier: 'free', price: 0, features: ['1 conexao', 'Dashboard basico', 'Cotacoes'] },
+  { tier: 'basic', price: 14.90, features: ['2 conexoes', 'Relatorios mensais', '10 consultas IA/dia'] },
+  { tier: 'pro', price: 19.90, features: ['5 conexoes', 'IA Financeira', '5 relatorios/mes', 'Alertas', 'Exportacao'] },
+  { tier: 'unlimited', price: 49.90, features: ['Conexoes ilimitadas', 'IA ilimitada', 'Suporte prioritario'] },
+  { tier: 'consultant', price: 299.90, features: ['Area do cliente', 'Relatorios personalizados'] },
+  { tier: 'enterprise', price: 149.90, features: ['Tudo ilimitado', 'Reuniao mensal com consultor', 'Suporte VIP'] },
 ];
 
 // =============================================================================
@@ -177,13 +192,27 @@ interface PlanState {
   isLoading: boolean;
   _initialized: boolean;
 
-  loadSubscription: () => Promise<void>;
+  // Admin overrides
+  userEmail: string;
+  overrides: Record<string, PlanTier>;
+
+  loadSubscription: (userEmail?: string) => Promise<void>;
   checkLimit: (feature: LimitFeature) => boolean;
   incrementUsage: (feature: LimitFeature) => void;
   resetDailyUsage: () => void;
   setConnectionsCount: (count: number) => void;
   setAlertsCount: (count: number) => void;
   reset: () => void;
+
+  // Admin
+  isAdmin: () => boolean;
+  setPlanOverride: (email: string, plan: PlanTier) => Promise<void>;
+  removePlanOverride: (email: string) => Promise<void>;
+  getAllOverrides: () => Record<string, PlanTier>;
+
+  // Plan hierarchy
+  isAtLeast: (target: PlanTier) => boolean;
+  getUpgradePlan: () => PlanTier | null;
 }
 
 export const usePlanStore = create<PlanState>((set, get) => ({
@@ -198,9 +227,26 @@ export const usePlanStore = create<PlanState>((set, get) => ({
   isLoading: false,
   _initialized: false,
 
-  loadSubscription: async () => {
+  userEmail: '',
+  overrides: { ...DEFAULT_OVERRIDES },
+
+  loadSubscription: async (userEmail?: string) => {
     if (get()._initialized) return;
     set({ isLoading: true, _initialized: true });
+
+    const email = (userEmail || '').toLowerCase().trim();
+    if (email) set({ userEmail: email });
+
+    // Load saved overrides
+    try {
+      const savedOverrides = await AsyncStorage.getItem(OVERRIDES_STORAGE_KEY);
+      if (savedOverrides) {
+        const parsed = JSON.parse(savedOverrides);
+        set({ overrides: { ...DEFAULT_OVERRIDES, ...parsed } });
+      }
+    } catch {
+      // ignore
+    }
 
     // Restore persisted usage
     const savedUsage = await loadPersistedUsage();
@@ -211,12 +257,26 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     // Reset daily counters if needed
     get().resetDailyUsage();
 
-    // Demo mode → pro plan for full experience
+    // Demo mode -> pro plan for full experience
     if (isDemoMode()) {
       set({
         plan: 'pro',
         status: 'active',
         limits: PLAN_LIMITS.pro,
+        isLoading: false,
+      });
+      return;
+    }
+
+    // Check admin override first
+    const overrides = get().overrides;
+    if (email && overrides[email]) {
+      const overrideTier = overrides[email];
+      logger.log('[PLAN] Admin override:', email, '->', overrideTier);
+      set({
+        plan: overrideTier,
+        status: 'active',
+        limits: PLAN_LIMITS[overrideTier],
         isLoading: false,
       });
       return;
@@ -238,12 +298,10 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         });
         logger.log('[PLAN] Loaded subscription:', validTier, data.status ?? 'active');
       } else {
-        // No subscription data → free
         set({ plan: 'free', status: 'none', limits: PLAN_LIMITS.free, isLoading: false });
       }
     } catch (err: any) {
       logger.log('[PLAN] Error loading subscription:', err?.message);
-      // On error, default to free
       set({ plan: 'free', status: 'none', limits: PLAN_LIMITS.free, isLoading: false });
     }
   },
@@ -309,7 +367,6 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     const updated: PlanUsage = {
       ...usage,
       aiQueriesToday: 0,
-      // Reset monthly counters if month changed
       reportsThisMonth: resetMonth !== currentMonth ? 0 : usage.reportsThisMonth,
       lastResetDate: today,
     };
@@ -342,6 +399,50 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       usage: defaultUsage(),
       isLoading: false,
       _initialized: false,
+      userEmail: '',
     });
+  },
+
+  // =========================================================================
+  // Admin overrides
+  // =========================================================================
+
+  isAdmin: () => ADMIN_EMAILS.includes(get().userEmail),
+
+  setPlanOverride: async (email: string, plan: PlanTier) => {
+    const key = email.toLowerCase().trim();
+    const overrides = { ...get().overrides, [key]: plan };
+    await AsyncStorage.setItem(OVERRIDES_STORAGE_KEY, JSON.stringify(overrides));
+    set({ overrides });
+    logger.log('[PLAN] Override set:', key, '->', plan);
+  },
+
+  removePlanOverride: async (email: string) => {
+    const key = email.toLowerCase().trim();
+    const overrides = { ...get().overrides };
+    delete overrides[key];
+    await AsyncStorage.setItem(OVERRIDES_STORAGE_KEY, JSON.stringify(overrides));
+    set({ overrides });
+    logger.log('[PLAN] Override removed:', key);
+  },
+
+  getAllOverrides: () => get().overrides,
+
+  // =========================================================================
+  // Plan hierarchy
+  // =========================================================================
+
+  isAtLeast: (target: PlanTier) => {
+    const tierOrder: PlanTier[] = ['free', 'basic', 'pro', 'unlimited', 'consultant', 'enterprise'];
+    const currentIdx = tierOrder.indexOf(get().plan);
+    const targetIdx = tierOrder.indexOf(target);
+    return currentIdx >= targetIdx;
+  },
+
+  getUpgradePlan: () => {
+    const tierOrder: PlanTier[] = ['free', 'basic', 'pro', 'unlimited', 'enterprise'];
+    const currentIdx = tierOrder.indexOf(get().plan);
+    if (currentIdx < tierOrder.length - 1) return tierOrder[currentIdx + 1];
+    return null;
   },
 }));

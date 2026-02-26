@@ -157,6 +157,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
           isDemoMode: false,
           error: null,
         });
+        // Load subscription plan for this user
+        try {
+          const { usePlanStore } = require('./planStore');
+          usePlanStore.getState().loadSubscription(user.email);
+        } catch {}
         return true;
       } catch (err: any) {
         logger.log('[ZURT Auth] login() failed:', err?.message ?? err);
@@ -205,6 +210,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
           isDemoMode: false,
           error: null,
         });
+        // Load subscription plan for this user
+        try {
+          const { usePlanStore } = require('./planStore');
+          usePlanStore.getState().loadSubscription(user.email);
+        } catch {}
         return true;
       } catch (err: any) {
         const message =
@@ -247,6 +257,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
             isAuthenticated: true,
             isDemoMode: false,
           });
+          // Load subscription plan for this user
+          try {
+            const { usePlanStore } = require('./planStore');
+            usePlanStore.getState().loadSubscription(user.email);
+          } catch {}
           return true;
         }
         // No saved user — token is orphaned, clean up

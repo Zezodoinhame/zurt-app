@@ -1,317 +1,147 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
-  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 import { useSettingsStore } from '../src/stores/settingsStore';
+import { usePlanStore } from '../src/stores/planStore';
+import { PLANS, PLAN_LIST, type PlanId } from '../src/config/plans';
 import { type ThemeColors } from '../src/theme/colors';
 import { spacing, radius } from '../src/theme/spacing';
-import { AppIcon, type AppIconName } from '../src/hooks/useIcon';
-import { fetchPlans } from '../src/services/api';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const PLAN_STORAGE_KEY = '@zurt:selected_plan';
-
-type Period = 'monthly' | 'annual';
-
-interface PlanFeature {
-  icon: AppIconName;
-  label: string;
-}
-
-interface PlanTier {
-  id: string;
-  nameKey: string;
-  monthlyPrice: number;
-  annualPrice: number;
-  highlighted: boolean;
-  badgeKey?: string;
-  accentColor: string;
-  features: PlanFeature[];
-}
-
-const PLAN_TIERS: PlanTier[] = [
-  {
-    id: 'free',
-    nameKey: 'plans.free',
-    monthlyPrice: 0,
-    annualPrice: 0,
-    highlighted: false,
-    accentColor: '#64748B',
-    features: [
-      { icon: 'bank', label: '1 plans.features.institutions' },
-      { icon: 'chart', label: 'plans.features.dashboard' },
-      { icon: 'sparkle', label: '3 plans.features.aiChats' },
-    ],
-  },
-  {
-    id: 'basic',
-    nameKey: 'plans.basic',
-    monthlyPrice: 19.90,
-    annualPrice: 190.80,
-    highlighted: false,
-    accentColor: '#3A86FF',
-    features: [
-      { icon: 'bank', label: '3 plans.features.institutions' },
-      { icon: 'document', label: 'plans.features.reports' },
-      { icon: 'sparkle', label: '20 plans.features.aiChats' },
-    ],
-  },
-  {
-    id: 'pro',
-    nameKey: 'plans.pro',
-    monthlyPrice: 39.90,
-    annualPrice: 382.80,
-    highlighted: true,
-    badgeKey: 'plans.mostPopular',
-    accentColor: '#A855F7',
-    features: [
-      { icon: 'bank', label: 'plans.features.unlimited plans.features.institutions' },
-      { icon: 'family', label: 'plans.features.family' },
-      { icon: 'document', label: 'plans.features.pdf' },
-      { icon: 'sparkle', label: 'plans.features.unlimited plans.features.aiChats' },
-      { icon: 'bell', label: 'plans.features.priority' },
-    ],
-  },
-  {
-    id: 'unlimited',
-    nameKey: 'plans.unlimited',
-    monthlyPrice: 99.90,
-    annualPrice: 958.80,
-    highlighted: false,
-    accentColor: '#F59E0B',
-    features: [
-      { icon: 'bank', label: 'plans.features.unlimited plans.features.institutions' },
-      { icon: 'family', label: 'plans.features.family' },
-      { icon: 'document', label: 'plans.features.pdf' },
-      { icon: 'sparkle', label: 'plans.features.unlimited plans.features.aiChats' },
-      { icon: 'bell', label: 'plans.features.priority' },
-      { icon: 'person', label: 'plans.features.consultant' },
-      { icon: 'settings', label: 'plans.features.api' },
-    ],
-  },
-];
+import { AppIcon } from '../src/hooks/useIcon';
 
 export default function PlansScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
+  const currentPlan = usePlanStore((s) => s.plan);
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const [period, setPeriod] = useState<Period>('monthly');
-  const [loading, setLoading] = useState<string | null>(null);
-
-  // Try to fetch plans from backend (ignored if unavailable — uses local tiers)
-  useEffect(() => {
-    fetchPlans().catch(() => {});
-  }, []);
-
-  const formatPrice = useCallback((value: number) => {
-    if (value === 0) return 'R$ 0';
-    return `R$ ${value.toFixed(2).replace('.', ',')}`;
-  }, []);
-
-  const resolveFeatureLabel = useCallback((raw: string) => {
-    // Replace i18n keys with translations: "3 plans.features.aiChats" → "3 chats IA/mês"
-    return raw.split(' ').map((part) => {
-      if (part.startsWith('plans.features.')) return t(part);
-      return part;
-    }).join(' ');
-  }, [t]);
-
-  const handleSelectFree = useCallback(async () => {
-    setLoading('free');
-    try {
-      await AsyncStorage.setItem(PLAN_STORAGE_KEY, 'free');
-      router.replace('/(auth)/login');
-    } finally {
-      setLoading(null);
-    }
+  const handleBack = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)');
   }, [router]);
 
-  const handleSelectPaid = useCallback(async (planId: string) => {
-    setLoading(planId);
-    try {
-      await WebBrowser.openBrowserAsync(
-        `https://zurt.com.br/api/stripe/checkout?plan=${planId}&period=${period}`
-      );
-      await AsyncStorage.setItem(PLAN_STORAGE_KEY, planId);
-      router.replace('/(auth)/login');
-    } catch {
-      // user closed browser
-    } finally {
-      setLoading(null);
-    }
-  }, [period, router]);
-
   const handleSelect = useCallback((planId: string) => {
-    if (planId === 'free') {
-      handleSelectFree();
-    } else {
-      handleSelectPaid(planId);
-    }
-  }, [handleSelectFree, handleSelectPaid]);
-
-  const renderPlanCard = useCallback((tier: PlanTier) => {
-    const price = period === 'monthly' ? tier.monthlyPrice : tier.annualPrice;
-    const periodKey = period === 'monthly' ? 'plans.perMonth' : 'plans.perYear';
-    const isLoading = loading === tier.id;
-
-    return (
-      <View
-        key={tier.id}
-        style={[
-          styles.planCard,
-          tier.highlighted && { borderColor: tier.accentColor, borderWidth: 2 },
-        ]}
-      >
-        {/* Badge */}
-        {tier.badgeKey && (
-          <View style={[styles.badge, { backgroundColor: tier.accentColor }]}>
-            <Text style={styles.badgeText}>{t(tier.badgeKey)}</Text>
-          </View>
-        )}
-
-        {/* Plan name + price */}
-        <Text style={[styles.planName, { color: tier.accentColor }]}>
-          {t(tier.nameKey)}
-        </Text>
-
-        <View style={styles.priceRow}>
-          <Text style={styles.priceValue}>{formatPrice(price)}</Text>
-          {price > 0 && (
-            <Text style={styles.pricePeriod}>{t(periodKey)}</Text>
-          )}
-        </View>
-
-        {/* Features */}
-        <View style={styles.featuresList}>
-          {tier.features.map((feature, idx) => (
-            <View key={idx} style={styles.featureRow}>
-              <AppIcon name={feature.icon} size={16} color={tier.accentColor} />
-              <Text style={styles.featureText}>
-                {resolveFeatureLabel(feature.label)}
-              </Text>
-            </View>
-          ))}
-        </View>
-
-        {/* CTA button */}
-        <TouchableOpacity
-          style={[
-            styles.ctaButton,
-            tier.id === 'free'
-              ? { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }
-              : { backgroundColor: tier.accentColor },
-          ]}
-          onPress={() => handleSelect(tier.id)}
-          activeOpacity={0.8}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator
-              size="small"
-              color={tier.id === 'free' ? colors.text.primary : colors.background}
-            />
-          ) : (
-            <Text
-              style={[
-                styles.ctaText,
-                tier.id === 'free'
-                  ? { color: colors.text.primary }
-                  : { color: colors.background },
-              ]}
-            >
-              {tier.id === 'free' ? t('plans.startFree') : t('plans.subscribe')}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    );
-  }, [period, loading, colors, t, formatPrice, resolveFeatureLabel, handleSelect, styles]);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // In production, this would open Stripe checkout
+    // For now, just log the selection
+    console.log('[Plans] Selected:', planId);
+  }, []);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={handleBack}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <AppIcon name="back" size={24} color={colors.text.primary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t('plans.title')}</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 80 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>{t('plans.title')}</Text>
-          <Text style={styles.subtitle}>{t('plans.subtitle')}</Text>
-        </View>
-
-        {/* Period Toggle */}
-        <View style={styles.toggleContainer}>
-          <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              period === 'monthly' && styles.toggleActive,
-            ]}
-            onPress={() => setPeriod('monthly')}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.toggleText,
-                period === 'monthly' && styles.toggleTextActive,
-              ]}
-            >
-              {t('plans.monthly')}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              period === 'annual' && styles.toggleActive,
-            ]}
-            onPress={() => setPeriod('annual')}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.toggleText,
-                period === 'annual' && styles.toggleTextActive,
-              ]}
-            >
-              {t('plans.annual')}
-            </Text>
-            <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>{t('plans.annualDiscount')}</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
+        {/* Subtitle */}
+        <Text style={styles.subtitle}>{t('plans.subtitle')}</Text>
 
         {/* Plan Cards */}
-        {PLAN_TIERS.map(renderPlanCard)}
+        {PLAN_LIST.map((plan) => {
+          const isCurrent = currentPlan === plan.id;
+          const hasBadge = plan.badge !== null;
 
-        {/* Cancel anytime note */}
+          return (
+            <View
+              key={plan.id}
+              style={[
+                styles.planCard,
+                { borderColor: isCurrent ? plan.color : colors.border },
+                isCurrent && { borderWidth: 2 },
+              ]}
+            >
+              {/* Badge row */}
+              <View style={styles.badgeRow}>
+                {hasBadge && (
+                  <View style={[styles.badge, { backgroundColor: plan.color }]}>
+                    <Text style={styles.badgeText}>{plan.badge}</Text>
+                  </View>
+                )}
+                {isCurrent && (
+                  <View style={[styles.badge, { backgroundColor: colors.positive }]}>
+                    <Text style={styles.badgeText}>ATUAL</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Icon + Name */}
+              <View style={styles.planNameRow}>
+                <Text style={styles.planIcon}>{plan.icon}</Text>
+                <Text style={[styles.planName, { color: plan.color }]}>
+                  {plan.name}
+                </Text>
+              </View>
+
+              {/* Price */}
+              <View style={styles.priceRow}>
+                <Text style={styles.priceValue}>{plan.priceLabel}</Text>
+              </View>
+
+              {/* Description */}
+              <Text style={styles.planDescription}>{plan.description}</Text>
+
+              {/* Highlights */}
+              <View style={styles.highlightsList}>
+                {plan.highlights.map((highlight, idx) => (
+                  <View key={idx} style={styles.highlightRow}>
+                    <AppIcon name="check" size={16} color={plan.color} />
+                    <Text style={styles.highlightText}>{highlight}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* CTA */}
+              <TouchableOpacity
+                style={[
+                  styles.ctaButton,
+                  isCurrent
+                    ? { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }
+                    : { backgroundColor: plan.color },
+                ]}
+                onPress={() => handleSelect(plan.id)}
+                activeOpacity={0.8}
+                disabled={isCurrent}
+              >
+                <Text
+                  style={[
+                    styles.ctaText,
+                    isCurrent
+                      ? { color: colors.text.muted }
+                      : { color: '#FFFFFF' },
+                  ]}
+                >
+                  {isCurrent ? t('plans.currentPlan') : t('plans.subscribe')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })}
+
+        {/* Cancel note */}
         <Text style={styles.cancelNote}>{t('plans.cancelAnytime')}</Text>
       </ScrollView>
-
-      {/* Fixed bottom: Continue free */}
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.md }]}>
-        <TouchableOpacity
-          style={styles.bottomFreeButton}
-          onPress={handleSelectFree}
-          activeOpacity={0.7}
-          disabled={loading !== null}
-        >
-          <Text style={styles.bottomFreeText}>{t('plans.startFree')}</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -322,65 +152,29 @@ const createStyles = (colors: ThemeColors) =>
       flex: 1,
       backgroundColor: colors.background,
     },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.lg,
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text.primary,
+    },
     scrollContent: {
       paddingHorizontal: spacing.xl,
-    },
-    header: {
-      alignItems: 'center',
-      marginTop: spacing.xxl,
-      marginBottom: spacing.xxl,
-    },
-    title: {
-      fontSize: 28,
-      fontWeight: '800',
-      color: colors.text.primary,
-      textAlign: 'center',
-      marginBottom: spacing.sm,
     },
     subtitle: {
       fontSize: 15,
       color: colors.text.secondary,
       textAlign: 'center',
-    },
-    // Toggle
-    toggleContainer: {
-      flexDirection: 'row',
-      backgroundColor: colors.card,
-      borderRadius: radius.md,
-      padding: spacing.xs,
       marginBottom: spacing.xxl,
+      lineHeight: 22,
     },
-    toggleButton: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: spacing.md,
-      borderRadius: radius.sm,
-      gap: spacing.xs,
-    },
-    toggleActive: {
-      backgroundColor: colors.elevated,
-    },
-    toggleText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.text.muted,
-    },
-    toggleTextActive: {
-      color: colors.text.primary,
-    },
-    discountBadge: {
-      backgroundColor: '#00D4AA20',
-      paddingHorizontal: spacing.sm,
-      paddingVertical: 2,
-      borderRadius: radius.sm,
-    },
-    discountText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: '#00D4AA',
-    },
+
     // Plan Card
     planCard: {
       backgroundColor: colors.card,
@@ -390,53 +184,68 @@ const createStyles = (colors: ThemeColors) =>
       borderWidth: 1,
       borderColor: colors.border,
     },
+    badgeRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+      flexWrap: 'wrap',
+    },
     badge: {
-      alignSelf: 'flex-start',
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.xs,
       borderRadius: radius.full,
-      marginBottom: spacing.md,
     },
     badgeText: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '700',
       color: '#FFFFFF',
+      letterSpacing: 0.5,
     },
-    planName: {
-      fontSize: 20,
-      fontWeight: '800',
+    planNameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
       marginBottom: spacing.sm,
     },
+    planIcon: {
+      fontSize: 22,
+    },
+    planName: {
+      fontSize: 22,
+      fontWeight: '800',
+    },
     priceRow: {
-      flexDirection: 'row',
-      alignItems: 'baseline',
-      marginBottom: spacing.lg,
+      marginBottom: spacing.sm,
     },
     priceValue: {
-      fontSize: 32,
+      fontSize: 28,
       fontWeight: '800',
       color: colors.text.primary,
     },
-    pricePeriod: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: colors.text.muted,
-      marginLeft: spacing.xs,
+    planDescription: {
+      fontSize: 13,
+      color: colors.text.secondary,
+      marginBottom: spacing.lg,
+      lineHeight: 18,
     },
-    featuresList: {
+
+    // Highlights
+    highlightsList: {
       gap: spacing.md,
       marginBottom: spacing.xl,
     },
-    featureRow: {
+    highlightRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.md,
     },
-    featureText: {
+    highlightText: {
       fontSize: 14,
       color: colors.text.secondary,
       flex: 1,
     },
+
+    // CTA
     ctaButton: {
       paddingVertical: spacing.lg,
       borderRadius: radius.md,
@@ -447,33 +256,12 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 16,
       fontWeight: '700',
     },
+
     cancelNote: {
       fontSize: 13,
       color: colors.text.muted,
       textAlign: 'center',
       marginTop: spacing.sm,
       marginBottom: spacing.xxl,
-    },
-    // Bottom bar
-    bottomBar: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      backgroundColor: colors.background,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-      paddingTop: spacing.md,
-      paddingHorizontal: spacing.xl,
-    },
-    bottomFreeButton: {
-      alignItems: 'center',
-      paddingVertical: spacing.md,
-    },
-    bottomFreeText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.accent,
-      textDecorationLine: 'underline',
     },
   });

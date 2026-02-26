@@ -26,6 +26,9 @@ import { useCardsStore } from '../src/stores/cardsStore';
 import { useAgentStore } from '../src/stores/agentStore';
 import { useAuthStore } from '../src/stores/authStore';
 import { generateReportApi } from '../src/services/api';
+import { usePlanStore } from '../src/stores/planStore';
+import { UpgradeModal } from '../src/components/shared/UpgradeGate';
+import { UsageBadge } from '../src/components/shared/UsageBadge';
 import { AppIcon } from '../src/hooks/useIcon';
 import { logger } from '../src/utils/logger';
 
@@ -534,6 +537,9 @@ export default function ReportScreen() {
 
   const [selectedPeriod, setSelectedPeriod] = useState('1m');
   const [generating, setGenerating] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const checkLimit = usePlanStore((s) => s.checkLimit);
+  const incrementUsage = usePlanStore((s) => s.incrementUsage);
 
   // Pulsing animation for loading text
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -576,6 +582,12 @@ export default function ReportScreen() {
   );
 
   const handleGenerate = useCallback(async () => {
+    // Check plan limit before generating
+    if (!checkLimit('reports')) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     setGenerating(true);
     try {
       logger.log('[Report] Collecting data from stores...');
@@ -650,6 +662,9 @@ export default function ReportScreen() {
         dialogTitle: fileName,
         UTI: 'com.adobe.pdf',
       });
+
+      // Track usage
+      incrementUsage('reports');
     } catch (error: any) {
       logger.log('[Report] Error generating PDF:', error?.message ?? error);
       Alert.alert(
@@ -741,6 +756,11 @@ export default function ReportScreen() {
           </View>
         </View>
 
+        {/* Usage badge */}
+        <View style={{ alignItems: 'flex-start', marginBottom: spacing.lg }}>
+          <UsageBadge feature="reports" />
+        </View>
+
         <TouchableOpacity style={styles.generateButton} onPress={handleGenerate} activeOpacity={0.8}>
           <AppIcon name="report" size={20} color={colors.background} />
           <Text style={styles.generateButtonText}>{t('report.generate')}</Text>
@@ -748,6 +768,12 @@ export default function ReportScreen() {
 
         <View style={{ height: insets.bottom + 40 }} />
       </ScrollView>
+
+      <UpgradeModal
+        feature="reports"
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+      />
     </View>
   );
 }
