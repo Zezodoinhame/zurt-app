@@ -577,6 +577,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
       page-break-inside: avoid;
       text-align: center;
       position: relative;
+      box-sizing: border-box;
     }
     .cover-top-line, .cover-bottom-line {
       position: absolute;
@@ -685,8 +686,9 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
       background: #080D14;
       display: flex;
       flex-direction: column;
+      box-sizing: border-box;
     }
-    .page:last-child { page-break-after: auto; }
+    .page:last-child { page-break-after: avoid; }
     .page-content { flex: 1; }
     .page-header {
       display: flex;
@@ -1072,14 +1074,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
   </style>
 </head>
 <body>
-  ${coverHTML}
-  ${execSummaryHTML}
-  ${portfolioHTML}
-  ${institutionsHTML}
-  ${transactionsHTML}
-  ${insightsHTML}
-  ${disclaimerHTML}
-</body>
+${coverHTML}${execSummaryHTML}${portfolioHTML}${institutionsHTML}${transactionsHTML}${insightsHTML}${disclaimerHTML}</body>
 </html>`;
 }
 
@@ -1098,7 +1093,6 @@ export async function generatePatrimonialReport(
     html,
     width: 595,
     height: 842,
-    margins: { top: 0, bottom: 0, left: 0, right: 0 },
   });
   await Sharing.shareAsync(uri, {
     mimeType: 'application/pdf',

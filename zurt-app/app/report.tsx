@@ -320,6 +320,7 @@ function buildReportHTML(opts: {
     text-align: center; position: relative;
     page-break-after: always;
     page-break-inside: avoid;
+    box-sizing: border-box;
   }
   .cover-accent-top, .cover-accent-bottom {
     position: absolute; left: 50%; transform: translateX(-50%);
@@ -371,8 +372,9 @@ function buildReportHTML(opts: {
     background: #0A0F1C;
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
   }
-  .page:last-child { page-break-after: auto; }
+  .page:last-child { page-break-after: avoid; }
   .page-content { flex: 1; }
   .ph {
     display: flex; justify-content: space-between; align-items: center;
@@ -511,13 +513,7 @@ function buildReportHTML(opts: {
   .gold { color: #C9A84C; }
 </style>
 </head>
-<body>
-  ${coverHTML}
-  ${summaryHTML}
-  ${cardsHTML}
-  ${transactionsHTML}
-  ${aiDisclaimerHTML}
-</body>
+<body>${coverHTML}${summaryHTML}${cardsHTML}${transactionsHTML}${aiDisclaimerHTML}</body>
 </html>`;
 }
 
@@ -641,7 +637,6 @@ export default function ReportScreen() {
       const { uri } = await Print.printToFileAsync({
         html,
         base64: false,
-        margins: { top: 0, bottom: 0, left: 0, right: 0 },
       });
       logger.log('[Report] PDF created at:', uri);
 
