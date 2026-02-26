@@ -567,7 +567,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
     /* ===== COVER ===== */
     .cover {
       width: 210mm;
-      height: 297mm;
+      min-height: 297mm;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -577,7 +577,6 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
       page-break-inside: avoid;
       text-align: center;
       position: relative;
-      overflow: hidden;
     }
     .cover-top-line, .cover-bottom-line {
       position: absolute;
@@ -678,7 +677,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
     /* ===== PAGE LAYOUT ===== */
     .page {
       width: 210mm;
-      height: 297mm;
+      min-height: 297mm;
       padding: 28px 32px;
       page-break-after: always;
       page-break-inside: avoid;
@@ -686,7 +685,6 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
       background: #080D14;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
     }
     .page:last-child { page-break-after: auto; }
     .page-content { flex: 1; }

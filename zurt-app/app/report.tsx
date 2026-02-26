@@ -314,13 +314,12 @@ function buildReportHTML(opts: {
 
   /* ===== COVER ===== */
   .cover {
-    width: 210mm; height: 297mm;
+    width: 210mm; min-height: 297mm;
     background: linear-gradient(180deg, #0A0F1C 0%, #111827 50%, #0A0F1C 100%);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     text-align: center; position: relative;
     page-break-after: always;
     page-break-inside: avoid;
-    overflow: hidden;
   }
   .cover-accent-top, .cover-accent-bottom {
     position: absolute; left: 50%; transform: translateX(-50%);
@@ -364,7 +363,7 @@ function buildReportHTML(opts: {
 
   /* ===== PAGE ===== */
   .page {
-    width: 210mm; height: 297mm;
+    width: 210mm; min-height: 297mm;
     padding: 28px 32px;
     page-break-after: always;
     page-break-inside: avoid;
@@ -372,7 +371,6 @@ function buildReportHTML(opts: {
     background: #0A0F1C;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
   }
   .page:last-child { page-break-after: auto; }
   .page-content { flex: 1; }
