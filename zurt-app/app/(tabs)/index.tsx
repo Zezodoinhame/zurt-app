@@ -19,7 +19,6 @@ import { spacing, radius } from '../../src/theme/spacing';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePortfolioStore } from '../../src/stores/portfolioStore';
 import { useGoalsStore } from '../../src/stores/goalsStore';
-import { useCardsStore } from '../../src/stores/cardsStore';
 import { useAgentStore } from '../../src/stores/agentStore';
 import { syncAllFinance } from '../../src/services/api';
 
@@ -32,9 +31,7 @@ import {
 import { ErrorState } from '../../src/components/shared/ErrorState';
 import { SectionHeader } from '../../src/components/shared/SectionHeader';
 import { InsightCard } from '../../src/components/shared/InsightCard';
-import { TransactionRow } from '../../src/components/shared/TransactionRow';
 import { GoalCard } from '../../src/components/shared/GoalCard';
-import { AllocationBar } from '../../src/components/shared/AllocationBar';
 import PlanCards from '../../src/components/home/PlanCards';
 
 import {
@@ -129,10 +126,16 @@ export default function HomeScreen() {
     loadBenchmarks,
   } = usePortfolioStore();
   const { goals, loadGoals } = useGoalsStore();
-  const { cards, dashboardTransactions, loadTransactions } = useCardsStore();
   const { loadInitialInsights } = useAgentStore();
   const { articles: newsArticles, loadNews } = useNewsStore();
-  const { loadMarketOverview } = useMarketStore();
+  const {
+    ibovespa,
+    usdBrl,
+    eurBrl,
+    btcBrl,
+    isLoading: marketLoading,
+    loadMarketOverview,
+  } = useMarketStore();
   const { t, currency } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
 
@@ -146,7 +149,6 @@ export default function HomeScreen() {
     loadPortfolio();
     loadGoals();
     loadBenchmarks();
-    loadTransactions();
     loadInitialInsights();
     loadNews();
     loadMarketOverview();
@@ -221,32 +223,53 @@ export default function HomeScreen() {
     info: 'info',
   };
 
-  // ---- Transaction category label map ---------------------------------------
-  const categoryLabelMap: Record<string, string> = {
-    food: 'Alimentação',
-    transport: 'Transporte',
-    subscriptions: 'Assinaturas',
-    shopping: 'Compras',
-    fuel: 'Combustível',
-    health: 'Saúde',
-    travel: 'Viagens',
-    tech: 'Tecnologia',
-  };
-
   // ---- Valid allocations (> 0) ----------------------------------------------
   const validAllocations = useMemo(
     () => allocations.filter((a) => a.value > 0),
     [allocations],
   );
 
-  // ---- Transactions (last 4) ------------------------------------------------
-  const recentTransactions = useMemo(
-    () => dashboardTransactions.slice(0, 4),
-    [dashboardTransactions],
-  );
-
-  // ---- Top 2 cards ----------------------------------------------------------
-  const topCards = useMemo(() => cards.slice(0, 2), [cards]);
+  // ---- Market preview items --------------------------------------------------
+  const marketPreview = useMemo(() => {
+    const items: { ticker: string; name: string; price: number; change: number; isCurrency: boolean }[] = [];
+    if (ibovespa) {
+      items.push({
+        ticker: 'IBOV',
+        name: 'Ibovespa',
+        price: Number(ibovespa.regularMarketPrice || 0),
+        change: Number(ibovespa.regularMarketChangePercent || 0),
+        isCurrency: false,
+      });
+    }
+    if (usdBrl) {
+      items.push({
+        ticker: 'USD/BRL',
+        name: 'Dólar',
+        price: Number(usdBrl.bidPrice || 0),
+        change: Number(usdBrl.regularMarketChangePercent || 0),
+        isCurrency: true,
+      });
+    }
+    if (eurBrl) {
+      items.push({
+        ticker: 'EUR/BRL',
+        name: 'Euro',
+        price: Number(eurBrl.bidPrice || 0),
+        change: Number(eurBrl.regularMarketChangePercent || 0),
+        isCurrency: true,
+      });
+    }
+    if (btcBrl) {
+      items.push({
+        ticker: 'BTC',
+        name: 'Bitcoin',
+        price: Number(btcBrl.regularMarketPrice || 0),
+        change: Number(btcBrl.regularMarketChangePercent || 0),
+        isCurrency: true,
+      });
+    }
+    return items;
+  }, [ibovespa, usdBrl, eurBrl, btcBrl]);
 
   // =========================================================================
   // Render
@@ -489,22 +512,7 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* 5. Alocação                                                    */}
-            {/* -------------------------------------------------------------- */}
-            {validAllocations.length > 0 && (
-              <View style={styles.section}>
-                <SectionHeader title={t('home.allocation')} />
-                <Card animated={false}>
-                  <AllocationBar
-                    allocations={validAllocations}
-                    valuesHidden={valuesHidden}
-                  />
-                </Card>
-              </View>
-            )}
-
-            {/* -------------------------------------------------------------- */}
-            {/* 6. Metas \u2014 horizontal scroll                                   */}
+            {/* 5. Metas \u2014 horizontal scroll                                   */}
             {/* -------------------------------------------------------------- */}
             {goals.length > 0 && (
               <View style={styles.section}>
@@ -542,86 +550,146 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* 7. Cartões \u2014 2 side by side                                    */}
+            {/* 6. Meu Patrimônio                                              */}
             {/* -------------------------------------------------------------- */}
-            {topCards.length > 0 && (
-              <View style={styles.section}>
-                <SectionHeader
-                  title={t('home.cards')}
-                  onAction={() => router.push('/(tabs)/cards')}
-                />
-                <View style={styles.cardsRow}>
-                  {topCards.map((card) => {
-                    const usage = card.limit > 0 ? card.used / card.limit : 0;
-                    const usageColor =
-                      usage > 0.8 ? colors.negative : usage > 0.5 ? colors.warning : colors.accent;
-                    return (
-                      <TouchableOpacity
-                        key={card.id}
-                        style={styles.miniCard}
-                        activeOpacity={0.7}
-                        onPress={() => router.push('/(tabs)/cards')}
-                      >
-                        <View style={[styles.miniCardStripe, { backgroundColor: card.color }]} />
-                        <Text style={styles.miniCardName} numberOfLines={1}>
-                          {card.name}
-                        </Text>
-                        <Text style={styles.miniCardLabel}>
-                          {valuesHidden ? maskValue('') : formatCurrency(card.currentInvoice, currency)}
-                        </Text>
-                        {/* Usage bar */}
-                        <View style={styles.usageBarBg}>
-                          <View
-                            style={[
-                              styles.usageBarFill,
-                              {
-                                width: `${Math.min(usage * 100, 100)}%`,
-                                backgroundColor: usageColor,
-                              },
-                            ]}
-                          />
+            <View style={styles.section}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.sectionHeaderLeft}>
+                  <AppIcon name="chart" size={18} color={colors.text.primary} />
+                  <Text style={styles.sectionTitle}>Meu Patrimônio</Text>
+                </View>
+                <TouchableOpacity onPress={() => router.push('/(tabs)/wallet')} activeOpacity={0.7}>
+                  <Text style={styles.sectionLink}>Ver detalhes ›</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.patrimonyCard}>
+                {validAllocations.length > 0 ? (
+                  <>
+                    {/* Stacked bar */}
+                    <View style={styles.stackedBar}>
+                      {validAllocations.map((cls, i) => (
+                        <View
+                          key={i}
+                          style={{
+                            flex: cls.percentage,
+                            backgroundColor: cls.color,
+                            marginRight: i < validAllocations.length - 1 ? 1 : 0,
+                          }}
+                        />
+                      ))}
+                    </View>
+
+                    {/* Class list */}
+                    <View style={{ marginTop: 14 }}>
+                      {validAllocations.map((cls, i) => (
+                        <View key={i} style={styles.classRow}>
+                          <View style={styles.classRowLeft}>
+                            <View style={[styles.classDot, { backgroundColor: cls.color }]} />
+                            <Text style={styles.className}>{cls.label}</Text>
+                          </View>
+                          <View style={styles.classRowRight}>
+                            <Text style={styles.classValue}>
+                              {valuesHidden ? maskValue('') : formatCurrency(cls.value, currency)}
+                            </Text>
+                            <Text style={styles.classPct}>{cls.percentage.toFixed(1)}%</Text>
+                          </View>
                         </View>
-                        <Text style={styles.miniCardUsage}>
-                          {valuesHidden ? '\u2022\u2022%' : `${(usage * 100).toFixed(0)}%`}
+                      ))}
+                    </View>
+
+                    {/* Monthly return footer */}
+                    <View style={styles.patrimonyFooter}>
+                      <Text style={styles.patrimonyFooterLabel}>Rendimento este mês</Text>
+                      <Text
+                        style={[
+                          styles.patrimonyFooterValue,
+                          { color: monthlyReturnValue >= 0 ? '#00D4AA' : '#FF4D4D' },
+                        ]}
+                      >
+                        {valuesHidden
+                          ? maskValue('')
+                          : `${monthlyReturnValue >= 0 ? '+' : ''}${formatCurrency(monthlyReturnValue, currency)} (${variation1m >= 0 ? '+' : ''}${variation1m.toFixed(2)}%)`}
+                      </Text>
+                    </View>
+                  </>
+                ) : (
+                  <View style={styles.patrimonyEmpty}>
+                    <AppIcon name="chart" size={48} color={colors.text.muted + '4D'} />
+                    <Text style={styles.patrimonyEmptyText}>
+                      Conecte seus bancos para ver seu patrimônio
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.patrimonyEmptyBtn}
+                      activeOpacity={0.7}
+                      onPress={() => router.push('/connect-bank')}
+                    >
+                      <Text style={styles.patrimonyEmptyBtnText}>Conectar banco</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* -------------------------------------------------------------- */}
+            {/* 7. Mercado                                                     */}
+            {/* -------------------------------------------------------------- */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.sectionHeaderLeft}>
+                  <AppIcon name="trending" size={18} color={colors.text.primary} />
+                  <Text style={styles.sectionTitle}>Mercado</Text>
+                </View>
+                <TouchableOpacity onPress={() => router.push('/market')} activeOpacity={0.7}>
+                  <Text style={styles.sectionLink}>Ver todos ›</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.marketScroll}
+              >
+                {marketLoading && marketPreview.length === 0
+                  ? [0, 1, 2, 3].map((i) => (
+                      <View key={i} style={[styles.marketCard, { opacity: 0.4 }]}>
+                        <View style={{ width: 40, height: 10, borderRadius: 4, backgroundColor: colors.border, marginBottom: 6 }} />
+                        <View style={{ width: 60, height: 8, borderRadius: 4, backgroundColor: colors.border, marginBottom: 12 }} />
+                        <View style={{ width: 70, height: 14, borderRadius: 4, backgroundColor: colors.border, marginBottom: 6 }} />
+                        <View style={{ width: 50, height: 10, borderRadius: 4, backgroundColor: colors.border }} />
+                      </View>
+                    ))
+                  : marketPreview.map((item) => (
+                      <TouchableOpacity
+                        key={item.ticker}
+                        style={styles.marketCard}
+                        activeOpacity={0.7}
+                        onPress={() => router.push('/market')}
+                      >
+                        <Text style={styles.marketTicker}>{item.ticker}</Text>
+                        <Text style={styles.marketName}>{item.name}</Text>
+                        <Text style={styles.marketPrice}>
+                          {item.isCurrency
+                            ? `R$ ${item.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                            : item.price.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.marketChange,
+                            { color: item.change >= 0 ? '#00D4AA' : '#FF4D4D' },
+                          ]}
+                        >
+                          {item.change >= 0 ? '\u25B2' : '\u25BC'}{' '}
+                          {item.change >= 0 ? '+' : ''}
+                          {item.change.toFixed(2)}%
                         </Text>
                       </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            )}
+                    ))}
+              </ScrollView>
+            </View>
 
             {/* -------------------------------------------------------------- */}
-            {/* 8. Movimentações \u2014 last 4                                      */}
-            {/* -------------------------------------------------------------- */}
-            {recentTransactions.length > 0 && (
-              <View style={styles.section}>
-                <SectionHeader
-                  title={t('home.transactions')}
-                  onAction={() => router.push('/(tabs)/cards')}
-                />
-                <Card animated={false}>
-                  {recentTransactions.map((tx, idx) => (
-                    <View key={tx.id || idx}>
-                      <TransactionRow
-                        description={tx.description || tx.merchant || ''}
-                        category={tx.category || ''}
-                        categoryLabel={categoryLabelMap[tx.category || ''] || tx.category || ''}
-                        amount={tx.amount}
-                        date={tx.date ? new Date(tx.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : ''}
-                        valuesHidden={valuesHidden}
-                      />
-                      {idx < recentTransactions.length - 1 && (
-                        <View style={styles.txDivider} />
-                      )}
-                    </View>
-                  ))}
-                </Card>
-              </View>
-            )}
-
-            {/* -------------------------------------------------------------- */}
-            {/* 9. Notícias do Mercado                                        */}
+            {/* 8. Notícias do Mercado                                        */}
             {/* -------------------------------------------------------------- */}
             {newsArticles.length > 0 && (
               <View style={styles.section}>
@@ -671,7 +739,7 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* 10. Plan Cards                                                 */}
+            {/* 9. Plan Cards                                                  */}
             {/* -------------------------------------------------------------- */}
             <PlanCards />
           </>
@@ -894,63 +962,153 @@ const createStyles = (colors: ThemeColors) =>
       width: 260,
     },
 
-    // -- Cards row (side by side) ---------------------------------------------
-    cardsRow: {
+    // -- Section headers -------------------------------------------------------
+    sectionHeaderRow: {
       flexDirection: 'row',
-      gap: spacing.md,
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: spacing.md,
     },
-    miniCard: {
-      flex: 1,
+    sectionHeaderLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text.primary,
+    },
+    sectionLink: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.accent,
+    },
+
+    // -- Meu Patrimônio -------------------------------------------------------
+    patrimonyCard: {
+      borderRadius: 16,
       backgroundColor: colors.card,
-      borderRadius: radius.lg,
       borderWidth: 1,
       borderColor: colors.border,
-      padding: spacing.lg,
+      padding: 16,
+    },
+    stackedBar: {
+      flexDirection: 'row',
+      height: 12,
+      borderRadius: 6,
       overflow: 'hidden',
     },
-    miniCardStripe: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      height: 3,
+    classRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 8,
     },
-    miniCardName: {
+    classRowLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    classDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+    },
+    className: {
+      fontSize: 13,
+      color: colors.text.primary,
+    },
+    classRowRight: {
+      alignItems: 'flex-end',
+    },
+    classValue: {
       fontSize: 13,
       fontWeight: '600',
       color: colors.text.primary,
-      marginBottom: spacing.sm,
-    },
-    miniCardLabel: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: colors.text.primary,
       fontVariant: ['tabular-nums'],
-      marginBottom: spacing.md,
     },
-    usageBarBg: {
-      height: 6,
-      backgroundColor: colors.border,
-      borderRadius: 3,
-      overflow: 'hidden',
-      marginBottom: spacing.xs,
-    },
-    usageBarFill: {
-      height: 6,
-      borderRadius: 3,
-    },
-    miniCardUsage: {
+    classPct: {
       fontSize: 11,
-      fontWeight: '600',
-      color: colors.text.muted,
-      textAlign: 'right',
+      color: colors.text.secondary,
       fontVariant: ['tabular-nums'],
+    },
+    patrimonyFooter: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingTop: 12,
+      marginTop: 12,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    patrimonyFooterLabel: {
+      fontSize: 12,
+      color: colors.text.secondary,
+    },
+    patrimonyFooterValue: {
+      fontSize: 14,
+      fontWeight: '700',
+      fontVariant: ['tabular-nums'],
+    },
+    patrimonyEmpty: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+    },
+    patrimonyEmptyText: {
+      fontSize: 13,
+      color: colors.text.secondary,
+      textAlign: 'center',
+      marginTop: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    patrimonyEmptyBtn: {
+      backgroundColor: colors.accent,
+      paddingHorizontal: spacing.xxl,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.md,
+    },
+    patrimonyEmptyBtnText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.background,
     },
 
-    // -- Transactions ---------------------------------------------------------
-    txDivider: {
-      height: 1,
-      backgroundColor: colors.border,
+    // -- Market ---------------------------------------------------------------
+    marketScroll: {
+      paddingRight: spacing.xl,
+    },
+    marketCard: {
+      width: 140,
+      borderRadius: 14,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 12,
+      marginRight: 10,
+    },
+    marketTicker: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.text.primary,
+    },
+    marketName: {
+      fontSize: 10,
+      color: colors.text.secondary,
+      marginTop: 2,
+    },
+    marketPrice: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text.primary,
+      marginTop: 8,
+      fontVariant: ['tabular-nums'],
+    },
+    marketChange: {
+      fontSize: 11,
+      fontWeight: '600',
+      marginTop: 2,
+      fontVariant: ['tabular-nums'],
     },
 
     // -- News section ---------------------------------------------------------
