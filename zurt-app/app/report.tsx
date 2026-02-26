@@ -299,9 +299,9 @@ function buildReportHTML(opts: {
   @page { size: A4; margin: 0; background: #0A0F1C; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
+    background: #0A0F1C !important;
     margin: 0; padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-    background: #0A0F1C;
     color: #E8E8E8;
     font-size: 10px;
     line-height: 1.5;
@@ -375,9 +375,6 @@ function buildReportHTML(opts: {
     page-break-after: always;
     page-break-inside: avoid;
     box-sizing: border-box;
-  }
-  .page:last-child {
-    page-break-after: auto;
   }
   .ph {
     display: flex; justify-content: space-between; align-items: center;
