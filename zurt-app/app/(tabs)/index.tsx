@@ -447,19 +447,19 @@ export default function HomeScreen() {
             {/* 3. Quick Actions                                               */}
             {/* -------------------------------------------------------------- */}
             <View style={styles.quickActions}>
-              {[
-                { emoji: '\uD83C\uDFE6', label: 'Conectar\nbanco', accent: true, onPress: () => router.push('/connect-bank') },
-                { emoji: '\uD83D\uDCCA', label: 'Gerar\nrelatório', accent: false, onPress: () => router.push('/report') },
-                { emoji: '\uD83D\uDD04', label: 'Sincronizar', accent: false, onPress: handleSync },
-                { emoji: '\uD83C\uDF81', label: 'Convidar\namigos', accent: false, onPress: () => Share.share({ message: 'Conheça o ZURT - inteligência patrimonial na palma da mão! https://zurt.com.br' }) },
-              ].map((btn, i) => (
+              {([
+                { icon: 'bank' as const, label: 'Conectar\nbanco', accent: true, onPress: () => router.push('/connect-bank') },
+                { icon: 'chart' as const, label: 'Gerar\nrelatório', accent: false, onPress: () => router.push('/report') },
+                { icon: 'refresh' as const, label: 'Sincronizar', accent: false, onPress: handleSync },
+                { icon: 'gift' as const, label: 'Convidar\namigos', accent: false, onPress: () => Share.share({ message: 'Conheça o ZURT - inteligência patrimonial na palma da mão! https://zurt.com.br' }) },
+              ] as const).map((btn, i) => (
                 <TouchableOpacity
                   key={i}
                   style={[styles.qaBtn, btn.accent && styles.qaBtnAccent]}
                   activeOpacity={0.7}
                   onPress={btn.onPress}
                 >
-                  <Text style={styles.qaIcon}>{btn.emoji}</Text>
+                  <AppIcon name={btn.icon} size={22} color={btn.accent ? colors.accent : colors.text.secondary} />
                   <Text style={[styles.qaLabel, btn.accent && styles.qaLabelAccent]}>
                     {btn.label}
                   </Text>
@@ -869,9 +869,6 @@ const createStyles = (colors: ThemeColors) =>
     qaBtnAccent: {
       backgroundColor: '#00D4AA0D',
       borderColor: '#00D4AA26',
-    },
-    qaIcon: {
-      fontSize: 22,
     },
     qaLabel: {
       fontSize: 10,
