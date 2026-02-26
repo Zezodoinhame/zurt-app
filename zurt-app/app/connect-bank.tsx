@@ -111,132 +111,79 @@ true;
 `;
 
 // =============================================================================
-// Bank deep linking — open native bank apps for OAuth instead of WebView
+// Bank URL detection — use Universal Links (HTTPS URLs) instead of custom schemes
+// Banks like Santander register Universal Links so that their HTTPS auth URLs
+// automatically open in the native app when opened via Linking.openURL().
+// Custom schemes (santander://) do NOT work — banks don't register them.
 // =============================================================================
 
-interface BankDeepLink {
-  ios: string;
-  android: string;
-  fallback: string;
-}
-
-const BANK_DEEP_LINKS: Record<string, BankDeepLink> = {
-  santander: { ios: 'santander://', android: 'intent://#Intent;package=com.santander.app;end', fallback: 'https://apps.apple.com/br/app/santander-brasil/id1491291290' },
-  itau: { ios: 'itau://', android: 'intent://#Intent;package=com.itau;end', fallback: 'https://apps.apple.com/br/app/banco-ita%C3%BA/id474436529' },
-  bradesco: { ios: 'bradesco://', android: 'intent://#Intent;package=com.bradesco;end', fallback: 'https://apps.apple.com/br/app/bradesco/id351439498' },
-  nubank: { ios: 'nubank://', android: 'intent://#Intent;package=com.nu.production;end', fallback: 'https://apps.apple.com/br/app/nubank/id814456780' },
-  btg: { ios: 'btgpactual://', android: 'intent://#Intent;package=com.btg.pactual.digital;end', fallback: 'https://apps.apple.com/br/app/btg-pactual/id1293080438' },
-  inter: { ios: 'bancointer://', android: 'intent://#Intent;package=br.com.intermedium;end', fallback: 'https://apps.apple.com/br/app/inter/id1051903726' },
-  bb: { ios: 'bb://', android: 'intent://#Intent;package=br.com.bb.android;end', fallback: 'https://apps.apple.com/br/app/banco-do-brasil/id330895368' },
-  caixa: { ios: 'caixa://', android: 'intent://#Intent;package=br.com.gabba.Caixa;end', fallback: 'https://apps.apple.com/br/app/caixa/id331885031' },
-  sicoob: { ios: 'sicoob://', android: 'intent://#Intent;package=br.com.sicoob.app;end', fallback: 'https://sicoob.com.br' },
-  sicredi: { ios: 'sicredi://', android: 'intent://#Intent;package=br.com.sicredi.app;end', fallback: 'https://sicredi.com.br' },
-  c6: { ios: 'c6bank://', android: 'intent://#Intent;package=com.c6bank.app;end', fallback: 'https://c6bank.com.br' },
-  original: { ios: 'bancooriginal://', android: 'intent://#Intent;package=br.com.original;end', fallback: 'https://bancooriginal.com.br' },
-  safra: { ios: 'safra://', android: 'intent://#Intent;package=br.com.safra.SafraDigital;end', fallback: 'https://safra.com.br' },
-  xp: { ios: 'xpinvestimentos://', android: 'intent://#Intent;package=com.xpi.investor;end', fallback: 'https://xpi.com.br' },
-  rico: { ios: 'rico://', android: 'intent://#Intent;package=com.rico.investimentos;end', fallback: 'https://rico.com.vc' },
-  clear: { ios: 'clear://', android: 'intent://#Intent;package=com.clear.mobile;end', fallback: 'https://clear.com.br' },
-  modal: { ios: 'modalmais://', android: 'intent://#Intent;package=br.com.modal;end', fallback: 'https://modalmais.com.br' },
-  mercadopago: { ios: 'mercadopago://', android: 'intent://#Intent;package=com.mercadopago.wallet;end', fallback: 'https://mercadopago.com.br' },
-  picpay: { ios: 'picpay://', android: 'intent://#Intent;package=com.picpay;end', fallback: 'https://picpay.com' },
-  neon: { ios: 'neon://', android: 'intent://#Intent;package=br.com.neon;end', fallback: 'https://neon.com.br' },
-  next: { ios: 'next://', android: 'intent://#Intent;package=br.com.bradesco.next;end', fallback: 'https://next.me' },
-  pagbank: { ios: 'pagseguro://', android: 'intent://#Intent;package=br.com.uol.ps.myaccount;end', fallback: 'https://pagbank.com.br' },
-};
-
-/** Map bank URL domains to deep link keys */
-const BANK_DOMAIN_MAP: Record<string, string> = {
-  'santander.com.br': 'santander', 'santander.com': 'santander', 'openfinance.santander.com.br': 'santander', 'banking.api.santander.com.br': 'santander',
-  'itau.com.br': 'itau', 'itau.com': 'itau',
-  'bradesco.com.br': 'bradesco', 'bradesco.com': 'bradesco',
-  'nubank.com.br': 'nubank', 'nu.com.br': 'nubank',
-  'btgpactual.com': 'btg', 'btgpactual.com.br': 'btg',
-  'bancointer.com.br': 'inter', 'inter.co': 'inter',
-  'bb.com.br': 'bb', 'bancodobrasil.com.br': 'bb',
-  'caixa.gov.br': 'caixa', 'caixa.com.br': 'caixa',
-  'sicoob.com.br': 'sicoob',
-  'sicredi.com.br': 'sicredi',
-  'c6bank.com.br': 'c6',
-  'bancooriginal.com.br': 'original',
-  'safra.com.br': 'safra',
-  'xpi.com.br': 'xp', 'xpinvestimentos.com.br': 'xp',
-  'rico.com.vc': 'rico',
-  'clear.com.br': 'clear',
-  'modalmais.com.br': 'modal',
-  'mercadopago.com.br': 'mercadopago', 'mercadopago.com': 'mercadopago',
-  'picpay.com': 'picpay',
-  'neon.com.br': 'neon',
-  'next.me': 'next',
-  'pagseguro.uol.com.br': 'pagbank', 'pagbank.com.br': 'pagbank',
-};
+const BANK_DOMAINS = [
+  'santander.com.br',
+  'banking.api.santander.com.br',
+  'openfinance.santander.com.br',
+  'itau.com.br',
+  'ib.itau.com.br',
+  'bradesco.com.br',
+  'nubank.com.br',
+  'nu.com.br',
+  'btgpactual.com',
+  'btgpactual.com.br',
+  'bancointer.com.br',
+  'inter.co',
+  'bb.com.br',
+  'bancodobrasil.com.br',
+  'caixa.gov.br',
+  'caixa.com.br',
+  'sicoob.com.br',
+  'sicredi.com.br',
+  'c6bank.com.br',
+  'bancooriginal.com.br',
+  'safra.com.br',
+  'xpi.com.br',
+  'rico.com.vc',
+  'modalmais.com.br',
+  'mercadopago.com.br',
+  'picpay.com',
+  'neon.com.br',
+  'next.me',
+  'pagbank.com.br',
+];
 
 /**
- * Detect bank slug from a URL by checking the domain.
- * Returns the BANK_DEEP_LINKS key or null.
+ * Check if a URL belongs to a known bank domain.
  */
-function detectBankFromUrl(url: string): string | null {
+function isBankUrl(url: string): boolean {
   try {
     const hostname = new URL(url).hostname.toLowerCase();
-    for (const [domain, slug] of Object.entries(BANK_DOMAIN_MAP)) {
-      if (hostname === domain || hostname.endsWith('.' + domain)) {
-        return slug;
-      }
-    }
-  } catch { /* invalid URL */ }
-  return null;
+    return BANK_DOMAINS.some(
+      (domain) => hostname === domain || hostname.endsWith('.' + domain),
+    );
+  } catch {
+    return false;
+  }
 }
 
 /**
- * Try to open the bank's native app via deep link.
- * Uses direct openURL (not canOpenURL which fails in Expo Go).
- * Returns true if handled (opened or showed alert), false if no deep link found.
+ * Open a bank auth URL via Linking.openURL() to trigger Universal Links.
+ * On iOS, if the bank app is installed and has Universal Links configured,
+ * iOS will open the native app automatically. Otherwise it opens in Safari
+ * (which is better than an in-app browser for OAuth flows).
  */
-async function tryOpenBankApp(bankSlug: string, originalUrl: string): Promise<boolean> {
-  const bank = BANK_DEEP_LINKS[bankSlug];
-  if (!bank) return false;
-
-  const scheme = Platform.OS === 'ios' ? bank.ios : bank.android;
-  const bankName = bankSlug.charAt(0).toUpperCase() + bankSlug.slice(1);
-
-  logger.log('[ConnectBank] Trying native app:', bankSlug, 'scheme:', scheme);
-
+async function openBankUrl(url: string): Promise<void> {
+  logger.log('[ConnectBank] Opening bank URL via Universal Link:', url.substring(0, 100));
   try {
-    // Try opening directly — if the app exists it will open
-    await Linking.openURL(scheme);
-    logger.log('[ConnectBank] Native app opened:', bankSlug);
-    return true;
+    await Linking.openURL(url);
+    logger.log('[ConnectBank] Opened via Linking.openURL (Universal Link or Safari)');
   } catch (error) {
-    // openURL failed — app is not installed
-    logger.log('[ConnectBank] Native app not found:', bankSlug, error);
-    return new Promise<boolean>((resolve) => {
-      Alert.alert(
-        'App do banco necessário',
-        `O ${bankName} exige autenticação pelo app nativo. Instale ou atualize o app.`,
-        [
-          {
-            text: 'Baixar App',
-            onPress: () => {
-              Linking.openURL(bank.fallback).catch(() => {});
-              resolve(true);
-            },
-          },
-          {
-            text: 'Tentar no navegador',
-            onPress: () => {
-              WebBrowser.openBrowserAsync(originalUrl, {
-                showInRecents: true,
-                createTask: false,
-              }).catch(() => {
-                Linking.openURL(originalUrl).catch(() => {});
-              });
-              resolve(true);
-            },
-          },
-          { text: 'Cancelar', style: 'cancel', onPress: () => resolve(true) },
-        ],
-      );
-    });
+    logger.log('[ConnectBank] Linking.openURL failed, trying WebBrowser:', error);
+    try {
+      await WebBrowser.openBrowserAsync(url, {
+        showInRecents: true,
+        createTask: false,
+      });
+    } catch {
+      logger.log('[ConnectBank] WebBrowser also failed for bank URL');
+    }
   }
 }
 
@@ -348,33 +295,30 @@ export default function ConnectBankScreen() {
 
         if (completedRef.current) return;
 
-        // Handle OAuth redirect - bank needs user authentication
-        // Try native bank app first (e.g. Santander requires it), fall back to WebBrowser
+        // Handle OAuth redirect — bank needs user authentication
+        // Use Linking.openURL() for bank URLs to trigger Universal Links (native app)
+        // Use WebBrowser for non-bank URLs (e.g. Pluggy's own OAuth)
         if (data?.type === 'OAUTH_OPEN' && data?.message) {
           const oauthUrl = data.message;
-          logger.log('[ConnectBank] Opening bank OAuth URL:', oauthUrl.substring(0, 80));
+          logger.log('[ConnectBank] OAuth redirect:', oauthUrl.substring(0, 100));
           (async () => {
-            // Check if this URL belongs to a bank with a known native app
-            const bankSlug = detectBankFromUrl(oauthUrl);
-            if (bankSlug) {
-              logger.log('[ConnectBank] Detected bank:', bankSlug, '— trying native app');
-              const handled = await tryOpenBankApp(bankSlug, oauthUrl);
-              if (handled) return; // Native app opened or user chose action
-              logger.log('[ConnectBank] No deep link for bank, falling back to browser');
-            }
-
-            // Fallback: open in system browser
-            try {
-              await WebBrowser.openBrowserAsync(oauthUrl, {
-                showInRecents: true,
-                createTask: false,
-              });
-            } catch (err) {
-              logger.log('[ConnectBank] WebBrowser failed, falling back to Linking:', err);
-              Linking.openURL(oauthUrl).catch((linkErr) => {
-                logger.log('[ConnectBank] Failed to open OAuth URL:', linkErr);
-                Alert.alert(t('connect.error'), t('connect.oauthOpenError'));
-              });
+            if (isBankUrl(oauthUrl)) {
+              logger.log('[ConnectBank] Bank URL detected, opening via Universal Link');
+              await openBankUrl(oauthUrl);
+            } else {
+              logger.log('[ConnectBank] Non-bank URL, opening in WebBrowser');
+              try {
+                await WebBrowser.openBrowserAsync(oauthUrl, {
+                  showInRecents: true,
+                  createTask: false,
+                });
+              } catch (err) {
+                logger.log('[ConnectBank] WebBrowser failed, falling back to Linking:', err);
+                Linking.openURL(oauthUrl).catch((linkErr) => {
+                  logger.log('[ConnectBank] Failed to open OAuth URL:', linkErr);
+                  Alert.alert(t('connect.error'), t('connect.oauthOpenError'));
+                });
+              }
             }
           })();
           return;
@@ -669,11 +613,10 @@ export default function ConnectBankScreen() {
           onShouldStartLoadWithRequest={(request) => {
             logger.log('[ConnectBank] Load request:', request.url.substring(0, 100));
 
-            // Intercept bank URLs — try native app before loading in WebView
-            const bankSlug = detectBankFromUrl(request.url);
-            if (bankSlug) {
-              logger.log('[ConnectBank] WebView intercepted bank URL:', bankSlug, request.url.substring(0, 100));
-              tryOpenBankApp(bankSlug, request.url);
+            // Intercept bank URLs — open via Linking to trigger Universal Links
+            if (isBankUrl(request.url)) {
+              logger.log('[ConnectBank] WebView intercepted bank URL, redirecting to Universal Link:', request.url.substring(0, 100));
+              Linking.openURL(request.url).catch(() => {});
               return false; // Block WebView from loading the bank URL
             }
 
