@@ -144,7 +144,7 @@ export default function MarketScreen() {
                 <Text style={styles.macroLabel}>IBOV</Text>
                 <Text style={styles.macroValue}>
                   {ibovespa
-                    ? ibovespa.regularMarketPrice.toLocaleString('pt-BR', { maximumFractionDigits: 0 })
+                    ? Number(ibovespa.regularMarketPrice || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 })
                     : '---'}
                 </Text>
                 <Text
@@ -158,7 +158,7 @@ export default function MarketScreen() {
                     },
                   ]}
                 >
-                  {ibovespa ? formatPct(ibovespa.regularMarketChangePercent) : '---'}
+                  {ibovespa ? formatPct(Number(ibovespa.regularMarketChangePercent || 0)) : '---'}
                 </Text>
               </View>
 
@@ -166,7 +166,7 @@ export default function MarketScreen() {
               <View style={styles.macroCard}>
                 <Text style={styles.macroLabel}>USD/BRL</Text>
                 <Text style={styles.macroValue}>
-                  {usdBrl ? usdBrl.bidPrice.toFixed(2).replace('.', ',') : '---'}
+                  {usdBrl ? Number(usdBrl.bidPrice || 0).toFixed(2).replace('.', ',') : '---'}
                 </Text>
                 <Text
                   style={[
@@ -179,7 +179,7 @@ export default function MarketScreen() {
                     },
                   ]}
                 >
-                  {usdBrl ? formatPct(usdBrl.regularMarketChangePercent) : '---'}
+                  {usdBrl ? formatPct(Number(usdBrl.regularMarketChangePercent || 0)) : '---'}
                 </Text>
               </View>
 
@@ -284,7 +284,7 @@ export default function MarketScreen() {
                       {/* Price + Change */}
                       <View style={styles.watchlistPriceCol}>
                         <Text style={styles.watchlistPrice}>
-                          {formatBRL(quote.regularMarketPrice)}
+                          {formatBRL(Number(quote.regularMarketPrice || 0))}
                         </Text>
                         <Text
                           style={[
@@ -297,7 +297,7 @@ export default function MarketScreen() {
                             },
                           ]}
                         >
-                          {formatPct(quote.regularMarketChangePercent)}
+                          {formatPct(Number(quote.regularMarketChangePercent || 0))}
                         </Text>
                       </View>
                     </TouchableOpacity>
@@ -326,7 +326,7 @@ export default function MarketScreen() {
                         {coin.coinName}
                       </Text>
                       <Text style={styles.cryptoPrice}>
-                        {formatBRL(coin.regularMarketPrice)}
+                        {formatBRL(Number(coin.regularMarketPrice || 0))}
                       </Text>
                       <Text
                         style={[
@@ -339,10 +339,10 @@ export default function MarketScreen() {
                           },
                         ]}
                       >
-                        {formatPct(coin.regularMarketChangePercent)}
+                        {formatPct(Number(coin.regularMarketChangePercent || 0))}
                       </Text>
                       <Text style={styles.cryptoCap}>
-                        MC: {formatMarketCap(coin.marketCap)}
+                        MC: {formatMarketCap(Number(coin.marketCap || 0))}
                       </Text>
                     </View>
                   ))}
@@ -370,7 +370,7 @@ export default function MarketScreen() {
                           </Text>
                         </View>
                         <Text style={styles.currencyBid}>
-                          R$ {cur.bidPrice.toFixed(2).replace('.', ',')}
+                          R$ {Number(cur.bidPrice || 0).toFixed(2).replace('.', ',')}
                         </Text>
                         <Text
                           style={[
@@ -383,7 +383,7 @@ export default function MarketScreen() {
                             },
                           ]}
                         >
-                          {formatPct(cur.regularMarketChangePercent)}
+                          {formatPct(Number(cur.regularMarketChangePercent || 0))}
                         </Text>
                       </View>
                     );

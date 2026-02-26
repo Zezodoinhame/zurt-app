@@ -136,8 +136,8 @@ export default function TickerDetailScreen() {
     const last12m = quote.dividendsData.cashDividends.filter(
       (d) => new Date(d.paymentDate) >= oneYearAgo,
     );
-    const totalDiv = last12m.reduce((sum, d) => sum + d.rate, 0);
-    return totalDiv > 0 ? (totalDiv / quote.regularMarketPrice) * 100 : null;
+    const totalDiv = last12m.reduce((sum, d) => sum + Number(d.rate || 0), 0);
+    return totalDiv > 0 ? (totalDiv / Number(quote.regularMarketPrice || 1)) * 100 : null;
   }, [quote?.dividendsData, quote?.regularMarketPrice]);
 
   if (loading) {
@@ -179,15 +179,15 @@ export default function TickerDetailScreen() {
         {/* ================================================================ */}
         <View style={styles.priceHero}>
           <Text style={styles.priceName}>{quote.shortName || quote.longName}</Text>
-          <Text style={styles.priceValue}>{formatBRL(quote.regularMarketPrice)}</Text>
+          <Text style={styles.priceValue}>{formatBRL(Number(quote.regularMarketPrice || 0))}</Text>
           <View style={styles.priceChangeRow}>
             <Text style={[styles.priceChange, { color: changeColor }]}>
               {isPositive ? '+' : ''}
-              {formatBRL(quote.regularMarketChange)}
+              {formatBRL(Number(quote.regularMarketChange || 0))}
             </Text>
             <View style={[styles.priceBadge, { backgroundColor: changeColor + '20' }]}>
               <Text style={[styles.priceBadgeText, { color: changeColor }]}>
-                {formatPct(quote.regularMarketChangePercent)}
+                {formatPct(Number(quote.regularMarketChangePercent || 0))}
               </Text>
             </View>
           </View>
@@ -242,15 +242,15 @@ export default function TickerDetailScreen() {
         {/* ================================================================ */}
         <View style={styles.dataCard}>
           <Text style={styles.dataCardTitle}>Dados do Pregao</Text>
-          <DataRow label="Abertura" value={formatBRL(quote.regularMarketOpen)} colors={colors} />
-          <DataRow label="Maxima" value={formatBRL(quote.regularMarketDayHigh)} colors={colors} />
-          <DataRow label="Minima" value={formatBRL(quote.regularMarketDayLow)} colors={colors} />
-          <DataRow label="Volume" value={formatVolume(quote.regularMarketVolume)} colors={colors} />
-          <DataRow label="Anterior" value={formatBRL(quote.regularMarketPreviousClose)} colors={colors} />
-          <DataRow label="52 sem max" value={formatBRL(quote.fiftyTwoWeekHigh)} colors={colors} />
-          <DataRow label="52 sem min" value={formatBRL(quote.fiftyTwoWeekLow)} colors={colors} />
+          <DataRow label="Abertura" value={formatBRL(Number(quote.regularMarketOpen || 0))} colors={colors} />
+          <DataRow label="Maxima" value={formatBRL(Number(quote.regularMarketDayHigh || 0))} colors={colors} />
+          <DataRow label="Minima" value={formatBRL(Number(quote.regularMarketDayLow || 0))} colors={colors} />
+          <DataRow label="Volume" value={formatVolume(Number(quote.regularMarketVolume || 0))} colors={colors} />
+          <DataRow label="Anterior" value={formatBRL(Number(quote.regularMarketPreviousClose || 0))} colors={colors} />
+          <DataRow label="52 sem max" value={formatBRL(Number(quote.fiftyTwoWeekHigh || 0))} colors={colors} />
+          <DataRow label="52 sem min" value={formatBRL(Number(quote.fiftyTwoWeekLow || 0))} colors={colors} />
           {quote.marketCap > 0 && (
-            <DataRow label="Market Cap" value={formatMarketCap(quote.marketCap)} colors={colors} />
+            <DataRow label="Market Cap" value={formatMarketCap(Number(quote.marketCap || 0))} colors={colors} />
           )}
         </View>
 
@@ -264,33 +264,33 @@ export default function TickerDetailScreen() {
               <DataRow label="P/L" value={formatNumber(quote.priceEarnings, 2)} colors={colors} />
             )}
             {quote.earningsPerShare != null && (
-              <DataRow label="LPA" value={formatBRL(quote.earningsPerShare)} colors={colors} />
+              <DataRow label="LPA" value={formatBRL(Number(quote.earningsPerShare || 0))} colors={colors} />
             )}
             {quote.financialData && (
               <>
                 {quote.financialData.returnOnEquity != null && (
-                  <DataRow label="ROE" value={formatPct(quote.financialData.returnOnEquity * 100, false)} colors={colors} />
+                  <DataRow label="ROE" value={formatPct(Number(quote.financialData.returnOnEquity || 0) * 100, false)} colors={colors} />
                 )}
                 {quote.financialData.returnOnAssets != null && (
-                  <DataRow label="ROA" value={formatPct(quote.financialData.returnOnAssets * 100, false)} colors={colors} />
+                  <DataRow label="ROA" value={formatPct(Number(quote.financialData.returnOnAssets || 0) * 100, false)} colors={colors} />
                 )}
                 {quote.financialData.profitMargins != null && (
-                  <DataRow label="Margem Liquida" value={formatPct(quote.financialData.profitMargins * 100, false)} colors={colors} />
+                  <DataRow label="Margem Liquida" value={formatPct(Number(quote.financialData.profitMargins || 0) * 100, false)} colors={colors} />
                 )}
                 {quote.financialData.ebitdaMargins != null && (
-                  <DataRow label="Margem EBITDA" value={formatPct(quote.financialData.ebitdaMargins * 100, false)} colors={colors} />
+                  <DataRow label="Margem EBITDA" value={formatPct(Number(quote.financialData.ebitdaMargins || 0) * 100, false)} colors={colors} />
                 )}
                 {quote.financialData.debtToEquity != null && (
                   <DataRow label="Div/PL" value={formatNumber(quote.financialData.debtToEquity, 2)} colors={colors} />
                 )}
                 {quote.financialData.totalRevenue != null && quote.financialData.totalRevenue > 0 && (
-                  <DataRow label="Receita" value={formatMarketCap(quote.financialData.totalRevenue)} colors={colors} />
+                  <DataRow label="Receita" value={formatMarketCap(Number(quote.financialData.totalRevenue || 0))} colors={colors} />
                 )}
                 {quote.financialData.ebitda != null && quote.financialData.ebitda > 0 && (
-                  <DataRow label="EBITDA" value={formatMarketCap(quote.financialData.ebitda)} colors={colors} />
+                  <DataRow label="EBITDA" value={formatMarketCap(Number(quote.financialData.ebitda || 0))} colors={colors} />
                 )}
                 {quote.financialData.freeCashflow != null && (
-                  <DataRow label="Free Cash Flow" value={formatMarketCap(quote.financialData.freeCashflow)} colors={colors} />
+                  <DataRow label="Free Cash Flow" value={formatMarketCap(Number(quote.financialData.freeCashflow || 0))} colors={colors} />
                 )}
               </>
             )}
@@ -328,7 +328,7 @@ export default function TickerDetailScreen() {
                   </Text>
                 </View>
                 <Text style={styles.divAmount}>
-                  R$ {div.rate.toFixed(4).replace('.', ',')}
+                  R$ {Number(div.rate || 0).toFixed(4).replace('.', ',')}
                 </Text>
               </View>
             ))}
@@ -353,7 +353,7 @@ export default function TickerDetailScreen() {
             {quote.summaryProfile.fullTimeEmployees > 0 && (
               <DataRow
                 label="Funcionarios"
-                value={quote.summaryProfile.fullTimeEmployees.toLocaleString('pt-BR')}
+                value={Number(quote.summaryProfile.fullTimeEmployees || 0).toLocaleString('pt-BR')}
                 colors={colors}
               />
             )}
