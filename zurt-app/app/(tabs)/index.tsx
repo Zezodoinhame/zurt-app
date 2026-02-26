@@ -158,9 +158,10 @@ export default function HomeScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsExporting(true);
     try {
-      const { assets } = usePortfolioStore.getState();
+      const { assets, insights: portfolioInsights } = usePortfolioStore.getState();
+      const { dashboardTransactions } = useCardsStore.getState();
       await generatePatrimonialReport(
-        { summary, institutions, allocations, cards, assets },
+        { summary, institutions, allocations, cards, assets, transactions: dashboardTransactions, insights: portfolioInsights },
         user,
         accentColor,
       );
