@@ -171,6 +171,10 @@ export default function TickerDetailScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
+      {/* Drag indicator */}
+      <View style={{ alignItems: 'center', paddingTop: 8, paddingBottom: 4 }}>
+        <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+      </View>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
