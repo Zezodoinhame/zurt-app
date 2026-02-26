@@ -955,10 +955,10 @@ export default function ReportScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.accent} />
           <Animated.Text style={[styles.loadingText, { opacity: pulseAnim }]}>
-            {t('report.generating') || 'Gerando relatório...'}
+            {t('report.generating')}
           </Animated.Text>
           <Text style={styles.loadingSubtext}>
-            {t('report.generatingHint') || 'Isso pode levar alguns segundos'}
+            {t('report.generatingHint')}
           </Text>
         </View>
       </View>
@@ -990,7 +990,7 @@ export default function ReportScreen() {
         {/* Preview Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>
-            {t('report.previewTitle') || 'O que o relatório inclui'}
+            {t('report.previewTitle')}
           </Text>
           {previewItems.map((item, index) => (
             <View key={index} style={styles.previewItem}>
@@ -1003,7 +1003,7 @@ export default function ReportScreen() {
         {/* Period Selector */}
         <View style={styles.periodSection}>
           <Text style={styles.periodLabel}>
-            {t('report.period') || 'Período de análise'}
+            {t('report.period')}
           </Text>
           <View style={styles.periodRow}>
             {periods.map((period) => {
@@ -1040,7 +1040,7 @@ export default function ReportScreen() {
         >
           <AppIcon name="report" size={20} color={colors.background} />
           <Text style={styles.generateButtonText}>
-            {t('report.generate') || 'Gerar Relatorio'}
+            {t('report.generate')}
           </Text>
         </TouchableOpacity>
 
