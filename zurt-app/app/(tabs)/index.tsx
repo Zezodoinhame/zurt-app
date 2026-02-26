@@ -43,7 +43,6 @@ import PlanCards from '../../src/components/home/PlanCards';
 import {
   formatCurrency,
   formatPct,
-  formatCompactNumber,
   maskValue,
 } from '../../src/utils/formatters';
 import { useSettingsStore } from '../../src/stores/settingsStore';
@@ -122,14 +121,7 @@ export default function HomeScreen() {
   const { loadInitialInsights } = useAgentStore();
   const { articles: newsArticles, loadNews } = useNewsStore();
   const { getUnreadCount } = useNotificationStore();
-  const {
-    ibovespa,
-    usdBrl,
-    eurBrl,
-    btcBrl,
-    currentSelic,
-    loadMarketOverview,
-  } = useMarketStore();
+  const { loadMarketOverview } = useMarketStore();
   const { t, currency } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
   const unreadCount = getUnreadCount();
@@ -373,37 +365,6 @@ export default function HomeScreen() {
                   )}
                 </View>
 
-                {/* Institution badges (horizontal scroll) */}
-                {institutions.length > 0 && (
-                  <>
-                    <View style={styles.heroDivider} />
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.institutionScroll}
-                    >
-                      {institutions.map((inst) => {
-                        const pct = summary.totalValue > 0
-                          ? (inst.totalValue / summary.totalValue) * 100
-                          : 0;
-                        const initials = inst.name.substring(0, 2).toUpperCase();
-                        return (
-                          <View key={inst.id} style={styles.institutionChip}>
-                            <View style={[styles.institutionIcon, { backgroundColor: inst.color + '30' }]}>
-                              <Text style={[styles.institutionInitials, { color: inst.color }]}>{initials}</Text>
-                            </View>
-                            <Text style={styles.institutionValue} numberOfLines={1}>
-                              {valuesHidden ? '\u2022\u2022' : `R$ ${formatCompactNumber(inst.totalValue)}`}
-                            </Text>
-                            <Text style={styles.institutionPct}>
-                              {valuesHidden ? '\u2022\u2022' : `${pct.toFixed(1)}%`}
-                            </Text>
-                          </View>
-                        );
-                      })}
-                    </ScrollView>
-                  </>
-                )}
               </View>
             )}
 
@@ -425,81 +386,6 @@ export default function HomeScreen() {
                 </View>
               </Card>
             )}
-
-            {/* -------------------------------------------------------------- */}
-            {/* Market Ticker — BRAPI data                                     */}
-            {/* -------------------------------------------------------------- */}
-            {(() => {
-              const tickers = [
-                ibovespa ? {
-                  label: 'IBOV',
-                  value: Number(ibovespa.regularMarketPrice || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 }),
-                  change: Number(ibovespa.regularMarketChangePercent || 0),
-                } : null,
-                usdBrl ? {
-                  label: 'USD',
-                  value: `R$ ${Number(usdBrl.bidPrice || 0).toFixed(2).replace('.', ',')}`,
-                  change: Number(usdBrl.regularMarketChangePercent || 0),
-                } : null,
-                eurBrl ? {
-                  label: 'EUR',
-                  value: `R$ ${Number(eurBrl.bidPrice || 0).toFixed(2).replace('.', ',')}`,
-                  change: Number(eurBrl.regularMarketChangePercent || 0),
-                } : null,
-                btcBrl ? {
-                  label: 'BTC',
-                  value: `R$ ${(Number(btcBrl.regularMarketPrice || 0) / 1000).toFixed(1).replace('.', ',')}K`,
-                  change: Number(btcBrl.regularMarketChangePercent || 0),
-                } : null,
-                currentSelic != null ? {
-                  label: 'SELIC',
-                  value: `${Number(currentSelic).toFixed(2).replace('.', ',')}%`,
-                  change: 0,
-                } : null,
-              ].filter(Boolean) as { label: string; value: string; change: number }[];
-
-              if (tickers.length === 0) {
-                return (
-                  <View style={styles.tickerSkeletonRow}>
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <View key={i} style={styles.tickerSkeleton} />
-                    ))}
-                  </View>
-                );
-              }
-
-              return (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.tickerScroll}
-                >
-                  {tickers.map((tk) => {
-                    const isPos = tk.change >= 0;
-                    const isNeutral = tk.change === 0;
-                    return (
-                      <TouchableOpacity
-                        key={tk.label}
-                        onPress={() => router.push('/market')}
-                        activeOpacity={0.7}
-                        style={styles.tickerChip}
-                      >
-                        <Text style={styles.tickerLabel}>{tk.label}</Text>
-                        <Text style={styles.tickerValue}>{tk.value}</Text>
-                        {!isNeutral && (
-                          <Text style={[styles.tickerChange, { color: isPos ? colors.positive : colors.negative }]}>
-                            {isPos ? '\u25B2' : '\u25BC'} {Math.abs(tk.change).toFixed(2)}%
-                          </Text>
-                        )}
-                        {isNeutral && tk.label === 'SELIC' && (
-                          <Text style={[styles.tickerChange, { color: colors.info }]}>a.a.</Text>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              );
-            })()}
 
             {/* -------------------------------------------------------------- */}
             {/* 3. Quick Actions (4 buttons)                                   */}
@@ -866,93 +752,6 @@ const createStyles = (colors: ThemeColors) =>
       marginLeft: spacing.md,
       marginTop: spacing.sm,
     },
-    heroDivider: {
-      height: 1,
-      backgroundColor: colors.border,
-      marginVertical: spacing.md,
-    },
-    institutionScroll: {
-      gap: spacing.sm,
-    },
-    institutionChip: {
-      alignItems: 'center',
-      backgroundColor: colors.elevated,
-      borderRadius: radius.md,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
-      gap: 4,
-      minWidth: 72,
-    },
-    institutionIcon: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    institutionInitials: {
-      fontSize: 11,
-      fontWeight: '800',
-    },
-    institutionValue: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: colors.text.primary,
-      fontVariant: ['tabular-nums'],
-    },
-    institutionPct: {
-      fontSize: 10,
-      fontWeight: '700',
-      color: colors.text.muted,
-      fontVariant: ['tabular-nums'],
-    },
-
-    // -- Market Ticker --------------------------------------------------------
-    tickerScroll: {
-      gap: spacing.sm,
-      marginBottom: spacing.lg,
-    },
-    tickerSkeletonRow: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-      marginBottom: spacing.lg,
-    },
-    tickerSkeleton: {
-      width: 90,
-      height: 56,
-      borderRadius: radius.md,
-      backgroundColor: colors.card,
-    },
-    tickerChip: {
-      backgroundColor: colors.card,
-      borderRadius: radius.md,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
-      borderWidth: 1,
-      borderColor: colors.border,
-      alignItems: 'center',
-      minWidth: 85,
-    },
-    tickerLabel: {
-      fontSize: 10,
-      fontWeight: '700',
-      color: colors.text.muted,
-      letterSpacing: 0.5,
-      marginBottom: 2,
-    },
-    tickerValue: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: colors.text.primary,
-      fontVariant: ['tabular-nums'],
-      marginBottom: 2,
-    },
-    tickerChange: {
-      fontSize: 11,
-      fontWeight: '700',
-      fontVariant: ['tabular-nums'],
-    },
-
     // -- Quick Actions --------------------------------------------------------
     quickActions: {
       flexDirection: 'row',

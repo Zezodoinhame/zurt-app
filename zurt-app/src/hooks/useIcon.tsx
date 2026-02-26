@@ -104,6 +104,8 @@ const ICON_MAP: Record<string, { lib: 'ion' | 'mci'; name: string; emoji: string
   converter:    { lib: 'ion', name: 'swap-horizontal-outline', emoji: '\uD83D\uDCB1' },
   emergency:    { lib: 'ion', name: 'shield-checkmark-outline', emoji: '\uD83D\uDEE1\uFE0F' },
   finCalendar:  { lib: 'ion', name: 'calendar-outline', emoji: '\uD83D\uDDD3\uFE0F' },
+  share:        { lib: 'ion', name: 'share-social-outline', emoji: '\uD83D\uDD17' },
+  gift:         { lib: 'ion', name: 'gift-outline', emoji: '\uD83C\uDF81' },
 };
 
 export type AppIconName = keyof typeof ICON_MAP;
