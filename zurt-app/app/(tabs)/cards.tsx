@@ -15,6 +15,8 @@ import {
   RefreshControl,
   Modal,
   ActivityIndicator,
+  Linking,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -85,6 +87,9 @@ export default function CardsScreen() {
   const [aiResponse, setAiResponse] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
 
+  // ── Invoice modal state ──
+  const [invoiceCard, setInvoiceCard] = useState<VisualCreditCard | null>(null);
+
   // ── Data load ──
   useEffect(() => {
     loadCards();
@@ -110,9 +115,8 @@ export default function CardsScreen() {
   // ── Aggregate calculations ──
   const totalFaturas = visualCards.reduce((s, c) => s + c.faturaAtual, 0);
   const totalLimite = visualCards.reduce((s, c) => s + c.limiteTotal, 0);
-  const totalUsado = visualCards.reduce((s, c) => s + c.limiteUsado, 0);
-  const totalDisponivel = totalLimite - totalUsado;
-  const pctGeral = totalLimite > 0 ? totalUsado / totalLimite : 0;
+  const totalDisponivel = Math.max(0, totalLimite - totalFaturas);
+  const pctGeral = totalLimite > 0 ? totalFaturas / totalLimite : 0;
 
   // ── Display helpers ──
   const display = useCallback(
@@ -168,6 +172,56 @@ export default function CardsScreen() {
     }
   }, [visualSpending, sendMessage, t, currency]);
 
+  // ── Bank deep link map ──
+  const BANK_APPS: Record<string, string> = useMemo(() => ({
+    BTG: 'btgpactual://',
+    'BTG Pactual': 'btgpactual://',
+    Nubank: 'nubank://',
+    nubank: 'nubank://',
+    nu: 'nubank://',
+    Bradesco: 'bradesco://',
+    Santander: 'santander://',
+    'Itaú': 'itau://',
+    Itau: 'itau://',
+    Inter: 'bancointer://',
+    BB: 'bb://',
+    'Banco do Brasil': 'bb://',
+    Caixa: 'caixa://',
+    C6: 'c6bank://',
+    'C6 Bank': 'c6bank://',
+    XP: 'xpinvestimentos://',
+    'XP Investimentos': 'xpinvestimentos://',
+  }), []);
+
+  // ── View invoice handler ──
+  const handleViewInvoice = useCallback((card: VisualCreditCard) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setInvoiceCard(card);
+  }, []);
+
+  // ── Pay handler (open bank app) ──
+  const handlePayCard = useCallback((card: VisualCreditCard) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const scheme = BANK_APPS[card.banco] || BANK_APPS[card.bancoAbrev];
+    if (scheme) {
+      Linking.openURL(scheme).catch(() => {
+        Alert.alert(t('cards.bankAppNotFound'), t('cards.installBankApp'));
+      });
+    } else {
+      Alert.alert(t('cards.bankAppNotFound'), t('cards.installBankApp'));
+    }
+  }, [BANK_APPS, t]);
+
+  // ── Filter transactions for a card ──
+  const getCardTransactions = useCallback((card: VisualCreditCard) => {
+    const { dashboardTransactions } = useCardsStore.getState();
+    const bancoLower = card.banco.toLowerCase();
+    return dashboardTransactions.filter((tx) => {
+      const instLower = (tx.institution_name || '').toLowerCase();
+      return instLower.includes(bancoLower) || bancoLower.includes(instLower);
+    });
+  }, []);
+
   // =====================================================================
   // Sub-renders
   // =====================================================================
@@ -207,34 +261,44 @@ export default function CardsScreen() {
             <Text style={styles.summaryLabel}>{t('cards.totalInvoices')}</Text>
             <Text style={styles.summaryValue}>{display(totalFaturas)}</Text>
           </View>
-          <View style={styles.summaryRight}>
-            <Text style={styles.summaryLabel}>{t('cards.available')}</Text>
-            <Text style={[styles.summarySecondary, { color: colors.positive }]}>
-              {display(totalDisponivel)}
-            </Text>
-          </View>
+          {totalLimite > 0 && (
+            <View style={styles.summaryRight}>
+              <Text style={styles.summaryLabel}>{t('cards.available')}</Text>
+              <Text style={[styles.summarySecondary, { color: colors.positive }]}>
+                {display(totalDisponivel)}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Usage bar */}
-        <View style={styles.summaryBarSection}>
-          <View style={styles.summaryBarLabels}>
-            <Text style={styles.summaryBarText}>
-              {(pctGeral * 100).toFixed(0)}% {t('cards.ofTotalLimit')}
+        {totalLimite > 0 ? (
+          <View style={styles.summaryBarSection}>
+            <View style={styles.summaryBarLabels}>
+              <Text style={styles.summaryBarText}>
+                {(pctGeral * 100).toFixed(0)}% {t('cards.ofTotalLimit')}
+              </Text>
+              <Text style={styles.summaryBarText}>{t('cards.limit')} {display(totalLimite)}</Text>
+            </View>
+            <View style={styles.summaryBarBg}>
+              <View
+                style={[
+                  styles.summaryBarFill,
+                  {
+                    width: `${Math.min(pctGeral * 100, 100)}%`,
+                    backgroundColor: getUsageColor(pctGeral),
+                  },
+                ]}
+              />
+            </View>
+          </View>
+        ) : (
+          <View style={styles.summaryBarSection}>
+            <Text style={[styles.summaryBarText, { color: colors.text.muted }]}>
+              {t('cards.limitNotInformed')}
             </Text>
-            <Text style={styles.summaryBarText}>{display(totalLimite)}</Text>
           </View>
-          <View style={styles.summaryBarBg}>
-            <View
-              style={[
-                styles.summaryBarFill,
-                {
-                  width: `${Math.min(pctGeral * 100, 100)}%`,
-                  backgroundColor: getUsageColor(pctGeral),
-                },
-              ]}
-            />
-          </View>
-        </View>
+        )}
 
         {/* Bank mini-badges */}
         <View style={styles.bankBadges}>
@@ -311,8 +375,9 @@ export default function CardsScreen() {
 
   // ── Card Detail Panel (expanded) ──
   const renderDetailPanel = (card: VisualCreditCard) => {
-    const disponivel = card.limiteTotal - card.limiteUsado;
-    const pctUsado = card.limiteTotal > 0 ? card.limiteUsado / card.limiteTotal : 0;
+    const hasLimit = card.limiteTotal > 0;
+    const disponivel = Math.max(0, card.limiteTotal - card.faturaAtual);
+    const pctUsado = hasLimit ? card.faturaAtual / card.limiteTotal : 0;
     const barColor = getUsageColor(pctUsado);
 
     return (
@@ -323,36 +388,46 @@ export default function CardsScreen() {
             <Text style={styles.detailLabel}>{t('cards.currentInvoice')}</Text>
             <Text style={styles.detailValue}>{display(card.faturaAtual)}</Text>
           </View>
-          <View style={styles.detailRight}>
-            <Text style={styles.detailLabel}>{t('cards.available')}</Text>
-            <Text style={[styles.detailValue, { color: colors.positive }]}>
-              {display(disponivel)}
-            </Text>
-          </View>
+          {hasLimit && (
+            <View style={styles.detailRight}>
+              <Text style={styles.detailLabel}>{t('cards.available')}</Text>
+              <Text style={[styles.detailValue, { color: colors.positive }]}>
+                {display(disponivel)}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Usage bar */}
-        <View style={styles.detailBarSection}>
-          <View style={styles.detailBarLabels}>
-            <Text style={styles.detailBarText}>
-              {(pctUsado * 100).toFixed(0)}% {t('cards.used')}
-            </Text>
-            <Text style={styles.detailBarText}>
-              {t('cards.limit')} {display(card.limiteTotal)}
+        {hasLimit ? (
+          <View style={styles.detailBarSection}>
+            <View style={styles.detailBarLabels}>
+              <Text style={styles.detailBarText}>
+                {(pctUsado * 100).toFixed(0)}% {t('cards.used')}
+              </Text>
+              <Text style={styles.detailBarText}>
+                {t('cards.limit')} {display(card.limiteTotal)}
+              </Text>
+            </View>
+            <View style={styles.detailBarBg}>
+              <View
+                style={[
+                  styles.detailBarFill,
+                  {
+                    width: `${Math.min(pctUsado * 100, 100)}%`,
+                    backgroundColor: barColor,
+                  },
+                ]}
+              />
+            </View>
+          </View>
+        ) : (
+          <View style={styles.detailBarSection}>
+            <Text style={[styles.detailBarText, { color: colors.text.muted }]}>
+              {t('cards.limitNotInformed')}
             </Text>
           </View>
-          <View style={styles.detailBarBg}>
-            <View
-              style={[
-                styles.detailBarFill,
-                {
-                  width: `${Math.min(pctUsado * 100, 100)}%`,
-                  backgroundColor: barColor,
-                },
-              ]}
-            />
-          </View>
-        </View>
+        )}
 
         {/* Dates */}
         <View style={styles.datesRow}>
@@ -418,13 +493,18 @@ export default function CardsScreen() {
 
         {/* Action buttons */}
         <View style={styles.detailActions}>
-          <TouchableOpacity style={styles.btnOutline} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.btnOutline}
+            activeOpacity={0.7}
+            onPress={() => handleViewInvoice(card)}
+          >
             <Ionicons name="receipt-outline" size={16} color={colors.text.primary} />
             <Text style={styles.btnOutlineText}>{t('cards.viewInvoice')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.btnFilled, { backgroundColor: colors.accent }]}
             activeOpacity={0.7}
+            onPress={() => handlePayCard(card)}
           >
             <Ionicons name="card-outline" size={16} color={colors.background} />
             <Text style={[styles.btnFilledText, { color: colors.background }]}>
@@ -661,6 +741,80 @@ export default function CardsScreen() {
             >
               <Text style={styles.modalCloseBtnText}>{t('common.close')}</Text>
             </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* ── Invoice Transactions Modal ── */}
+      <Modal
+        visible={invoiceCard !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setInvoiceCard(null)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setInvoiceCard(null)}>
+          <View style={styles.invoiceModalContent} onStartShouldSetResponder={() => true}>
+            {invoiceCard && (
+              <>
+                <View style={styles.invoiceModalHeader}>
+                  <Text style={styles.modalTitle}>
+                    {t('cards.viewInvoice')} — {invoiceCard.banco}
+                  </Text>
+                  <Text style={styles.invoiceModalSubtitle}>
+                    {invoiceCard.tipo} •••• {invoiceCard.ultimos4}
+                  </Text>
+                </View>
+
+                <ScrollView
+                  style={styles.aiScroll}
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator={false}
+                >
+                  {(() => {
+                    const txs = getCardTransactions(invoiceCard);
+                    if (txs.length === 0) {
+                      return (
+                        <View style={styles.invoiceEmptyState}>
+                          <AppIcon name="document" size={32} color={colors.text.muted} />
+                          <Text style={styles.invoiceEmptyText}>
+                            {t('cards.noTransactions')}
+                          </Text>
+                        </View>
+                      );
+                    }
+                    return txs.map((tx) => (
+                      <View key={tx.id} style={styles.invoiceTxRow}>
+                        <View style={styles.invoiceTxLeft}>
+                          <Text style={styles.invoiceTxDesc} numberOfLines={1}>
+                            {tx.description || tx.merchant || '—'}
+                          </Text>
+                          <Text style={styles.invoiceTxDate}>
+                            {tx.date ? new Date(tx.date).toLocaleDateString() : ''}
+                          </Text>
+                        </View>
+                        <Text
+                          style={[
+                            styles.invoiceTxAmount,
+                            { color: tx.amount < 0 ? colors.negative : colors.text.primary },
+                          ]}
+                        >
+                          {display(Math.abs(tx.amount))}
+                        </Text>
+                      </View>
+                    ));
+                  })()}
+                  <View style={{ height: 20 }} />
+                </ScrollView>
+
+                <TouchableOpacity
+                  style={styles.modalCloseBtn}
+                  onPress={() => setInvoiceCard(null)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.modalCloseBtnText}>{t('common.close')}</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </Pressable>
       </Modal>
@@ -1213,5 +1367,61 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 14,
       fontWeight: '600',
       color: colors.text.primary,
+    },
+
+    // ── Invoice Modal ──
+    invoiceModalContent: {
+      backgroundColor: colors.card,
+      borderRadius: radius.lg,
+      padding: spacing.xl,
+      width: '100%',
+      maxHeight: '85%',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    invoiceModalHeader: {
+      marginBottom: spacing.lg,
+    },
+    invoiceModalSubtitle: {
+      fontSize: 13,
+      color: colors.text.muted,
+      marginTop: 4,
+      textAlign: 'center',
+    },
+    invoiceEmptyState: {
+      alignItems: 'center',
+      paddingVertical: 40,
+      gap: spacing.md,
+    },
+    invoiceEmptyText: {
+      fontSize: 14,
+      color: colors.text.muted,
+    },
+    invoiceTxRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    invoiceTxLeft: {
+      flex: 1,
+      marginRight: spacing.md,
+    },
+    invoiceTxDesc: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.text.primary,
+    },
+    invoiceTxDate: {
+      fontSize: 11,
+      color: colors.text.muted,
+      marginTop: 2,
+    },
+    invoiceTxAmount: {
+      fontSize: 14,
+      fontWeight: '600',
+      fontVariant: ['tabular-nums'],
     },
   });

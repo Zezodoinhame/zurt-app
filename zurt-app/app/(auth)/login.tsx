@@ -69,8 +69,10 @@ export default function LoginScreen() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleAvailable] = useState(true);
 
@@ -294,19 +296,33 @@ export default function LoginScreen() {
     Keyboard.dismiss();
     setError('');
     clearError();
+    const errors: Record<string, string> = {};
 
     if (!fullName.trim()) {
-      setError(t('login.nameError'));
-      return;
+      errors.fullName = t('login.nameRequired');
+    } else if (fullName.trim().length < 2) {
+      errors.fullName = t('login.nameTooShort');
     }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email.trim()) {
-      setError(t('login.emailError'));
-      return;
+      errors.email = t('login.emailError');
+    } else if (!emailRegex.test(email.trim())) {
+      errors.email = t('login.emailInvalid');
     }
+
     if (!password.trim() || password.length < 6) {
-      setError(t('login.passwordMinLength'));
-      return;
+      errors.password = t('login.passwordMinLength');
     }
+
+    if (!confirmPassword.trim()) {
+      errors.confirmPassword = t('login.confirmPasswordRequired');
+    } else if (password !== confirmPassword) {
+      errors.confirmPassword = t('login.passwordsDontMatch');
+    }
+
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
     try {
       const success = await register(fullName.trim(), email.trim(), password);
@@ -321,7 +337,7 @@ export default function LoginScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError(t('login.registerError'));
     }
-  }, [fullName, email, password, register, router, clearError, t]);
+  }, [fullName, email, password, confirmPassword, register, router, clearError, t]);
 
   const handleDemo = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -331,7 +347,9 @@ export default function LoginScreen() {
 
   const toggleMode = useCallback(() => {
     setError('');
+    setFieldErrors({});
     clearError();
+    setConfirmPassword('');
     setMode((m) => (m === 'login' ? 'register' : 'login'));
   }, [clearError]);
 
@@ -380,18 +398,24 @@ export default function LoginScreen() {
             </View>
 
             {mode === 'register' && (
-              <Input
-                label={t('login.fullName')}
-                placeholder={t('login.yourName')}
-                value={fullName}
-                onChangeText={(text) => {
-                  setFullName(text);
-                  setError('');
-                }}
-                autoCapitalize="words"
-                autoCorrect={false}
-                returnKeyType="next"
-              />
+              <>
+                <Input
+                  label={t('login.fullName')}
+                  placeholder={t('login.yourName')}
+                  value={fullName}
+                  onChangeText={(text) => {
+                    setFullName(text);
+                    setError('');
+                    setFieldErrors((e) => ({ ...e, fullName: '' }));
+                  }}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  returnKeyType="next"
+                />
+                {fieldErrors.fullName ? (
+                  <Text style={styles.fieldError}>{fieldErrors.fullName}</Text>
+                ) : null}
+              </>
             )}
 
             <Input
@@ -401,25 +425,30 @@ export default function LoginScreen() {
               onChangeText={(text) => {
                 setEmail(text);
                 setError('');
+                setFieldErrors((e) => ({ ...e, email: '' }));
               }}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="next"
             />
+            {fieldErrors.email ? (
+              <Text style={styles.fieldError}>{fieldErrors.email}</Text>
+            ) : null}
 
             <Input
               label={t('login.password')}
-              placeholder={'\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'}
+              placeholder={mode === 'register' ? t('login.passwordMinLength') : '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'}
               value={password}
               onChangeText={(text) => {
                 setPassword(text);
                 setError('');
+                setFieldErrors((e) => ({ ...e, password: '' }));
               }}
               secureTextEntry={!showPassword}
               autoCapitalize="none"
-              returnKeyType="done"
-              onSubmitEditing={mode === 'login' ? handleLogin : handleRegister}
+              returnKeyType={mode === 'register' ? 'next' : 'done'}
+              onSubmitEditing={mode === 'login' ? handleLogin : undefined}
               rightIcon={
                 <Text style={styles.eyeIcon}>
                   {showPassword ? '\uD83D\uDC41\uFE0F' : '\uD83D\uDC41\uFE0F\u200D\uD83D\uDDE8\uFE0F'}
@@ -427,6 +456,31 @@ export default function LoginScreen() {
               }
               onRightIconPress={() => setShowPassword(!showPassword)}
             />
+            {fieldErrors.password ? (
+              <Text style={styles.fieldError}>{fieldErrors.password}</Text>
+            ) : null}
+
+            {mode === 'register' && (
+              <>
+                <Input
+                  label={t('login.confirmPassword')}
+                  placeholder={t('login.confirmPasswordPlaceholder')}
+                  value={confirmPassword}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    setError('');
+                    setFieldErrors((e) => ({ ...e, confirmPassword: '' }));
+                  }}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  returnKeyType="done"
+                  onSubmitEditing={handleRegister}
+                />
+                {fieldErrors.confirmPassword ? (
+                  <Text style={styles.fieldError}>{fieldErrors.confirmPassword}</Text>
+                ) : null}
+              </>
+            )}
 
             {displayError ? (
               <Text style={styles.error}>{displayError}</Text>
@@ -556,6 +610,13 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     marginBottom: spacing.lg,
+  },
+  fieldError: {
+    color: colors.negative,
+    fontSize: 12,
+    marginTop: -spacing.xs,
+    marginBottom: spacing.sm,
+    paddingLeft: 2,
   },
   buttonContainer: {
     marginTop: spacing.sm,
