@@ -758,13 +758,14 @@ export default function ProfileScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsExportingPdf(true);
     try {
-      const { summary, institutions: insts, allocations: allocs, assets } = usePortfolioStore.getState();
+      const { summary, institutions: insts, allocations: allocs, assets, insights: portfolioInsights } = usePortfolioStore.getState();
+      const { dashboardTransactions } = useCardsStore.getState();
       if (!summary) {
         Alert.alert(t('common.error'), t('report.error'));
         return;
       }
       await generatePatrimonialReport(
-        { summary, institutions: insts, allocations: allocs, cards, assets },
+        { summary, institutions: insts, allocations: allocs, cards, assets, transactions: dashboardTransactions, insights: portfolioInsights },
         user,
         accentColor,
       );

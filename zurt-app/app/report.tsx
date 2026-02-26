@@ -1,5 +1,6 @@
 // =============================================================================
-// ZURT Wealth Intelligence - Premium PDF Report Generation Screen
+// ZURT Wealth Intelligence — Premium PDF Report Screen
+// Dark theme, gold accents, 5-page layout with real store data + AI analysis
 // =============================================================================
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
@@ -20,826 +21,486 @@ import * as Sharing from 'expo-sharing';
 import { type ThemeColors } from '../src/theme/colors';
 import { spacing, radius } from '../src/theme/spacing';
 import { useSettingsStore } from '../src/stores/settingsStore';
+import { usePortfolioStore } from '../src/stores/portfolioStore';
+import { useCardsStore } from '../src/stores/cardsStore';
+import { useAgentStore } from '../src/stores/agentStore';
+import { useAuthStore } from '../src/stores/authStore';
 import { generateReportApi } from '../src/services/api';
 import { AppIcon } from '../src/hooks/useIcon';
 import { logger } from '../src/utils/logger';
 
 // =============================================================================
-// Types
+// Helpers
 // =============================================================================
 
-interface ReportData {
-  analysis: string;
-  portfolio: any;
-  market: any;
-  generatedAt: string;
-  investorName: string;
+function fmtBRL(value: number): string {
+  const safe = typeof value === 'number' && isFinite(value) ? value : 0;
+  return safe.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 });
+}
+
+function fmtPct(value: number): string {
+  const safe = typeof value === 'number' && isFinite(value) ? value : 0;
+  const formatted = Math.abs(safe).toFixed(2).replace('.', ',');
+  return safe >= 0 ? `+${formatted}%` : `-${formatted}%`;
+}
+
+function fmtDate(dateStr: string): string {
+  if (!dateStr) return '-';
+  try {
+    return new Date(dateStr).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  } catch {
+    return dateStr;
+  }
+}
+
+function capitalize(s: string): string {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+}
+
+function dateByExtension(): string {
+  return new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
 // =============================================================================
-// Multilingual Report Labels
+// HTML Builder
 // =============================================================================
 
-const reportLabels: Record<string, Record<string, string>> = {
-  pt: {
-    title: 'Relatório Patrimonial',
-    subtitle: 'Wealth Intelligence',
-    coverSubtitle: 'Análise completa do seu patrimônio financeiro',
-    executiveSummary: 'Resumo Executivo',
-    summarySubtitle: 'Visão geral do seu patrimônio e indicadores de mercado',
-    patrimony: 'Patrimônio Detalhado',
-    patrimonySubtitle: 'Contas bancárias, investimentos e cartões de crédito',
-    investments: 'Carteira de Investimentos',
-    cards: 'Cartões de Crédito',
-    bankAccounts: 'Contas Bancárias',
-    marketScenario: 'Cenário de Mercado',
-    marketIndicators: 'Indicadores de Mercado',
-    recommendations: 'Recomendações',
-    recommendationsSubtitle: 'Sugestões personalizadas para otimização do seu patrimônio',
-    perspectives: 'Perspectivas',
-    generatedBy: 'Documento gerado automaticamente pela plataforma ZURT · zurt.com.br',
-    confidential: 'Documento confidencial — uso exclusivo do titular',
-    disclaimer: 'Aviso Legal',
-    disclaimerText: 'Este relatório é gerado automaticamente pela plataforma ZURT com base nos dados financeiros conectados pelo usuário e em análises de inteligência artificial. As informações contidas neste documento não constituem recomendação de investimento, consultoria financeira, ou aconselhamento profissional de qualquer natureza. Rentabilidade passada não é garantia de resultados futuros. Todas as decisões de investimento devem ser tomadas com base no seu próprio julgamento e, quando apropriado, com o auxílio de um profissional certificado pela CVM (Comissão de Valores Mobiliários). A ZURT não se responsabiliza por perdas ou danos decorrentes do uso das informações apresentadas neste relatório.',
-    account: 'Banco',
-    type: 'Tipo',
-    balance: 'Saldo',
-    institution: 'Instituição',
-    asset: 'Ativo',
-    value: 'Valor',
-    brand: 'Bandeira',
-    lastDigits: 'Final',
-    netWorth: 'Patrimônio Líquido',
-    totalInvested: 'Total Investido',
-    checking: 'Conta Corrente',
-    creditCards: 'Cartões',
-    noAccounts: 'Nenhuma conta disponível.',
-    noInvestments: 'Nenhum investimento disponível.',
-    noCards: 'Nenhum cartão disponível.',
-    defaultRec: 'Conecte mais contas e investimentos para receber recomendações personalizadas baseadas no seu perfil.',
-    page: 'Página',
-    recsAndPerspectives: 'Recomendações e Perspectivas',
-    detailing: 'Detalhamento do Patrimônio',
-  },
-  en: {
-    title: 'Patrimonial Report',
-    subtitle: 'Wealth Intelligence',
-    coverSubtitle: 'Complete analysis of your financial patrimony',
-    executiveSummary: 'Executive Summary',
-    summarySubtitle: 'Overview of your patrimony and market indicators',
-    patrimony: 'Detailed Patrimony',
-    patrimonySubtitle: 'Bank accounts, investments and credit cards',
-    investments: 'Investment Portfolio',
-    cards: 'Credit Cards',
-    bankAccounts: 'Bank Accounts',
-    marketScenario: 'Market Scenario',
-    marketIndicators: 'Market Indicators',
-    recommendations: 'Recommendations',
-    recommendationsSubtitle: 'Personalized suggestions for your patrimony optimization',
-    perspectives: 'Perspectives',
-    generatedBy: 'Document automatically generated by ZURT platform · zurt.com.br',
-    confidential: 'Confidential document — for account holder use only',
-    disclaimer: 'Legal Notice',
-    disclaimerText: 'This report is automatically generated by the ZURT platform based on user-connected financial data and artificial intelligence analysis. The information contained in this document does not constitute investment advice, financial consulting, or professional counsel of any kind. Past performance is not a guarantee of future results. All investment decisions should be made based on your own judgment and, where appropriate, with the help of a CVM-certified professional. ZURT is not liable for any losses or damages arising from the use of the information presented in this report.',
-    account: 'Bank',
-    type: 'Type',
-    balance: 'Balance',
-    institution: 'Institution',
-    asset: 'Asset',
-    value: 'Value',
-    brand: 'Brand',
-    lastDigits: 'Last digits',
-    netWorth: 'Net Worth',
-    totalInvested: 'Total Invested',
-    checking: 'Checking Account',
-    creditCards: 'Cards',
-    noAccounts: 'No accounts available.',
-    noInvestments: 'No investments available.',
-    noCards: 'No cards available.',
-    defaultRec: 'Connect more accounts and investments to receive personalized recommendations based on your profile.',
-    page: 'Page',
-    recsAndPerspectives: 'Recommendations and Perspectives',
-    detailing: 'Patrimony Detailing',
-  },
-  zh: {
-    title: '财产报告', subtitle: 'Wealth Intelligence',
-    coverSubtitle: '您的财务资产完整分析',
-    executiveSummary: '执行摘要', summarySubtitle: '资产与市场指标概览',
-    patrimony: '详细资产', patrimonySubtitle: '银行账户、投资和信用卡',
-    investments: '投资组合', cards: '信用卡', bankAccounts: '银行账户',
-    marketScenario: '市场情景', marketIndicators: '市场指标',
-    recommendations: '建议', recommendationsSubtitle: '针对您资产的个性化优化建议',
-    perspectives: '展望',
-    generatedBy: 'ZURT平台自动生成 · zurt.com.br', confidential: '机密文件',
-    disclaimer: '法律声明',
-    disclaimerText: '本报告由ZURT平台根据用户连接的财务数据和人工智能分析自动生成。本文件中的信息不构成投资建议。',
-    account: '银行', type: '类型', balance: '余额', institution: '机构',
-    asset: '资产', value: '价值', brand: '品牌', lastDigits: '尾号',
-    netWorth: '净资产', totalInvested: '总投资', checking: '活期账户', creditCards: '卡片',
-    noAccounts: '暂无账户。', noInvestments: '暂无投资。', noCards: '暂无卡片。',
-    defaultRec: '连接更多账户和投资以获取个性化建议。', page: '页', recsAndPerspectives: '建议与展望', detailing: '资产明细',
-  },
-  ar: {
-    title: 'التقرير المالي', subtitle: 'Wealth Intelligence',
-    coverSubtitle: 'تحليل شامل لأصولك المالية',
-    executiveSummary: 'الملخص التنفيذي', summarySubtitle: 'نظرة عامة على الأصول ومؤشرات السوق',
-    patrimony: 'التفاصيل المالية', patrimonySubtitle: 'الحسابات المصرفية والاستثمارات وبطاقات الائتمان',
-    investments: 'محفظة الاستثمارات', cards: 'البطاقات', bankAccounts: 'الحسابات المصرفية',
-    marketScenario: 'سيناريو السوق', marketIndicators: 'مؤشرات السوق',
-    recommendations: 'التوصيات', recommendationsSubtitle: 'اقتراحات مخصصة لتحسين أصولك',
-    perspectives: 'التوقعات',
-    generatedBy: 'وثيقة تم إنشاؤها تلقائيًا بواسطة ZURT · zurt.com.br', confidential: 'وثيقة سرية',
-    disclaimer: 'إشعار قانوني',
-    disclaimerText: 'يتم إنشاء هذا التقرير تلقائيًا بواسطة منصة ZURT. لا يشكل نصيحة استثمارية.',
-    account: 'بنك', type: 'نوع', balance: 'رصيد', institution: 'مؤسسة',
-    asset: 'أصل', value: 'قيمة', brand: 'علامة', lastDigits: 'آخر أرقام',
-    netWorth: 'صافي الثروة', totalInvested: 'إجمالي المستثمر', checking: 'حساب جاري', creditCards: 'بطاقات',
-    noAccounts: 'لا توجد حسابات.', noInvestments: 'لا توجد استثمارات.', noCards: 'لا توجد بطاقات.',
-    defaultRec: 'اربط المزيد من الحسابات للحصول على توصيات مخصصة.', page: 'صفحة', recsAndPerspectives: 'التوصيات والتوقعات', detailing: 'تفاصيل الأصول',
-  },
-};
+function buildReportHTML(opts: {
+  summary: any;
+  institutions: any[];
+  allocations: any[];
+  cards: any[];
+  assets: any[];
+  transactions: any[];
+  aiInsights: string;
+  userName: string;
+  aiAnalysis?: string;
+}): string {
+  const { summary, institutions, allocations, cards, assets, transactions, aiInsights, userName, aiAnalysis } = opts;
 
-// =============================================================================
-// Helper: Format date in Brazilian Portuguese
-// =============================================================================
+  const now = new Date();
+  const dateStr = dateByExtension();
+  const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const shortDate = now.toLocaleDateString('pt-BR');
 
-function formatDateBR(date: string): string {
-  const months = [
-    'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
-  ];
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return date;
-  const day = d.getDate();
-  const month = months[d.getMonth()];
-  const year = d.getFullYear();
-  return `${day} de ${month} de ${year}`;
-}
+  // Computed values
+  const totalValue = summary?.totalValue ?? 0;
+  const totalInvested = summary?.investedValue ?? assets.reduce((s: number, a: any) => s + (a.investedValue ?? 0), 0);
+  const profit = totalValue - totalInvested;
+  const var1m = summary?.variation1m ?? 0;
+  const var12m = summary?.variation12m ?? 0;
 
-// =============================================================================
-// Helper: Format currency in Brazilian format
-// =============================================================================
+  const totalFaturas = cards.reduce((s: number, c: any) => s + (c.currentInvoice ?? 0), 0);
+  const totalLimite = cards.reduce((s: number, c: any) => s + (c.limit ?? 0), 0);
 
-function formatCurrencyBR(value: number): string {
-  if (value == null || isNaN(value)) return 'R$ 0,00';
-  return value.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
+  const top15Assets = [...assets].sort((a: any, b: any) => (b.currentValue ?? 0) - (a.currentValue ?? 0)).slice(0, 15);
+  const recentTx = transactions.slice(0, 15);
 
-// =============================================================================
-// Helper: Parse AI analysis text into sections
-// =============================================================================
-
-function parseAnalysisSections(analysis: string): {
-  resumo: string;
-  patrimonio: string;
-  investimentos: string;
-  cartoes: string;
-  mercado: string;
-  recomendacoes: string;
-  perspectivas: string;
-} {
-  const defaults = {
-    resumo: '',
-    patrimonio: '',
-    investimentos: '',
-    cartoes: '',
-    mercado: '',
-    recomendacoes: '',
-    perspectivas: '',
-  };
-
-  if (!analysis) return defaults;
-
-  // Try to split by numbered headers like "1. RESUMO EXECUTIVO", "2. ANALISE DO PATRIMONIO"
-  const sectionPattern = /\d+\.\s*[A-ZÁÉÍÓÚÂÊÔÃÕÇ\s]+/g;
-  const matches = [...analysis.matchAll(sectionPattern)];
-
-  if (matches.length === 0) {
-    // No structured sections found, put everything in resumo
-    defaults.resumo = analysis;
-    return defaults;
+  // AI content — merge API analysis with local agent messages
+  let aiContent = '';
+  if (aiAnalysis && aiAnalysis.trim().length > 20) {
+    aiContent = aiAnalysis.replace(/\n/g, '<br>');
+  } else if (aiInsights && aiInsights.trim().length > 10) {
+    aiContent = aiInsights.replace(/\n/g, '<br>');
   }
 
-  const sections: { title: string; start: number; end: number; content: string }[] = [];
-  for (let i = 0; i < matches.length; i++) {
-    const match = matches[i];
-    const start = (match.index ?? 0) + match[0].length;
-    const end = i + 1 < matches.length ? (matches[i + 1].index ?? analysis.length) : analysis.length;
-    const title = match[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const content = analysis.substring(start, end).trim();
-    sections.push({ title, start, end, content });
-  }
+  const pageHeader = (page: number) => `
+    <div class="ph">
+      <div class="ph-left"><span class="ph-logo">ZURT</span><span class="ph-sep">|</span><span class="ph-type">Wealth Intelligence</span></div>
+      <div class="ph-right">${userName} &bull; ${shortDate}</div>
+    </div>`;
 
-  for (const section of sections) {
-    const t = section.title;
-    if (t.includes('resumo') || t.includes('executivo')) {
-      defaults.resumo = section.content;
-    } else if (t.includes('patrimonio') || t.includes('patrimônio')) {
-      defaults.patrimonio = section.content;
-    } else if (t.includes('investimento')) {
-      defaults.investimentos = section.content;
-    } else if (t.includes('cartao') || t.includes('cartoes') || t.includes('cartões')) {
-      defaults.cartoes = section.content;
-    } else if (t.includes('mercado') || t.includes('cenario') || t.includes('cenário')) {
-      defaults.mercado = section.content;
-    } else if (t.includes('recomenda')) {
-      defaults.recomendacoes = section.content;
-    } else if (t.includes('perspectiva') || t.includes('conclus')) {
-      defaults.perspectivas = section.content;
-    }
-  }
-
-  // If resumo is still empty, use the first section
-  if (!defaults.resumo && sections.length > 0) {
-    defaults.resumo = sections[0].content;
-  }
-
-  return defaults;
-}
-
-// =============================================================================
-// HTML Builder: Summary Cards
-// =============================================================================
-
-function buildSummaryCards(portfolio: any, labels: Record<string, string>): string {
-  const contas = portfolio?.contas ?? portfolio?.accounts ?? [];
-  const investimentos = portfolio?.investimentos ?? portfolio?.investments ?? [];
-  const cartoes = portfolio?.cartoes ?? portfolio?.cards ?? [];
-
-  const totalContas = Array.isArray(contas)
-    ? contas.reduce((sum: number, c: any) => sum + (parseFloat(c.saldo ?? c.balance ?? c.current_balance ?? '0') || 0), 0)
-    : 0;
-  const totalInvestimentos = Array.isArray(investimentos)
-    ? investimentos.reduce((sum: number, i: any) => sum + (parseFloat(i.valor ?? i.value ?? i.current_value ?? '0') || 0), 0)
-    : 0;
-  const patrimonioLiquido = totalContas + totalInvestimentos;
-  const totalCartoes = Array.isArray(cartoes)
-    ? cartoes.reduce((sum: number, c: any) => sum + (parseFloat(c.fatura ?? c.invoice ?? c.openDebt ?? '0') || 0), 0)
-    : 0;
-
-  return `
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 20px 0;">
-      <div style="background: linear-gradient(135deg, #F7FAFC, #EDF2F7); border-radius: 12px; padding: 18px; border: 1px solid #E2E8F0; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-        <div style="font-size: 10px; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">${labels.netWorth}</div>
-        <div style="font-size: 20px; font-weight: 700; color: #080D14;">${formatCurrencyBR(patrimonioLiquido)}</div>
+  const pageFooter = (page: number) => `
+    <div class="pf">
+      <div class="pf-line"></div>
+      <div class="pf-row">
+        <span class="pf-brand">ZURT Wealth Intelligence</span>
+        <span class="pf-conf">Confidencial</span>
+        <span class="pf-page">Página ${page}</span>
       </div>
-      <div style="background: linear-gradient(135deg, #F7FAFC, #EDF2F7); border-radius: 12px; padding: 18px; border: 1px solid #E2E8F0; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-        <div style="font-size: 10px; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">${labels.totalInvested}</div>
-        <div style="font-size: 20px; font-weight: 700; color: #080D14;">${formatCurrencyBR(totalInvestimentos)}</div>
+    </div>`;
+
+  // ---- PAGE 1: COVER ----
+  const coverHTML = `
+  <div class="cover">
+    <div class="cover-accent-top"></div>
+    <div class="cover-body">
+      <div class="cover-logo">ZURT</div>
+      <div class="cover-tagline">WEALTH INTELLIGENCE</div>
+      <div class="cover-sep"></div>
+      <div class="cover-title">Relatório Patrimonial</div>
+      <div class="cover-value-label">PATRIMÔNIO TOTAL</div>
+      <div class="cover-value">${fmtBRL(totalValue)}</div>
+      <div class="cover-var">
+        <span class="${var1m >= 0 ? 'pos' : 'neg'}">30d: ${fmtPct(var1m)}</span>
+        <span class="cover-var-dot">&bull;</span>
+        <span class="${var12m >= 0 ? 'pos' : 'neg'}">12m: ${fmtPct(var12m)}</span>
       </div>
-      <div style="background: linear-gradient(135deg, #F7FAFC, #EDF2F7); border-radius: 12px; padding: 18px; border: 1px solid #E2E8F0; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-        <div style="font-size: 10px; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">${labels.checking}</div>
-        <div style="font-size: 20px; font-weight: 700; color: #080D14;">${formatCurrencyBR(totalContas)}</div>
-      </div>
-      <div style="background: linear-gradient(135deg, #F7FAFC, #EDF2F7); border-radius: 12px; padding: 18px; border: 1px solid #E2E8F0; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-        <div style="font-size: 10px; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">${labels.creditCards}</div>
-        <div style="font-size: 20px; font-weight: 700; color: #E53E3E;">${formatCurrencyBR(totalCartoes)}</div>
-      </div>
+      <div class="cover-client-label">PREPARADO PARA</div>
+      <div class="cover-client">${userName.toUpperCase()}</div>
+      <div class="cover-date">${dateStr}</div>
     </div>
-  `;
-}
+    <div class="cover-footer">Documento confidencial &bull; Uso exclusivo do cliente</div>
+    <div class="cover-accent-bottom"></div>
+  </div>`;
 
-// =============================================================================
-// HTML Builder: Market Indicator Chips
-// =============================================================================
+  // ---- PAGE 2: EXECUTIVE SUMMARY ----
+  const instRows = institutions.map((inst: any) => {
+    const pct = totalValue > 0 ? ((inst.totalValue ?? 0) / totalValue * 100).toFixed(1) : '0.0';
+    return `<tr>
+      <td><span class="cdot" style="background:${inst.color ?? '#1A73E8'}"></span>${inst.name ?? '-'}</td>
+      <td class="td-r td-b">${fmtBRL(inst.totalValue ?? 0)}</td>
+      <td class="td-r">${pct.replace('.', ',')}%</td>
+    </tr>`;
+  }).join('');
 
-function buildMarketChips(market: any, labels: Record<string, string>): string {
-  if (!market) return '';
+  const allocBar = allocations.map((a: any) =>
+    `<div style="width:${Math.max(a.percentage ?? 0, 1)}%;height:100%;background:${a.color ?? '#3A86FF'}"></div>`
+  ).join('');
 
-  const indicators = [
-    { label: 'IBOV', value: market.ibov ?? market.ibovespa ?? null, suffix: 'pts' },
-    { label: 'Selic', value: market.selic ?? null, suffix: '% a.a.' },
-    { label: 'Dolar', value: market.dolar ?? market.usd ?? market.dollar ?? null, suffix: '' },
-    { label: 'IPCA', value: market.ipca ?? null, suffix: '% a.a.' },
-    { label: 'BTC', value: market.btc ?? market.bitcoin ?? null, suffix: '' },
-  ];
-
-  const chips = indicators
-    .filter((ind) => ind.value != null)
-    .map((ind) => {
-      const formattedValue = typeof ind.value === 'number'
-        ? (ind.suffix === 'pts'
-          ? ind.value.toLocaleString('pt-BR')
-          : ind.suffix.includes('%')
-            ? `${ind.value.toFixed(2).replace('.', ',')}${ind.suffix}`
-            : formatCurrencyBR(ind.value))
-        : String(ind.value);
-      return `
-        <div style="display: inline-block; background: linear-gradient(135deg, #00D4AA10, #00D4AA20); border: 1px solid #00D4AA40; border-radius: 20px; padding: 6px 14px; margin: 4px; font-size: 11px;">
-          <span style="color: #718096; font-weight: 600;">${ind.label}</span>
-          <span style="color: #080D14; font-weight: 700; margin-left: 6px;">${formattedValue}</span>
-        </div>
-      `;
-    })
-    .join('');
-
-  return `
-    <div style="margin: 16px 0; text-align: center;">
-      <div style="font-size: 11px; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; font-weight: 600;">${labels.marketIndicators}</div>
-      ${chips}
-    </div>
-  `;
-}
-
-// =============================================================================
-// HTML Builder: Accounts Table
-// =============================================================================
-
-function buildAccountsTable(contas: any[], labels: Record<string, string>): string {
-  if (!Array.isArray(contas) || contas.length === 0) {
-    return `<p style="color: #718096; font-size: 12px; font-style: italic;">${labels.noAccounts}</p>`;
-  }
-
-  const rows = contas
-    .map((c, i) => {
-      const banco = c.banco ?? c.institution_name ?? c.institution ?? c.name ?? '-';
-      const tipo = c.tipo ?? c.type ?? c.account_type ?? 'Corrente';
-      const saldo = parseFloat(c.saldo ?? c.balance ?? c.current_balance ?? '0') || 0;
-      const bgColor = i % 2 === 0 ? '#FFFFFF' : '#F7FAFC';
-      return `
-        <tr style="background: ${bgColor};">
-          <td style="padding: 8px 12px; font-size: 12px; color: #2D3748; border-bottom: 1px solid #E2E8F0;">${banco}</td>
-          <td style="padding: 8px 12px; font-size: 12px; color: #718096; border-bottom: 1px solid #E2E8F0;">${tipo}</td>
-          <td style="padding: 8px 12px; font-size: 12px; color: #2D3748; font-weight: 600; text-align: right; border-bottom: 1px solid #E2E8F0;">${formatCurrencyBR(saldo)}</td>
-        </tr>
-      `;
-    })
-    .join('');
-
-  return `
-    <table style="width: 100%; border-collapse: collapse; margin: 12px 0; border-radius: 8px; overflow: hidden;">
-      <thead>
-        <tr style="background: #080D14;">
-          <th style="padding: 10px 12px; font-size: 11px; color: #FFFFFF; text-align: left; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 8px 0 0 0;">${labels.account}</th>
-          <th style="padding: 10px 12px; font-size: 11px; color: #FFFFFF; text-align: left; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${labels.type}</th>
-          <th style="padding: 10px 12px; font-size: 11px; color: #FFFFFF; text-align: right; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 0 8px 0 0;">${labels.balance}</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
-}
-
-// =============================================================================
-// HTML Builder: Investments Table
-// =============================================================================
-
-function buildInvestmentsTable(investimentos: any[], labels: Record<string, string>): string {
-  if (!Array.isArray(investimentos) || investimentos.length === 0) {
-    return `<p style="color: #718096; font-size: 12px; font-style: italic;">${labels.noInvestments}</p>`;
-  }
-
-  const rows = investimentos
-    .map((inv, i) => {
-      const ativo = inv.ativo ?? inv.name ?? inv.ticker ?? inv.symbol ?? '-';
-      const tipo = inv.tipo ?? inv.type ?? inv.asset_class ?? inv.class ?? '-';
-      const valor = parseFloat(inv.valor ?? inv.value ?? inv.current_value ?? '0') || 0;
-      const instituicao = inv.instituicao ?? inv.institution ?? inv.institution_name ?? '-';
-      const bgColor = i % 2 === 0 ? '#FFFFFF' : '#F7FAFC';
-      return `
-        <tr style="background: ${bgColor};">
-          <td style="padding: 8px 12px; font-size: 12px; color: #2D3748; font-weight: 500; border-bottom: 1px solid #E2E8F0;">${ativo}</td>
-          <td style="padding: 8px 12px; font-size: 12px; color: #718096; border-bottom: 1px solid #E2E8F0;">${tipo}</td>
-          <td style="padding: 8px 12px; font-size: 12px; color: #2D3748; font-weight: 600; text-align: right; border-bottom: 1px solid #E2E8F0;">${formatCurrencyBR(valor)}</td>
-          <td style="padding: 8px 12px; font-size: 12px; color: #718096; border-bottom: 1px solid #E2E8F0;">${instituicao}</td>
-        </tr>
-      `;
-    })
-    .join('');
-
-  return `
-    <table style="width: 100%; border-collapse: collapse; margin: 12px 0; border-radius: 8px; overflow: hidden;">
-      <thead>
-        <tr style="background: #080D14;">
-          <th style="padding: 10px 12px; font-size: 11px; color: #FFFFFF; text-align: left; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 8px 0 0 0;">${labels.asset}</th>
-          <th style="padding: 10px 12px; font-size: 11px; color: #FFFFFF; text-align: left; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${labels.type}</th>
-          <th style="padding: 10px 12px; font-size: 11px; color: #FFFFFF; text-align: right; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${labels.value}</th>
-          <th style="padding: 10px 12px; font-size: 11px; color: #FFFFFF; text-align: left; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 0 8px 0 0;">${labels.institution}</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
-}
-
-// =============================================================================
-// HTML Builder: Cards Table
-// =============================================================================
-
-function buildCardsTable(cartoes: any[], labels: Record<string, string>): string {
-  if (!Array.isArray(cartoes) || cartoes.length === 0) {
-    return `<p style="color: #718096; font-size: 12px; font-style: italic;">${labels.noCards}</p>`;
-  }
-
-  const rows = cartoes
-    .map((c, i) => {
-      const bandeira = c.bandeira ?? c.brand ?? c.flag ?? '-';
-      const final4 = c.final ?? c.last4 ?? c.lastFour ?? c.last_four ?? '-';
-      const instituicao = c.instituicao ?? c.institution ?? c.institution_name ?? c.name ?? '-';
-      const bgColor = i % 2 === 0 ? '#FFFFFF' : '#F7FAFC';
-      return `
-        <tr style="background: ${bgColor};">
-          <td style="padding: 8px 12px; font-size: 12px; color: #2D3748; font-weight: 500; border-bottom: 1px solid #E2E8F0; text-transform: capitalize;">${bandeira}</td>
-          <td style="padding: 8px 12px; font-size: 12px; color: #718096; border-bottom: 1px solid #E2E8F0;">**** ${final4}</td>
-          <td style="padding: 8px 12px; font-size: 12px; color: #2D3748; border-bottom: 1px solid #E2E8F0;">${instituicao}</td>
-        </tr>
-      `;
-    })
-    .join('');
-
-  return `
-    <table style="width: 100%; border-collapse: collapse; margin: 12px 0; border-radius: 8px; overflow: hidden;">
-      <thead>
-        <tr style="background: #080D14;">
-          <th style="padding: 10px 12px; font-size: 11px; color: #FFFFFF; text-align: left; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 8px 0 0 0;">${labels.brand}</th>
-          <th style="padding: 10px 12px; font-size: 11px; color: #FFFFFF; text-align: left; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${labels.lastDigits}</th>
-          <th style="padding: 10px 12px; font-size: 11px; color: #FFFFFF; text-align: left; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 0 8px 0 0;">${labels.institution}</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
-}
-
-// =============================================================================
-// HTML Builder: Recommendations
-// =============================================================================
-
-function buildRecommendations(text: string): string {
-  if (!text) return '';
-
-  // Try to split by numbered recommendations like "1.", "2.", etc.
-  const lines = text.split(/\n/).filter((l) => l.trim());
-  const numbered = lines.filter((l) => /^\d+[\.\)]\s/.test(l.trim()));
-
-  if (numbered.length > 0) {
-    const cards = numbered
-      .map((line, idx) => {
-        const cleaned = line.replace(/^\d+[\.\)]\s*/, '').trim();
-        return `
-          <div style="background: linear-gradient(135deg, #F0FFF4, #F7FAFC); border-left: 4px solid #00D4AA; border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px;">
-            <div class="rec-number" style="min-width: 28px; height: 28px; border-radius: 50%; background: #00D4AA; color: #FFFFFF; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">${idx + 1}</div>
-            <p style="font-size: 12px; color: #2D3748; line-height: 1.6; margin: 0; padding-top: 4px;">${cleaned}</p>
-          </div>
-        `;
-      })
-      .join('');
-    return cards;
-  }
-
-  // If no numbered items, just wrap paragraphs
-  const paragraphs = lines
-    .map((line, idx) => {
-      return `
-        <div style="background: linear-gradient(135deg, #F0FFF4, #F7FAFC); border-left: 4px solid #00D4AA; border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px;">
-          <div class="rec-number" style="min-width: 28px; height: 28px; border-radius: 50%; background: #00D4AA; color: #FFFFFF; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">${idx + 1}</div>
-          <p style="font-size: 12px; color: #2D3748; line-height: 1.6; margin: 0; padding-top: 4px;">${line.trim()}</p>
-        </div>
-      `;
-    })
-    .join('');
-  return paragraphs;
-}
-
-// =============================================================================
-// HTML Builder: Main Report
-// =============================================================================
-
-function buildReportHTML(data: ReportData, language: string): string {
-  const labels = reportLabels[language] || reportLabels.pt;
-  const sections = parseAnalysisSections(data.analysis ?? '');
-  const portfolio = data.portfolio ?? {};
-  const contas = portfolio.contas ?? portfolio.accounts ?? [];
-  const investimentos = portfolio.investimentos ?? portfolio.investments ?? [];
-  const cartoes = portfolio.cartoes ?? portfolio.cards ?? [];
-  const dateFormatted = formatDateBR(data.generatedAt);
-  const investorName = data.investorName || 'Investidor';
-
-  return `
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    @page {
-      size: A4;
-      margin: 0;
-    }
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      color: #2D3748;
-      line-height: 1.5;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-
-    /* ---- Cover Page ---- */
-    .cover-page {
-      width: 100%;
-      min-height: 100vh;
-      background: linear-gradient(135deg, #080D14 0%, #0D1520 50%, #1A2A3A 100%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 60px 40px;
-      page-break-after: always;
-      position: relative;
-      overflow: hidden;
-    }
-    .cover-page::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -30%;
-      width: 80%;
-      height: 80%;
-      background: radial-gradient(circle, rgba(0,212,170,0.15) 0%, transparent 70%);
-      border-radius: 50%;
-    }
-    .cover-page::after {
-      content: '';
-      position: absolute;
-      bottom: -40%;
-      left: -20%;
-      width: 60%;
-      height: 60%;
-      background: radial-gradient(circle, rgba(0,212,170,0.15) 0%, transparent 70%);
-      border-radius: 50%;
-    }
-    .cover-logo {
-      font-size: 48px;
-      font-weight: 800;
-      color: #00D4AA;
-      letter-spacing: 8px;
-      margin-bottom: 8px;
-      z-index: 1;
-    }
-    .cover-subtitle {
-      font-size: 14px;
-      color: #A0AEC0;
-      letter-spacing: 4px;
-      text-transform: uppercase;
-      margin-bottom: 60px;
-      z-index: 1;
-    }
-    .cover-divider {
-      width: 80px;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, #00D4AA, transparent);
-      margin-bottom: 60px;
-      z-index: 1;
-    }
-    .cover-report-title {
-      font-size: 28px;
-      font-weight: 700;
-      color: #FFFFFF;
-      text-align: center;
-      margin-bottom: 8px;
-      z-index: 1;
-    }
-    .cover-report-subtitle {
-      font-size: 14px;
-      color: #A0AEC0;
-      text-align: center;
-      margin-bottom: 48px;
-      z-index: 1;
-    }
-    .cover-investor {
-      font-size: 18px;
-      font-weight: 600;
-      color: #E2E8F0;
-      margin-bottom: 8px;
-      z-index: 1;
-    }
-    .cover-date {
-      font-size: 13px;
-      color: #718096;
-      z-index: 1;
-    }
-    .cover-footer {
-      position: absolute;
-      bottom: 30px;
-      font-size: 10px;
-      color: #4A5568;
-      z-index: 1;
-    }
-
-    /* ---- Content Pages ---- */
-    .page {
-      width: 100%;
-      min-height: 100vh;
-      padding: 40px;
-      page-break-after: always;
-      position: relative;
-    }
-    .page-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 2px solid #00D4AA;
-      padding-bottom: 12px;
-      margin-bottom: 24px;
-    }
-    .page-header-logo {
-      font-size: 16px;
-      font-weight: 800;
-      color: #00D4AA;
-      letter-spacing: 3px;
-    }
-    .page-header-title {
-      font-size: 11px;
-      color: #718096;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .section-title {
-      font-size: 20px;
-      font-weight: 700;
-      color: #080D14;
-      margin-bottom: 6px;
-    }
-    .section-subtitle {
-      font-size: 12px;
-      color: #718096;
-      margin-bottom: 20px;
-    }
-    .analysis-text {
-      font-size: 12px;
-      color: #4A5568;
-      line-height: 1.8;
-      text-align: justify;
-      margin-bottom: 20px;
-    }
-    .subsection-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: #080D14;
-      margin-top: 24px;
-      margin-bottom: 12px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid #E2E8F0;
-    }
-
-    /* ---- Disclaimer ---- */
-    .disclaimer {
-      background: #FFF5F5;
-      border: 1px solid #FEB2B2;
-      border-radius: 8px;
-      padding: 14px 16px;
-      margin-top: 24px;
-    }
-    .disclaimer-title {
-      font-size: 11px;
-      font-weight: 700;
-      color: #C53030;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-    .disclaimer-text {
-      font-size: 10px;
-      color: #742A2A;
-      line-height: 1.6;
-    }
-
-    /* ---- Page Footer ---- */
-    .page-footer {
-      position: absolute;
-      bottom: 20px;
-      left: 40px;
-      right: 40px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 9px;
-      color: #A0AEC0;
-      border-top: 1px solid #E2E8F0;
-      padding-top: 8px;
-    }
-  </style>
-</head>
-<body>
-
-  <!-- ============ COVER PAGE ============ -->
-  <div class="cover-page">
-    <div class="cover-logo">ZURT</div>
-    <div class="cover-subtitle">${labels.subtitle}</div>
-    <div class="cover-divider"></div>
-    <div class="cover-report-title">${labels.title}</div>
-    <div class="cover-report-subtitle">${labels.coverSubtitle}</div>
-    <div class="cover-investor">${investorName}</div>
-    <div class="cover-date">${dateFormatted}</div>
-    <div class="cover-footer">${labels.confidential}</div>
-  </div>
-
-  <!-- ============ PAGE 2: RESUMO ============ -->
+  const summaryHTML = `
   <div class="page">
-    <div class="page-header">
-      <div class="page-header-logo">ZURT</div>
-      <div class="page-header-title">${labels.title}</div>
-    </div>
+    ${pageHeader(2)}
+    <div class="sh"><div class="sh-num">01</div><div><div class="sh-title">Resumo Executivo</div><div class="sh-sub">Visão consolidada do patrimônio</div></div></div>
 
-    <div class="section-title">${labels.executiveSummary}</div>
-    <div class="section-subtitle">${labels.summarySubtitle}</div>
-
-    ${buildSummaryCards(portfolio, labels)}
-
-    ${sections.resumo ? `<div class="analysis-text">${sections.resumo.replace(/\n/g, '<br>')}</div>` : ''}
-
-    ${buildMarketChips(data.market, labels)}
-
-    ${sections.mercado ? `
-      <div class="subsection-title">${labels.marketScenario}</div>
-      <div class="analysis-text">${sections.mercado.replace(/\n/g, '<br>')}</div>
-    ` : ''}
-
-    <div class="page-footer">
-      <span>ZURT ${labels.subtitle}</span>
-      <span>${labels.page} 2</span>
-      <span>${dateFormatted}</span>
-    </div>
-  </div>
-
-  <!-- ============ PAGE 3: PATRIMONIO ============ -->
-  <div class="page">
-    <div class="page-header">
-      <div class="page-header-logo">ZURT</div>
-      <div class="page-header-title">${labels.detailing}</div>
-    </div>
-
-    <div class="section-title">${labels.detailing}</div>
-    <div class="section-subtitle">${labels.patrimonySubtitle}</div>
-
-    ${sections.patrimonio ? `<div class="analysis-text">${sections.patrimonio.replace(/\n/g, '<br>')}</div>` : ''}
-
-    <div class="subsection-title">${labels.bankAccounts}</div>
-    ${buildAccountsTable(contas, labels)}
-
-    <div class="subsection-title">${labels.investments}</div>
-    ${buildInvestmentsTable(investimentos, labels)}
-
-    ${sections.investimentos ? `<div class="analysis-text">${sections.investimentos.replace(/\n/g, '<br>')}</div>` : ''}
-
-    <div class="subsection-title">${labels.cards}</div>
-    ${buildCardsTable(cartoes, labels)}
-
-    ${sections.cartoes ? `<div class="analysis-text">${sections.cartoes.replace(/\n/g, '<br>')}</div>` : ''}
-
-    <div class="page-footer">
-      <span>ZURT ${labels.subtitle}</span>
-      <span>${labels.page} 3</span>
-      <span>${dateFormatted}</span>
-    </div>
-  </div>
-
-  <!-- ============ PAGE 4: RECOMENDACOES ============ -->
-  <div class="page">
-    <div class="page-header">
-      <div class="page-header-logo">ZURT</div>
-      <div class="page-header-title">${labels.recsAndPerspectives}</div>
-    </div>
-
-    <div class="section-title">${labels.recommendations}</div>
-    <div class="section-subtitle">${labels.recommendationsSubtitle}</div>
-
-    ${sections.recomendacoes ? buildRecommendations(sections.recomendacoes) : `
-      <div style="background: linear-gradient(135deg, #F0FFF4, #F7FAFC); border-left: 4px solid #00D4AA; border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px;">
-        <div class="rec-number" style="min-width: 28px; height: 28px; border-radius: 50%; background: #00D4AA; color: #FFFFFF; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">1</div>
-        <p style="font-size: 12px; color: #2D3748; line-height: 1.6; margin: 0; padding-top: 4px;">${labels.defaultRec}</p>
+    <div class="kpi-row">
+      <div class="kpi kpi-hl">
+        <div class="kpi-label">Patrimônio Total</div>
+        <div class="kpi-val green">${fmtBRL(totalValue)}</div>
+        <div class="kpi-badge ${var1m >= 0 ? 'badge-pos' : 'badge-neg'}">${fmtPct(var1m)} no mês</div>
       </div>
-    `}
+      <div class="kpi">
+        <div class="kpi-label">Total Faturas</div>
+        <div class="kpi-val red">${fmtBRL(totalFaturas)}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Instituições</div>
+        <div class="kpi-val gold">${institutions.length}</div>
+      </div>
+    </div>
 
-    ${sections.perspectivas ? `
-      <div class="subsection-title">${labels.perspectives}</div>
-      <div class="analysis-text">${sections.perspectivas.replace(/\n/g, '<br>')}</div>
-    ` : ''}
+    <div class="block-title">Distribuição por Instituição</div>
+    <div class="alloc-bar">${allocBar}</div>
+    <table>
+      <thead><tr><th>Instituição</th><th class="td-r">Saldo</th><th class="td-r">% Total</th></tr></thead>
+      <tbody>${instRows}</tbody>
+    </table>
+
+    ${pageFooter(2)}
+  </div>`;
+
+  // ---- PAGE 3: CREDIT CARDS ----
+  const cardBlocks = cards.map((c: any) => {
+    const used = c.currentInvoice ?? 0;
+    const limit = c.limit ?? 0;
+    const available = limit - used;
+    const usagePct = limit > 0 ? (used / limit * 100) : 0;
+    const barColor = usagePct > 80 ? '#FF6B6B' : usagePct > 50 ? '#FFD93D' : '#00E99B';
+    return `
+    <div class="card-block">
+      <div class="card-header">
+        <div class="card-name">${c.name ?? '-'} <span class="muted">****${c.lastFour ?? '0000'}</span></div>
+        <div class="card-brand">${capitalize(c.brand ?? '-')}</div>
+      </div>
+      <div class="card-data">
+        <div class="card-item"><div class="card-item-label">Fatura Atual</div><div class="card-item-val red">${fmtBRL(used)}</div></div>
+        <div class="card-item"><div class="card-item-label">Limite</div><div class="card-item-val">${fmtBRL(limit)}</div></div>
+        <div class="card-item"><div class="card-item-label">Disponível</div><div class="card-item-val green">${fmtBRL(available)}</div></div>
+      </div>
+      <div class="usage-bar-bg"><div class="usage-bar-fill" style="width:${Math.min(usagePct, 100)}%;background:${barColor}"></div></div>
+      <div class="usage-label">${usagePct.toFixed(0)}% utilizado</div>
+    </div>`;
+  }).join('');
+
+  const cardsHTML = cards.length > 0 ? `
+  <div class="page">
+    ${pageHeader(3)}
+    <div class="sh"><div class="sh-num">02</div><div><div class="sh-title">Cartões de Crédito</div><div class="sh-sub">Faturas e limites consolidados</div></div></div>
+
+    ${cardBlocks}
+
+    <div class="totals-bar">
+      <div class="totals-item"><div class="totals-label">Total Faturas</div><div class="totals-val red">${fmtBRL(totalFaturas)}</div></div>
+      <div class="totals-sep"></div>
+      <div class="totals-item"><div class="totals-label">Limite Total</div><div class="totals-val">${fmtBRL(totalLimite)}</div></div>
+      <div class="totals-sep"></div>
+      <div class="totals-item"><div class="totals-label">Disponível Total</div><div class="totals-val green">${fmtBRL(totalLimite - totalFaturas)}</div></div>
+    </div>
+
+    ${pageFooter(3)}
+  </div>` : '';
+
+  // ---- PAGE 4: TRANSACTIONS ----
+  const txRows = recentTx.map((tx: any) => {
+    const isNeg = (tx.amount ?? 0) < 0;
+    return `<tr>
+      <td>${fmtDate(tx.date)}</td>
+      <td class="td-name">${tx.description || tx.merchant || '-'}</td>
+      <td>${tx.institution_name || '-'}</td>
+      <td class="td-r td-b ${isNeg ? 'neg' : 'pos'}">${fmtBRL(tx.amount ?? 0)}</td>
+    </tr>`;
+  }).join('');
+
+  const transactionsHTML = recentTx.length > 0 ? `
+  <div class="page">
+    ${pageHeader(4)}
+    <div class="sh"><div class="sh-num">03</div><div><div class="sh-title">Movimentações Recentes</div><div class="sh-sub">Últimas ${recentTx.length} transações</div></div></div>
+
+    <table class="table-striped">
+      <thead><tr><th>Data</th><th>Descrição</th><th>Instituição</th><th class="td-r">Valor</th></tr></thead>
+      <tbody>${txRows}</tbody>
+    </table>
+
+    ${pageFooter(4)}
+  </div>` : '';
+
+  // ---- PAGE 5: AI ANALYSIS + DISCLAIMER ----
+  const lastPage = 3 + (cards.length > 0 ? 1 : 0) + (recentTx.length > 0 ? 1 : 0) + 1;
+  const aiSection = aiContent
+    ? `<div class="ai-card"><div class="ai-header">Análise ZURT Intelligence</div><div class="ai-text">${aiContent}</div></div>`
+    : `<div class="ai-card ai-empty"><div class="ai-header">Análise ZURT Intelligence</div><div class="ai-text">Conecte suas contas e converse com o ZURT Agent para receber análises personalizadas do seu patrimônio.</div></div>`;
+
+  const aiDisclaimerHTML = `
+  <div class="page">
+    ${pageHeader(lastPage)}
+    <div class="sh"><div class="sh-num">${String(lastPage - 1).padStart(2, '0')}</div><div><div class="sh-title">Análise & Aviso Legal</div><div class="sh-sub">Inteligência artificial e informações legais</div></div></div>
+
+    ${aiSection}
 
     <div class="disclaimer">
-      <div class="disclaimer-title">${labels.disclaimer}</div>
-      <div class="disclaimer-text">${labels.disclaimerText}</div>
+      <div class="disclaimer-title">Aviso Legal & Confidencialidade</div>
+      <p>Este relatório foi gerado automaticamente pela plataforma ZURT Wealth Intelligence com base nos dados
+      sincronizados das contas e instituições financeiras do titular.</p>
+      <p>Os valores, rentabilidades e análises apresentados são meramente informativos e não constituem
+      recomendação, consultoria ou aconselhamento de investimento. Rentabilidade passada não garante
+      rentabilidade futura.</p>
+      <p>As informações podem apresentar atraso ou divergência em relação aos valores reais das instituições
+      financeiras. Consulte sempre um profissional qualificado (CVM/CFA) antes de tomar decisões de investimento.</p>
+      <p><strong>Confidencialidade:</strong> Este documento é pessoal e confidencial, destinado exclusivamente
+      ao titular identificado na capa.</p>
     </div>
 
-    <div class="page-footer">
-      <span>ZURT ${labels.subtitle}</span>
-      <span>${labels.page} 4</span>
-      <span>${dateFormatted}</span>
+    <div class="gen-info">
+      <div class="gen-brand">ZURT Wealth Intelligence</div>
+      <div class="gen-date">Gerado em ${dateStr} às ${timeStr}</div>
     </div>
-  </div>
 
+    ${pageFooter(lastPage)}
+  </div>`;
+
+  // ---- FULL HTML ----
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  @page { margin: 0; size: A4; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0A0F1C;
+    color: #E8E8E8;
+    font-size: 10px;
+    line-height: 1.5;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* ===== COVER ===== */
+  .cover {
+    width: 100%; height: 100vh;
+    background: linear-gradient(180deg, #0A0F1C 0%, #111827 50%, #0A0F1C 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; position: relative;
+    page-break-after: always;
+  }
+  .cover-accent-top, .cover-accent-bottom {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    width: 180px; height: 1px;
+    background: linear-gradient(90deg, transparent, #C9A84C, transparent);
+  }
+  .cover-accent-top { top: 50px; }
+  .cover-accent-bottom { bottom: 50px; }
+  .cover-body { z-index: 1; }
+  .cover-logo {
+    font-size: 48px; font-weight: 900; color: #00E99B;
+    letter-spacing: 12px; margin-bottom: 6px;
+  }
+  .cover-tagline {
+    font-size: 11px; color: #C9A84C; letter-spacing: 6px; margin-bottom: 40px;
+  }
+  .cover-sep {
+    width: 80px; height: 1px; background: #C9A84C; margin: 0 auto 40px;
+  }
+  .cover-title {
+    font-size: 32px; font-weight: 300; color: #FFFFFF; margin-bottom: 40px;
+  }
+  .cover-value-label {
+    font-size: 9px; color: #94A3B8; letter-spacing: 3px; margin-bottom: 8px;
+  }
+  .cover-value {
+    font-size: 44px; font-weight: 800; color: #00E99B; margin-bottom: 8px;
+  }
+  .cover-var { font-size: 12px; margin-bottom: 40px; }
+  .cover-var-dot { color: #64748B; margin: 0 8px; }
+  .cover-client-label {
+    font-size: 9px; color: #64748B; letter-spacing: 3px; margin-bottom: 4px;
+  }
+  .cover-client {
+    font-size: 18px; font-weight: 600; color: #FFFFFF; letter-spacing: 4px; margin-bottom: 8px;
+  }
+  .cover-date { font-size: 12px; color: #94A3B8; }
+  .cover-footer {
+    position: absolute; bottom: 28px; font-size: 9px; color: #4A5568; letter-spacing: 0.5px;
+  }
+
+  /* ===== PAGE ===== */
+  .page {
+    padding: 36px 40px; page-break-before: always; position: relative; min-height: 100vh;
+    background: #0A0F1C;
+  }
+  .ph {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 10px; margin-bottom: 22px; border-bottom: 1px solid #C9A84C30;
+  }
+  .ph-left, .ph-right { display: flex; align-items: center; gap: 6px; font-size: 9px; color: #94A3B8; }
+  .ph-logo { font-size: 13px; font-weight: 800; color: #00E99B; letter-spacing: 3px; }
+  .ph-sep { color: #C9A84C40; }
+  .ph-type { font-style: italic; color: #C9A84C; }
+  .pf { position: absolute; bottom: 18px; left: 40px; right: 40px; }
+  .pf-line { height: 1px; background: #C9A84C20; margin-bottom: 6px; }
+  .pf-row { display: flex; justify-content: space-between; font-size: 8px; color: #64748B; }
+  .pf-brand { color: #C9A84C80; letter-spacing: 1px; }
+  .pf-conf { font-style: italic; }
+  .pf-page { color: #94A3B8; }
+
+  /* ===== SECTION HEADING ===== */
+  .sh { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+  .sh-num { font-size: 26px; font-weight: 800; color: #C9A84C30; line-height: 1; min-width: 36px; }
+  .sh-title { font-size: 17px; font-weight: 700; color: #FFFFFF; }
+  .sh-sub { font-size: 10px; color: #94A3B8; font-style: italic; margin-top: 2px; }
+
+  /* ===== KPI ===== */
+  .kpi-row { display: flex; gap: 12px; margin-bottom: 20px; }
+  .kpi {
+    flex: 1; background: #111827; border: 1px solid #1E293B; border-radius: 8px;
+    padding: 14px; text-align: center;
+  }
+  .kpi-hl { border-color: #00E99B30; background: linear-gradient(180deg, #111827, #0D1B1580); }
+  .kpi-label { font-size: 8px; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .kpi-val { font-size: 18px; font-weight: 800; color: #FFFFFF; }
+  .kpi-val.green { color: #00E99B; }
+  .kpi-val.red { color: #FF6B6B; }
+  .kpi-val.gold { color: #C9A84C; }
+  .kpi-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 9px; font-weight: 600; margin-top: 4px;
+  }
+  .badge-pos { background: #00E99B18; color: #00E99B; }
+  .badge-neg { background: #FF6B6B18; color: #FF6B6B; }
+
+  /* ===== TABLES ===== */
+  .block-title {
+    font-size: 12px; font-weight: 700; color: #C9A84C; letter-spacing: 0.5px;
+    padding-bottom: 6px; border-bottom: 1px solid #C9A84C20; margin-bottom: 10px;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; font-size: 8px; font-weight: 700; color: #C9A84C;
+    text-transform: uppercase; letter-spacing: 0.5px; padding: 7px 6px;
+    border-bottom: 1px solid #C9A84C30;
+  }
+  td { padding: 6px; font-size: 10px; color: #E8E8E8; border-bottom: 1px solid #1E293B; }
+  .table-striped tbody tr:nth-child(even) td { background: #11182780; }
+  .td-r { text-align: right; }
+  .td-b { font-weight: 700; }
+  .td-name { font-weight: 600; color: #FFFFFF; }
+  .cdot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 2px;
+    margin-right: 6px; vertical-align: middle;
+  }
+  .muted { color: #64748B; font-size: 9px; }
+
+  /* ===== ALLOC BAR ===== */
+  .alloc-bar {
+    display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 12px;
+  }
+
+  /* ===== CARD BLOCKS ===== */
+  .card-block {
+    background: #111827; border: 1px solid #1E293B; border-radius: 8px;
+    padding: 14px; margin-bottom: 12px;
+  }
+  .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .card-name { font-size: 13px; font-weight: 700; color: #FFFFFF; }
+  .card-brand { font-size: 10px; color: #C9A84C; font-weight: 600; text-transform: uppercase; }
+  .card-data { display: flex; gap: 16px; margin-bottom: 10px; }
+  .card-item { flex: 1; }
+  .card-item-label { font-size: 8px; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+  .card-item-val { font-size: 14px; font-weight: 700; color: #FFFFFF; }
+  .card-item-val.red { color: #FF6B6B; }
+  .card-item-val.green { color: #00E99B; }
+  .usage-bar-bg { height: 6px; background: #1E293B; border-radius: 3px; overflow: hidden; }
+  .usage-bar-fill { height: 100%; border-radius: 3px; }
+  .usage-label { font-size: 9px; color: #94A3B8; margin-top: 4px; text-align: right; }
+
+  .totals-bar {
+    display: flex; align-items: center; justify-content: center; gap: 20px;
+    background: #111827; border: 1px solid #1E293B; border-radius: 8px;
+    padding: 14px 20px; margin-top: 16px;
+  }
+  .totals-item { text-align: center; flex: 1; }
+  .totals-label { font-size: 8px; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+  .totals-val { font-size: 16px; font-weight: 800; color: #FFFFFF; }
+  .totals-val.red { color: #FF6B6B; }
+  .totals-val.green { color: #00E99B; }
+  .totals-sep { width: 1px; height: 28px; background: #C9A84C20; }
+
+  /* ===== AI SECTION ===== */
+  .ai-card {
+    background: linear-gradient(135deg, #0D2818, #111827); border: 1px solid #00E99B30;
+    border-radius: 8px; padding: 18px; margin-bottom: 20px;
+  }
+  .ai-empty { border-color: #1E293B; background: #111827; }
+  .ai-header {
+    font-size: 13px; font-weight: 700; color: #00E99B; margin-bottom: 10px;
+    padding-bottom: 6px; border-bottom: 1px solid #00E99B20;
+  }
+  .ai-text { font-size: 11px; color: #CBD5E1; line-height: 1.8; }
+
+  /* ===== DISCLAIMER ===== */
+  .disclaimer {
+    background: #111827; border: 1px solid #1E293B; border-radius: 8px;
+    padding: 16px; margin-bottom: 20px;
+  }
+  .disclaimer-title {
+    font-size: 12px; font-weight: 700; color: #C9A84C; margin-bottom: 10px;
+    padding-bottom: 6px; border-bottom: 1px solid #C9A84C20;
+  }
+  .disclaimer p {
+    font-size: 9px; color: #94A3B8; line-height: 1.7; margin-bottom: 8px;
+  }
+  .gen-info { text-align: center; margin-top: 12px; }
+  .gen-brand { font-size: 11px; font-weight: 700; color: #C9A84C; letter-spacing: 2px; }
+  .gen-date { font-size: 9px; color: #94A3B8; margin-top: 2px; }
+
+  /* ===== UTILS ===== */
+  .pos { color: #00E99B; }
+  .neg { color: #FF6B6B; }
+  .green { color: #00E99B; }
+  .red { color: #FF6B6B; }
+  .gold { color: #C9A84C; }
+</style>
+</head>
+<body>
+  ${coverHTML}
+  ${summaryHTML}
+  ${cardsHTML}
+  ${transactionsHTML}
+  ${aiDisclaimerHTML}
 </body>
-</html>
-  `;
+</html>`;
 }
 
 // =============================================================================
@@ -864,16 +525,8 @@ export default function ReportScreen() {
     if (generating) {
       const animation = Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 0.4,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
+          Animated.timing(pulseAnim, { toValue: 0.4, duration: 800, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
         ]),
       );
       animation.start();
@@ -908,26 +561,80 @@ export default function ReportScreen() {
   const handleGenerate = useCallback(async () => {
     setGenerating(true);
     try {
-      // Step 1: Call API to generate report data
-      const data: ReportData = await generateReportApi(selectedPeriod, language);
+      logger.log('[Report] Collecting data from stores...');
 
-      // Step 2: Build premium HTML from report data
-      const html = buildReportHTML(data, language);
+      // 1. Get data from local stores (always available)
+      const { summary, institutions, allocations, assets, insights: portfolioInsights } = usePortfolioStore.getState();
+      const { cards, dashboardTransactions } = useCardsStore.getState();
+      const user = useAuthStore.getState().user;
+      const agentState = useAgentStore.getState();
 
-      // Step 3: Generate PDF file
+      const userName = user?.name || 'Investidor';
+
+      // 2. Get AI insights from all possible sources
+      const assistantMessages = agentState.messages
+        ?.filter((m: any) => m.role === 'assistant')
+        .map((m: any) => m.content)
+        .filter(Boolean) ?? [];
+      const localAiInsights = assistantMessages.length > 0
+        ? assistantMessages[assistantMessages.length - 1]
+        : portfolioInsights?.map((ins: any) => `[${capitalize(ins.type)}] ${ins.text}`).join('\n\n') || '';
+
+      // 3. Try to get AI report analysis from API (non-blocking)
+      let aiAnalysis = '';
+      try {
+        logger.log('[Report] Calling generateReportApi...');
+        const apiData = await generateReportApi(selectedPeriod, language);
+        aiAnalysis = apiData?.analysis ?? '';
+        logger.log('[Report] API analysis received, length:', aiAnalysis.length);
+      } catch (apiErr: any) {
+        logger.log('[Report] API analysis failed (non-critical):', apiErr?.message);
+        // Continue with local data — API failure is not fatal
+      }
+
+      const reportData = {
+        summary: summary ?? { totalValue: 0, investedValue: 0, profit: 0, variation1m: 0, variation12m: 0, history: [] },
+        institutions: institutions ?? [],
+        allocations: allocations ?? [],
+        cards: cards ?? [],
+        assets: assets ?? [],
+        transactions: dashboardTransactions ?? [],
+        aiInsights: localAiInsights,
+        userName,
+        aiAnalysis,
+      };
+
+      logger.log('[Report] Data collected:', JSON.stringify({
+        totalValue: reportData.summary.totalValue,
+        institutions: reportData.institutions.length,
+        cards: reportData.cards.length,
+        assets: reportData.assets.length,
+        transactions: reportData.transactions.length,
+        hasAiAnalysis: !!aiAnalysis,
+        hasLocalInsights: !!localAiInsights,
+      }));
+
+      // 4. Build HTML
+      logger.log('[Report] Generating HTML...');
+      const html = buildReportHTML(reportData);
+      logger.log('[Report] HTML generated, length:', html.length);
+
+      // 5. Generate PDF
       const { uri } = await Print.printToFileAsync({ html, base64: false });
+      logger.log('[Report] PDF created at:', uri);
 
-      // Step 4: Share via system share dialog
+      // 6. Share
+      const fileName = 'ZURT_Relatorio_' + new Date().toISOString().split('T')[0] + '.pdf';
       await Sharing.shareAsync(uri, {
         mimeType: 'application/pdf',
-        dialogTitle: 'Relatorio ZURT',
+        dialogTitle: fileName,
         UTI: 'com.adobe.pdf',
       });
-    } catch (err: any) {
-      logger.log('[Report] Error generating report:', err?.message ?? err);
+    } catch (error: any) {
+      logger.log('[Report] Error generating PDF:', error?.message ?? error);
       Alert.alert(
         t('common.error'),
-        t('report.error'),
+        t('report.error') + '\n\n' + (error?.message ?? ''),
         [{ text: t('common.ok') }],
       );
     } finally {
@@ -968,7 +675,6 @@ export default function ReportScreen() {
   // ---- Main UI ----
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      {/* Header */}
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
           <AppIcon name="back" size={22} color={colors.text.primary} />
@@ -982,16 +688,10 @@ export default function ReportScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Subtitle */}
-        <Text style={styles.subtitle}>
-          {t('report.subtitle')}
-        </Text>
+        <Text style={styles.subtitle}>{t('report.subtitle')}</Text>
 
-        {/* Preview Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>
-            {t('report.previewTitle')}
-          </Text>
+          <Text style={styles.cardTitle}>{t('report.previewTitle')}</Text>
           {previewItems.map((item, index) => (
             <View key={index} style={styles.previewItem}>
               <View style={styles.bulletDot} />
@@ -1000,30 +700,19 @@ export default function ReportScreen() {
           ))}
         </View>
 
-        {/* Period Selector */}
         <View style={styles.periodSection}>
-          <Text style={styles.periodLabel}>
-            {t('report.period')}
-          </Text>
+          <Text style={styles.periodLabel}>{t('report.period')}</Text>
           <View style={styles.periodRow}>
             {periods.map((period) => {
               const isSelected = selectedPeriod === period.key;
               return (
                 <TouchableOpacity
                   key={period.key}
-                  style={[
-                    styles.periodChip,
-                    isSelected && styles.periodChipActive,
-                  ]}
+                  style={[styles.periodChip, isSelected && styles.periodChipActive]}
                   onPress={() => setSelectedPeriod(period.key)}
                   activeOpacity={0.7}
                 >
-                  <Text
-                    style={[
-                      styles.periodChipText,
-                      isSelected && styles.periodChipTextActive,
-                    ]}
-                  >
+                  <Text style={[styles.periodChipText, isSelected && styles.periodChipTextActive]}>
                     {period.label}
                   </Text>
                 </TouchableOpacity>
@@ -1032,19 +721,11 @@ export default function ReportScreen() {
           </View>
         </View>
 
-        {/* Generate Button */}
-        <TouchableOpacity
-          style={styles.generateButton}
-          onPress={handleGenerate}
-          activeOpacity={0.8}
-        >
+        <TouchableOpacity style={styles.generateButton} onPress={handleGenerate} activeOpacity={0.8}>
           <AppIcon name="report" size={20} color={colors.background} />
-          <Text style={styles.generateButtonText}>
-            {t('report.generate')}
-          </Text>
+          <Text style={styles.generateButtonText}>{t('report.generate')}</Text>
         </TouchableOpacity>
 
-        {/* Bottom spacing */}
         <View style={{ height: insets.bottom + 40 }} />
       </ScrollView>
     </View>
@@ -1061,8 +742,6 @@ const createStyles = (colors: ThemeColors) =>
       flex: 1,
       backgroundColor: colors.background,
     },
-
-    // Header bar
     headerBar: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -1078,25 +757,17 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    backIcon: {
-      fontSize: 22,
-      color: colors.text.primary,
-    },
     headerBarTitle: {
       fontSize: 18,
       fontWeight: '700',
       color: colors.text.primary,
     },
-
-    // Subtitle
     subtitle: {
       fontSize: 14,
       color: colors.text.secondary,
       lineHeight: 20,
       marginBottom: spacing.xl,
     },
-
-    // Card
     card: {
       backgroundColor: colors.card,
       borderRadius: radius.lg,
@@ -1111,8 +782,6 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.text.primary,
       marginBottom: spacing.lg,
     },
-
-    // Preview items
     previewItem: {
       flexDirection: 'row',
       alignItems: 'flex-start',
@@ -1132,8 +801,6 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.text.secondary,
       lineHeight: 20,
     },
-
-    // Period selector
     periodSection: {
       marginBottom: spacing.xxl,
     },
@@ -1170,8 +837,6 @@ const createStyles = (colors: ThemeColors) =>
     periodChipTextActive: {
       color: colors.accent,
     },
-
-    // Generate button
     generateButton: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -1182,22 +847,17 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: spacing.xxl,
       gap: spacing.sm,
     },
-    generateButtonEmoji: {
-      fontSize: 20,
-    },
     generateButtonText: {
       fontSize: 17,
       fontWeight: '700',
       color: colors.background,
     },
-
-    // Loading
     loadingContainer: {
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
       gap: spacing.md,
-      paddingHorizontal: spacing.xxxl,
+      paddingHorizontal: 40,
     },
     loadingText: {
       fontSize: 18,
@@ -1210,8 +870,6 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.text.secondary,
       textAlign: 'center',
     },
-
-    // Scroll
     scroll: {
       flex: 1,
     },
