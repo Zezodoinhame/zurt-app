@@ -121,14 +121,14 @@ interface BankDeepLink {
 }
 
 const BANK_DEEP_LINKS: Record<string, BankDeepLink> = {
-  santander: { ios: 'santanderbr://', android: 'intent://openfinance#Intent;scheme=santanderbr;package=com.santander.app;end', fallback: 'https://apps.apple.com/br/app/santander-brasil/id1491291290' },
-  itau: { ios: 'itauopenfinance://', android: 'intent://openfinance#Intent;scheme=itau;package=com.itau;end', fallback: 'https://apps.apple.com/br/app/ita%C3%BA/id474436529' },
+  santander: { ios: 'santander://', android: 'intent://#Intent;package=com.santander.app;end', fallback: 'https://apps.apple.com/br/app/santander-brasil/id1491291290' },
+  itau: { ios: 'itau://', android: 'intent://#Intent;package=com.itau;end', fallback: 'https://apps.apple.com/br/app/banco-ita%C3%BA/id474436529' },
   bradesco: { ios: 'bradesco://', android: 'intent://#Intent;package=com.bradesco;end', fallback: 'https://apps.apple.com/br/app/bradesco/id351439498' },
   nubank: { ios: 'nubank://', android: 'intent://#Intent;package=com.nu.production;end', fallback: 'https://apps.apple.com/br/app/nubank/id814456780' },
   btg: { ios: 'btgpactual://', android: 'intent://#Intent;package=com.btg.pactual.digital;end', fallback: 'https://apps.apple.com/br/app/btg-pactual/id1293080438' },
   inter: { ios: 'bancointer://', android: 'intent://#Intent;package=br.com.intermedium;end', fallback: 'https://apps.apple.com/br/app/inter/id1051903726' },
   bb: { ios: 'bb://', android: 'intent://#Intent;package=br.com.bb.android;end', fallback: 'https://apps.apple.com/br/app/banco-do-brasil/id330895368' },
-  caixa: { ios: 'caixa://', android: 'intent://#Intent;package=br.com.gabba.Caixa;end', fallback: 'https://apps.apple.com/br/app/caixa/id490813154' },
+  caixa: { ios: 'caixa://', android: 'intent://#Intent;package=br.com.gabba.Caixa;end', fallback: 'https://apps.apple.com/br/app/caixa/id331885031' },
   sicoob: { ios: 'sicoob://', android: 'intent://#Intent;package=br.com.sicoob.app;end', fallback: 'https://sicoob.com.br' },
   sicredi: { ios: 'sicredi://', android: 'intent://#Intent;package=br.com.sicredi.app;end', fallback: 'https://sicredi.com.br' },
   c6: { ios: 'c6bank://', android: 'intent://#Intent;package=com.c6bank.app;end', fallback: 'https://c6bank.com.br' },
@@ -189,71 +189,55 @@ function detectBankFromUrl(url: string): string | null {
 
 /**
  * Try to open the bank's native app via deep link.
+ * Uses direct openURL (not canOpenURL which fails in Expo Go).
  * Returns true if handled (opened or showed alert), false if no deep link found.
  */
 async function tryOpenBankApp(bankSlug: string, originalUrl: string): Promise<boolean> {
   const bank = BANK_DEEP_LINKS[bankSlug];
   if (!bank) return false;
 
-  const checkUrl = bank.ios; // e.g. "santanderbr://" — simple scheme for canOpenURL
-  const openUrl = Platform.OS === 'ios' ? bank.ios : bank.android;
+  const scheme = Platform.OS === 'ios' ? bank.ios : bank.android;
   const bankName = bankSlug.charAt(0).toUpperCase() + bankSlug.slice(1);
 
-  logger.log('[ConnectBank] tryOpenBankApp:', bankSlug, 'scheme:', checkUrl);
+  logger.log('[ConnectBank] Trying native app:', bankSlug, 'scheme:', scheme);
 
   try {
-    const canOpen = await Linking.canOpenURL(checkUrl);
-    logger.log('[ConnectBank] canOpenURL(' + checkUrl + '):', canOpen);
-    if (canOpen) {
-      await Linking.openURL(openUrl);
-      logger.log('[ConnectBank] Opened native app for:', bankSlug);
-      return true;
-    }
-  } catch (err) {
-    logger.log('[ConnectBank] canOpenURL failed for', bankSlug, err);
-  }
-
-  // Fallback: try openURL directly (works on some Android versions without canOpenURL)
-  if (Platform.OS === 'android') {
-    try {
-      await Linking.openURL(openUrl);
-      logger.log('[ConnectBank] Opened native app (direct) for:', bankSlug);
-      return true;
-    } catch {
-      logger.log('[ConnectBank] Android direct openURL failed for:', bankSlug);
-    }
-  }
-
-  // Native app not available — show alert with options
-  logger.log('[ConnectBank] Native app not installed:', bankSlug, '— showing alert');
-  return new Promise<boolean>((resolve) => {
-    Alert.alert(
-      'App do banco necessário',
-      `O ${bankName} exige que a autenticação Open Finance seja feita pelo app nativo. Instale ou atualize o app do banco.`,
-      [
-        {
-          text: 'Baixar App',
-          onPress: () => {
-            Linking.openURL(bank.fallback).catch(() => {});
-            resolve(true);
+    // Try opening directly — if the app exists it will open
+    await Linking.openURL(scheme);
+    logger.log('[ConnectBank] Native app opened:', bankSlug);
+    return true;
+  } catch (error) {
+    // openURL failed — app is not installed
+    logger.log('[ConnectBank] Native app not found:', bankSlug, error);
+    return new Promise<boolean>((resolve) => {
+      Alert.alert(
+        'App do banco necessário',
+        `O ${bankName} exige autenticação pelo app nativo. Instale ou atualize o app.`,
+        [
+          {
+            text: 'Baixar App',
+            onPress: () => {
+              Linking.openURL(bank.fallback).catch(() => {});
+              resolve(true);
+            },
           },
-        },
-        {
-          text: 'Tentar no navegador',
-          onPress: () => {
-            WebBrowser.openBrowserAsync(originalUrl, {
-              showInRecents: true,
-              createTask: false,
-            }).catch(() => {
-              Linking.openURL(originalUrl).catch(() => {});
-            });
-            resolve(true);
+          {
+            text: 'Tentar no navegador',
+            onPress: () => {
+              WebBrowser.openBrowserAsync(originalUrl, {
+                showInRecents: true,
+                createTask: false,
+              }).catch(() => {
+                Linking.openURL(originalUrl).catch(() => {});
+              });
+              resolve(true);
+            },
           },
-        },
-        { text: 'Cancelar', style: 'cancel', onPress: () => resolve(true) },
-      ],
-    );
-  });
+          { text: 'Cancelar', style: 'cancel', onPress: () => resolve(true) },
+        ],
+      );
+    });
+  }
 }
 
 // =============================================================================

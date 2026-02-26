@@ -24,10 +24,9 @@
           "remote-notification"
         ],
         "LSApplicationQueriesSchemes": [
-          "santanderbr", "santander", "itauopenfinance", "itau", "bradesco",
-          "nubank", "btgpactual", "bancointer", "bb", "caixa",
-          "sicoob", "sicredi", "c6bank", "bancooriginal", "safra",
-          "xpinvestimentos", "rico", "clear", "modalmais",
+          "santander", "itau", "bradesco", "nubank", "btgpactual", "bancointer",
+          "bb", "caixa", "sicoob", "sicredi", "c6bank", "bancooriginal",
+          "safra", "xpinvestimentos", "rico", "clear", "modalmais",
           "mercadopago", "picpay", "neon", "next", "pagseguro"
         ]
       }
