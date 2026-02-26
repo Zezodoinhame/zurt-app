@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Linking,
-  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -28,9 +27,7 @@ import {
   formatMarketCap,
   formatDate,
 } from '../../src/utils/formatters';
-import type { BrapiQuote, HistoricalPrice } from '../../src/types/brapi';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import type { BrapiQuote } from '../../src/types/brapi';
 
 // ---------------------------------------------------------------------------
 // Chart range config
@@ -65,6 +62,7 @@ export default function TickerDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [selectedRange, setSelectedRange] = useState<RangeKey>('1mo');
   const [chartLoading, setChartLoading] = useState(false);
+  const [showFullSummary, setShowFullSummary] = useState(false);
 
   const isInWatchlist = watchlist.some((q) => q.symbol === ticker);
 
@@ -113,6 +111,13 @@ export default function TickerDetailScreen() {
     }
   }, [isInWatchlist, ticker, addToWatchlist, removeFromWatchlist]);
 
+  const handleAskAgent = useCallback(() => {
+    router.push({
+      pathname: '/(tabs)/agent',
+      params: { message: `Analise o ativo ${ticker} para mim. Quais são os pontos positivos e negativos?` },
+    });
+  }, [ticker, router]);
+
   // Chart data
   const chartData = useMemo(() => {
     if (!quote?.historicalDataPrice) return [];
@@ -121,11 +126,11 @@ export default function TickerDetailScreen() {
         day: '2-digit',
         month: '2-digit',
       }),
-      value: h.close,
+      value: Number(h.close || 0),
     }));
   }, [quote?.historicalDataPrice]);
 
-  const isPositive = (quote?.regularMarketChangePercent ?? 0) >= 0;
+  const isPositive = Number(quote?.regularMarketChangePercent || 0) >= 0;
   const changeColor = isPositive ? colors.positive : colors.negative;
 
   // Dividend yield calc
@@ -140,10 +145,14 @@ export default function TickerDetailScreen() {
     return totalDiv > 0 ? (totalDiv / Number(quote.regularMarketPrice || 1)) * 100 : null;
   }, [quote?.dividendsData, quote?.regularMarketPrice]);
 
+  // Key statistics
+  const stats = quote?.defaultKeyStatistics;
+
   if (loading) {
     return (
       <View style={[styles.screen, styles.center, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={colors.accent} />
+        <Text style={styles.loadingText}>Carregando {ticker}...</Text>
       </View>
     );
   }
@@ -151,8 +160,9 @@ export default function TickerDetailScreen() {
   if (!quote) {
     return (
       <View style={[styles.screen, styles.center, { paddingTop: insets.top }]}>
-        <Text style={styles.errorText}>Ativo nao encontrado</Text>
-        <TouchableOpacity onPress={() => router.back()}>
+        <AppIcon name="warning" size={40} color={colors.text.muted} />
+        <Text style={styles.errorText}>Ativo não encontrado</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.errorBtn}>
           <Text style={styles.errorLink}>Voltar</Text>
         </TouchableOpacity>
       </View>
@@ -166,8 +176,17 @@ export default function TickerDetailScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <AppIcon name="back" size={20} color={colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTicker}>{quote.symbol}</Text>
-        <View style={{ width: 36 }} />
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTicker}>{quote.symbol}</Text>
+          <Text style={styles.headerName} numberOfLines={1}>{quote.shortName || quote.longName}</Text>
+        </View>
+        <TouchableOpacity onPress={handleWatchlistToggle} style={styles.backBtn}>
+          <AppIcon
+            name={isInWatchlist ? 'heart' : 'heart-outline'}
+            size={22}
+            color={isInWatchlist ? colors.negative : colors.text.secondary}
+          />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -178,7 +197,6 @@ export default function TickerDetailScreen() {
         {/* Price Hero                                                       */}
         {/* ================================================================ */}
         <View style={styles.priceHero}>
-          <Text style={styles.priceName}>{quote.shortName || quote.longName}</Text>
           <Text style={styles.priceValue}>{formatBRL(Number(quote.regularMarketPrice || 0))}</Text>
           <View style={styles.priceChangeRow}>
             <Text style={[styles.priceChange, { color: changeColor }]}>
@@ -187,7 +205,7 @@ export default function TickerDetailScreen() {
             </Text>
             <View style={[styles.priceBadge, { backgroundColor: changeColor + '20' }]}>
               <Text style={[styles.priceBadgeText, { color: changeColor }]}>
-                {formatPct(Number(quote.regularMarketChangePercent || 0))}
+                {isPositive ? '\u25B2' : '\u25BC'} {formatPct(Number(quote.regularMarketChangePercent || 0))}
               </Text>
             </View>
           </View>
@@ -209,7 +227,8 @@ export default function TickerDetailScreen() {
             />
           ) : (
             <View style={styles.chartLoading}>
-              <Text style={styles.noDataText}>Sem dados para o periodo</Text>
+              <AppIcon name="trending" size={32} color={colors.text.muted} />
+              <Text style={styles.noDataText}>Sem dados para o período</Text>
             </View>
           )}
 
@@ -238,61 +257,108 @@ export default function TickerDetailScreen() {
         </View>
 
         {/* ================================================================ */}
-        {/* Trading Data                                                     */}
+        {/* Trading Data (2x3 grid)                                          */}
         {/* ================================================================ */}
         <View style={styles.dataCard}>
-          <Text style={styles.dataCardTitle}>Dados do Pregao</Text>
-          <DataRow label="Abertura" value={formatBRL(Number(quote.regularMarketOpen || 0))} colors={colors} />
-          <DataRow label="Maxima" value={formatBRL(Number(quote.regularMarketDayHigh || 0))} colors={colors} />
-          <DataRow label="Minima" value={formatBRL(Number(quote.regularMarketDayLow || 0))} colors={colors} />
-          <DataRow label="Volume" value={formatVolume(Number(quote.regularMarketVolume || 0))} colors={colors} />
-          <DataRow label="Anterior" value={formatBRL(Number(quote.regularMarketPreviousClose || 0))} colors={colors} />
-          <DataRow label="52 sem max" value={formatBRL(Number(quote.fiftyTwoWeekHigh || 0))} colors={colors} />
-          <DataRow label="52 sem min" value={formatBRL(Number(quote.fiftyTwoWeekLow || 0))} colors={colors} />
-          {quote.marketCap > 0 && (
-            <DataRow label="Market Cap" value={formatMarketCap(Number(quote.marketCap || 0))} colors={colors} />
-          )}
+          <Text style={styles.dataCardTitle}>Dados do Pregão</Text>
+          <View style={styles.gridRow}>
+            <GridItem label="Abertura" value={formatBRL(Number(quote.regularMarketOpen || 0))} colors={colors} />
+            <GridItem label="Máxima" value={formatBRL(Number(quote.regularMarketDayHigh || 0))} colors={colors} />
+          </View>
+          <View style={styles.gridRow}>
+            <GridItem label="Mínima" value={formatBRL(Number(quote.regularMarketDayLow || 0))} colors={colors} />
+            <GridItem label="Volume" value={formatVolume(Number(quote.regularMarketVolume || 0))} colors={colors} />
+          </View>
+          <View style={styles.gridRow}>
+            <GridItem label="Fech. Anterior" value={formatBRL(Number(quote.regularMarketPreviousClose || 0))} colors={colors} />
+            <GridItem
+              label="Market Cap"
+              value={Number(quote.marketCap || 0) > 0 ? formatMarketCap(Number(quote.marketCap || 0)) : '---'}
+              colors={colors}
+            />
+          </View>
+          <View style={styles.gridRow}>
+            <GridItem label="52 sem Máx" value={formatBRL(Number(quote.fiftyTwoWeekHigh || 0))} colors={colors} />
+            <GridItem label="52 sem Mín" value={formatBRL(Number(quote.fiftyTwoWeekLow || 0))} colors={colors} />
+          </View>
         </View>
 
         {/* ================================================================ */}
         {/* Fundamentals                                                     */}
         {/* ================================================================ */}
-        {(quote.priceEarnings || quote.financialData) && (
+        {(quote.priceEarnings || quote.financialData || stats) && (
           <View style={styles.dataCard}>
             <Text style={styles.dataCardTitle}>Fundamentalista</Text>
+
+            {/* P/L */}
             {quote.priceEarnings != null && (
-              <DataRow label="P/L" value={formatNumber(quote.priceEarnings, 2)} colors={colors} />
+              <DataRow label="P/L" value={formatNumber(Number(quote.priceEarnings || 0), 2)} colors={colors} />
             )}
-            {quote.earningsPerShare != null && (
-              <DataRow label="LPA" value={formatBRL(Number(quote.earningsPerShare || 0))} colors={colors} />
+            {!quote.priceEarnings && stats?.earningsTrailingPE != null && (
+              <DataRow label="P/L" value={formatNumber(Number(stats.earningsTrailingPE || 0), 2)} colors={colors} />
             )}
-            {quote.financialData && (
-              <>
-                {quote.financialData.returnOnEquity != null && (
-                  <DataRow label="ROE" value={formatPct(Number(quote.financialData.returnOnEquity || 0) * 100, false)} colors={colors} />
-                )}
-                {quote.financialData.returnOnAssets != null && (
-                  <DataRow label="ROA" value={formatPct(Number(quote.financialData.returnOnAssets || 0) * 100, false)} colors={colors} />
-                )}
-                {quote.financialData.profitMargins != null && (
-                  <DataRow label="Margem Liquida" value={formatPct(Number(quote.financialData.profitMargins || 0) * 100, false)} colors={colors} />
-                )}
-                {quote.financialData.ebitdaMargins != null && (
-                  <DataRow label="Margem EBITDA" value={formatPct(Number(quote.financialData.ebitdaMargins || 0) * 100, false)} colors={colors} />
-                )}
-                {quote.financialData.debtToEquity != null && (
-                  <DataRow label="Div/PL" value={formatNumber(quote.financialData.debtToEquity, 2)} colors={colors} />
-                )}
-                {quote.financialData.totalRevenue != null && quote.financialData.totalRevenue > 0 && (
-                  <DataRow label="Receita" value={formatMarketCap(Number(quote.financialData.totalRevenue || 0))} colors={colors} />
-                )}
-                {quote.financialData.ebitda != null && quote.financialData.ebitda > 0 && (
-                  <DataRow label="EBITDA" value={formatMarketCap(Number(quote.financialData.ebitda || 0))} colors={colors} />
-                )}
-                {quote.financialData.freeCashflow != null && (
-                  <DataRow label="Free Cash Flow" value={formatMarketCap(Number(quote.financialData.freeCashflow || 0))} colors={colors} />
-                )}
-              </>
+
+            {/* P/VP */}
+            {stats?.priceToBook != null && (
+              <DataRow label="P/VP" value={formatNumber(Number(stats.priceToBook || 0), 2)} colors={colors} />
+            )}
+
+            {/* ROE */}
+            {quote.financialData?.returnOnEquity != null && (
+              <DataRow label="ROE" value={formatPct(Number(quote.financialData.returnOnEquity || 0) * 100, false)} colors={colors} />
+            )}
+
+            {/* Margem Líquida */}
+            {quote.financialData?.profitMargins != null && (
+              <DataRow label="Margem Líquida" value={formatPct(Number(quote.financialData.profitMargins || 0) * 100, false)} colors={colors} />
+            )}
+
+            {/* Dívida/PL */}
+            {quote.financialData?.debtToEquity != null && (
+              <DataRow label="Dívida/PL" value={formatNumber(Number(quote.financialData.debtToEquity || 0), 2)} colors={colors} />
+            )}
+
+            {/* LPA */}
+            {(quote.earningsPerShare != null || stats?.trailingEps != null) && (
+              <DataRow
+                label="LPA"
+                value={formatBRL(Number(quote.earningsPerShare || stats?.trailingEps || 0))}
+                colors={colors}
+              />
+            )}
+
+            {/* DY */}
+            {(dividendYield != null || stats?.lastDividendValue != null) && (
+              <DataRow
+                label="DY (12m)"
+                value={dividendYield != null ? formatPct(dividendYield, false) : `R$ ${Number(stats?.lastDividendValue || 0).toFixed(2).replace('.', ',')}`}
+                colors={colors}
+              />
+            )}
+
+            {/* EV/EBITDA */}
+            {stats?.enterpriseToEbitda != null && (
+              <DataRow label="EV/EBITDA" value={formatNumber(Number(stats.enterpriseToEbitda || 0), 2)} colors={colors} />
+            )}
+
+            {/* Margem EBITDA */}
+            {quote.financialData?.ebitdaMargins != null && (
+              <DataRow label="Margem EBITDA" value={formatPct(Number(quote.financialData.ebitdaMargins || 0) * 100, false)} colors={colors} />
+            )}
+
+            {/* Beta */}
+            {stats?.beta != null && (
+              <DataRow label="Beta" value={formatNumber(Number(stats.beta || 0), 2)} colors={colors} />
+            )}
+
+            {/* Receita */}
+            {quote.financialData?.totalRevenue != null && Number(quote.financialData.totalRevenue) > 0 && (
+              <DataRow label="Receita" value={formatMarketCap(Number(quote.financialData.totalRevenue || 0))} colors={colors} />
+            )}
+
+            {/* EBITDA */}
+            {quote.financialData?.ebitda != null && Number(quote.financialData.ebitda) > 0 && (
+              <DataRow label="EBITDA" value={formatMarketCap(Number(quote.financialData.ebitda || 0))} colors={colors} />
             )}
           </View>
         )}
@@ -341,18 +407,22 @@ export default function TickerDetailScreen() {
         {quote.summaryProfile && (
           <View style={styles.dataCard}>
             <Text style={styles.dataCardTitle}>Sobre a Empresa</Text>
-            <DataRow label="Setor" value={quote.summaryProfile.sector} colors={colors} />
-            <DataRow label="Industria" value={quote.summaryProfile.industry} colors={colors} />
+            {quote.summaryProfile.sector && (
+              <DataRow label="Setor" value={quote.summaryProfile.sector} colors={colors} />
+            )}
+            {quote.summaryProfile.industry && (
+              <DataRow label="Indústria" value={quote.summaryProfile.industry} colors={colors} />
+            )}
             {quote.summaryProfile.city && (
               <DataRow
                 label="Sede"
-                value={`${quote.summaryProfile.city}, ${quote.summaryProfile.state}`}
+                value={`${quote.summaryProfile.city}${quote.summaryProfile.state ? `, ${quote.summaryProfile.state}` : ''}`}
                 colors={colors}
               />
             )}
-            {quote.summaryProfile.fullTimeEmployees > 0 && (
+            {Number(quote.summaryProfile.fullTimeEmployees || 0) > 0 && (
               <DataRow
-                label="Funcionarios"
+                label="Funcionários"
                 value={Number(quote.summaryProfile.fullTimeEmployees || 0).toLocaleString('pt-BR')}
                 colors={colors}
               />
@@ -369,46 +439,99 @@ export default function TickerDetailScreen() {
               </TouchableOpacity>
             )}
             {quote.summaryProfile.longBusinessSummary && (
-              <Text style={styles.summary} numberOfLines={6}>
-                {quote.summaryProfile.longBusinessSummary}
-              </Text>
+              <>
+                <Text
+                  style={styles.summary}
+                  numberOfLines={showFullSummary ? undefined : 4}
+                >
+                  {quote.summaryProfile.longBusinessSummary}
+                </Text>
+                <TouchableOpacity onPress={() => setShowFullSummary(!showFullSummary)}>
+                  <Text style={styles.readMore}>
+                    {showFullSummary ? 'Ver menos' : 'Ler mais'}
+                  </Text>
+                </TouchableOpacity>
+              </>
             )}
           </View>
         )}
 
+        {/* ================================================================ */}
+        {/* Action Buttons                                                   */}
+        {/* ================================================================ */}
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: colors.accent }]}
+            onPress={handleWatchlistToggle}
+            activeOpacity={0.8}
+          >
+            <AppIcon
+              name={isInWatchlist ? 'close' : 'add'}
+              size={18}
+              color={colors.background}
+            />
+            <Text style={[styles.actionBtnText, { color: colors.background }]}>
+              {isInWatchlist ? 'Remover da Watchlist' : 'Adicionar à Watchlist'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: colors.info + '20' }]}
+            onPress={handleAskAgent}
+            activeOpacity={0.8}
+          >
+            <AppIcon name="agent" size={18} color={colors.info} />
+            <Text style={[styles.actionBtnText, { color: colors.info }]}>
+              Perguntar ao ZURT Agent
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={{ height: 100 }} />
       </ScrollView>
-
-      {/* Floating watchlist button */}
-      <View style={[styles.fabWrap, { paddingBottom: insets.bottom + spacing.lg }]}>
-        <TouchableOpacity
-          style={[
-            styles.fab,
-            {
-              backgroundColor: isInWatchlist ? colors.negative + '20' : colors.accent,
-            },
-          ]}
-          onPress={handleWatchlistToggle}
-          activeOpacity={0.8}
-        >
-          <AppIcon
-            name={isInWatchlist ? 'close' : 'add'}
-            size={18}
-            color={isInWatchlist ? colors.negative : colors.background}
-          />
-          <Text
-            style={[
-              styles.fabText,
-              { color: isInWatchlist ? colors.negative : colors.background },
-            ]}
-          >
-            {isInWatchlist ? 'Remover da Watchlist' : 'Adicionar a Watchlist'}
-          </Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
+
+// ---------------------------------------------------------------------------
+// GridItem helper (2-column grid)
+// ---------------------------------------------------------------------------
+
+function GridItem({
+  label,
+  value,
+  colors,
+}: {
+  label: string;
+  value: string;
+  colors: ThemeColors;
+}) {
+  return (
+    <View style={gridStyles(colors).item}>
+      <Text style={gridStyles(colors).label}>{label}</Text>
+      <Text style={gridStyles(colors).value}>{value}</Text>
+    </View>
+  );
+}
+
+const gridStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    item: {
+      flex: 1,
+      paddingVertical: spacing.sm,
+    },
+    label: {
+      fontSize: 11,
+      color: colors.text.muted,
+      marginBottom: 2,
+    },
+    value: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text.primary,
+      fontVariant: ['tabular-nums'],
+    },
+  });
 
 // ---------------------------------------------------------------------------
 // DataRow helper
@@ -466,11 +589,24 @@ const createStyles = (colors: ThemeColors) =>
     center: {
       alignItems: 'center',
       justifyContent: 'center',
+      gap: spacing.md,
+    },
+    loadingText: {
+      color: colors.text.secondary,
+      fontSize: 14,
+      marginTop: spacing.md,
     },
     errorText: {
       color: colors.text.secondary,
       fontSize: 16,
-      marginBottom: spacing.md,
+      marginTop: spacing.md,
+    },
+    errorBtn: {
+      marginTop: spacing.md,
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.sm,
+      backgroundColor: colors.accent + '20',
+      borderRadius: radius.md,
     },
     errorLink: {
       color: colors.accent,
@@ -490,10 +626,19 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
+    headerCenter: {
+      flex: 1,
+      alignItems: 'center',
+    },
     headerTicker: {
       fontSize: 16,
       fontWeight: '700',
       color: colors.text.primary,
+    },
+    headerName: {
+      fontSize: 11,
+      color: colors.text.secondary,
+      marginTop: 1,
     },
     scrollContent: {
       paddingHorizontal: spacing.xl,
@@ -503,13 +648,8 @@ const createStyles = (colors: ThemeColors) =>
     priceHero: {
       marginBottom: spacing.xl,
     },
-    priceName: {
-      fontSize: 14,
-      color: colors.text.secondary,
-      marginBottom: spacing.xs,
-    },
     priceValue: {
-      fontSize: 32,
+      fontSize: 34,
       fontWeight: '700',
       color: colors.text.primary,
       fontVariant: ['tabular-nums'],
@@ -521,7 +661,7 @@ const createStyles = (colors: ThemeColors) =>
       gap: spacing.sm,
     },
     priceChange: {
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '600',
       fontVariant: ['tabular-nums'],
     },
@@ -531,7 +671,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: radius.sm,
     },
     priceBadgeText: {
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '700',
       fontVariant: ['tabular-nums'],
     },
@@ -544,6 +684,7 @@ const createStyles = (colors: ThemeColors) =>
       height: 200,
       alignItems: 'center',
       justifyContent: 'center',
+      gap: spacing.sm,
     },
     noDataText: {
       color: colors.text.muted,
@@ -588,6 +729,10 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: '700',
       color: colors.text.primary,
       marginBottom: spacing.md,
+    },
+    gridRow: {
+      flexDirection: 'row',
+      gap: spacing.md,
     },
 
     // -- Dividends --------------------------------------------------------
@@ -658,16 +803,19 @@ const createStyles = (colors: ThemeColors) =>
       lineHeight: 20,
       marginTop: spacing.md,
     },
-
-    // -- FAB --------------------------------------------------------------
-    fabWrap: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      paddingHorizontal: spacing.xl,
+    readMore: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.accent,
+      marginTop: spacing.sm,
     },
-    fab: {
+
+    // -- Action Buttons ---------------------------------------------------
+    actionsRow: {
+      gap: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    actionBtn: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
@@ -675,7 +823,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingVertical: spacing.lg,
       borderRadius: radius.lg,
     },
-    fabText: {
+    actionBtnText: {
       fontSize: 15,
       fontWeight: '700',
     },

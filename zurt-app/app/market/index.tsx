@@ -8,6 +8,7 @@ import {
   RefreshControl,
   TextInput,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -19,6 +20,7 @@ import { useSettingsStore } from '../../src/stores/settingsStore';
 import { useMarketStore } from '../../src/stores/marketStore';
 import { AppIcon } from '../../src/hooks/useIcon';
 import { formatBRL, formatPct, formatVolume, formatMarketCap } from '../../src/utils/formatters';
+import type { StockListItem } from '../../src/types/brapi';
 
 // ---------------------------------------------------------------------------
 // Filter chips
@@ -51,29 +53,29 @@ export default function MarketScreen() {
 
   const {
     allStocks,
+    searchResults,
     currentPage,
     hasMore,
     isLoading,
+    isSearching,
     activeFilter,
-    searchQuery,
     ibovespa,
-    currencies,
-    selic,
-    inflation,
+    usdBrl,
+    eurBrl,
+    btcBrl,
+    currentSelic,
+    currentInflation,
     loadAllStocks,
     loadMarketOverview,
+    searchAssets,
+    clearSearch,
   } = useMarketStore();
 
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Derived macro data
-  const usdBrl = currencies.find(
-    (c) => c.fromCurrency === 'USD' && c.toCurrency === 'BRL',
-  );
-  const latestSelic = selic.length > 0 ? selic[0] : null;
-  const latestIpca = inflation.length > 0 ? inflation[0] : null;
+  const isSearchMode = search.length >= 2;
 
   // Initial load
   useEffect(() => {
@@ -84,9 +86,13 @@ export default function MarketScreen() {
   // Debounced search
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      loadAllStocks(1, activeFilter);
-    }, 400);
+    if (search.length >= 2) {
+      debounceRef.current = setTimeout(() => {
+        searchAssets(search);
+      }, 400);
+    } else {
+      clearSearch();
+    }
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
@@ -101,9 +107,9 @@ export default function MarketScreen() {
   );
 
   const handleLoadMore = useCallback(() => {
-    if (isLoading || !hasMore) return;
+    if (isLoading || !hasMore || isSearchMode) return;
     loadAllStocks(currentPage + 1, activeFilter);
-  }, [isLoading, hasMore, currentPage, activeFilter, loadAllStocks]);
+  }, [isLoading, hasMore, isSearchMode, currentPage, activeFilter, loadAllStocks]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -119,10 +125,10 @@ export default function MarketScreen() {
   // ---------------------------------------------------------------------------
 
   const renderStockItem = useCallback(
-    ({ item }: { item: any }) => {
+    ({ item }: { item: StockListItem }) => {
       const change = Number(item.change || 0);
       const changeColor = change >= 0 ? colors.positive : colors.negative;
-      const dotColor = change > 0 ? colors.positive : change < 0 ? colors.negative : colors.text.muted;
+      const arrow = change > 0 ? '\u25B2' : change < 0 ? '\u25BC' : '';
       const typeColor = TYPE_COLORS[item.type] || colors.text.muted;
 
       return (
@@ -134,16 +140,24 @@ export default function MarketScreen() {
             router.push(`/market/${item.stock}`);
           }}
         >
-          {/* Left: dot + ticker + type + name */}
+          {/* Left: ticker + type + name */}
           <View style={styles.stockLeft}>
-            <View style={[styles.dot, { backgroundColor: dotColor }]} />
+            {item.logo ? (
+              <View style={styles.logoWrap}>
+                <Text style={styles.logoFallback}>{item.stock?.[0] || '?'}</Text>
+              </View>
+            ) : (
+              <View style={styles.logoWrap}>
+                <Text style={styles.logoFallback}>{item.stock?.[0] || '?'}</Text>
+              </View>
+            )}
             <View style={styles.stockInfo}>
               <View style={styles.stockTickerRow}>
                 <Text style={styles.stockTicker}>{item.stock}</Text>
                 {item.type && (
                   <View style={[styles.typeBadge, { backgroundColor: typeColor + '20' }]}>
                     <Text style={[styles.typeBadgeText, { color: typeColor }]}>
-                      {item.type === 'stock' ? 'Ação' : item.type === 'fund' ? 'FII' : 'BDR'}
+                      {item.type === 'stock' ? 'AÇÃO' : item.type === 'fund' ? 'FII' : 'BDR'}
                     </Text>
                   </View>
                 )}
@@ -154,17 +168,16 @@ export default function MarketScreen() {
             </View>
           </View>
 
-          {/* Right: price + change + volume + mcap */}
+          {/* Right: price + change + volume */}
           <View style={styles.stockRight}>
             <Text style={styles.stockPrice}>
               {formatBRL(Number(item.close || 0))}
             </Text>
             <Text style={[styles.stockChange, { color: changeColor }]}>
-              {formatPct(change)}
+              {arrow} {formatPct(change)}
             </Text>
             <Text style={styles.stockMeta}>
-              Vol: {formatVolume(Number(item.volume || 0))}
-              {'  '}MC: {formatMarketCap(Number(item.market_cap_basic || 0))}
+              Vol {formatVolume(Number(item.volume || 0))}
             </Text>
           </View>
         </TouchableOpacity>
@@ -173,73 +186,169 @@ export default function MarketScreen() {
     [colors, styles, router],
   );
 
+  // Search result item
+  const renderSearchItem = useCallback(
+    ({ item }: { item: StockListItem }) => {
+      const typeColor = TYPE_COLORS[item.type] || colors.text.muted;
+      return (
+        <TouchableOpacity
+          style={styles.stockRow}
+          activeOpacity={0.7}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            router.push(`/market/${item.stock}`);
+          }}
+        >
+          <View style={styles.stockLeft}>
+            <View style={styles.logoWrap}>
+              <Text style={styles.logoFallback}>{item.stock?.[0] || '?'}</Text>
+            </View>
+            <View style={styles.stockInfo}>
+              <View style={styles.stockTickerRow}>
+                <Text style={styles.stockTicker}>{item.stock}</Text>
+                {item.type && (
+                  <View style={[styles.typeBadge, { backgroundColor: typeColor + '20' }]}>
+                    <Text style={[styles.typeBadgeText, { color: typeColor }]}>
+                      {item.type === 'stock' ? 'AÇÃO' : item.type === 'fund' ? 'FII' : 'BDR'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.stockName} numberOfLines={1}>
+                {item.name || item.stock}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.stockRight}>
+            <Text style={styles.stockPrice}>
+              {formatBRL(Number(item.close || 0))}
+            </Text>
+            {item.sector && (
+              <Text style={styles.stockMeta} numberOfLines={1}>{item.sector}</Text>
+            )}
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [colors, styles, router],
+  );
+
+  const renderMacroIndicators = useCallback(
+    () => (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.macroScroll}
+      >
+        {/* IBOV */}
+        <View style={styles.macroCard}>
+          <Text style={styles.macroLabel}>IBOV</Text>
+          <Text style={styles.macroValue}>
+            {ibovespa
+              ? Number(ibovespa.regularMarketPrice || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 })
+              : '---'}
+          </Text>
+          <Text
+            style={[
+              styles.macroChange,
+              {
+                color: Number(ibovespa?.regularMarketChangePercent || 0) >= 0
+                  ? colors.positive
+                  : colors.negative,
+              },
+            ]}
+          >
+            {ibovespa
+              ? `${Number(ibovespa.regularMarketChangePercent || 0) >= 0 ? '\u25B2' : '\u25BC'} ${formatPct(Number(ibovespa.regularMarketChangePercent || 0))}`
+              : '---'}
+          </Text>
+        </View>
+
+        {/* USD/BRL */}
+        <View style={styles.macroCard}>
+          <Text style={styles.macroLabel}>USD/BRL</Text>
+          <Text style={styles.macroValue}>
+            {usdBrl ? `R$ ${Number(usdBrl.bidPrice || 0).toFixed(2).replace('.', ',')}` : '---'}
+          </Text>
+          <Text
+            style={[
+              styles.macroChange,
+              {
+                color: Number(usdBrl?.regularMarketChangePercent || 0) >= 0
+                  ? colors.positive
+                  : colors.negative,
+              },
+            ]}
+          >
+            {usdBrl
+              ? `${Number(usdBrl.regularMarketChangePercent || 0) >= 0 ? '\u25B2' : '\u25BC'} ${formatPct(Number(usdBrl.regularMarketChangePercent || 0))}`
+              : '---'}
+          </Text>
+        </View>
+
+        {/* EUR/BRL */}
+        <View style={styles.macroCard}>
+          <Text style={styles.macroLabel}>EUR/BRL</Text>
+          <Text style={styles.macroValue}>
+            {eurBrl ? `R$ ${Number(eurBrl.bidPrice || 0).toFixed(2).replace('.', ',')}` : '---'}
+          </Text>
+          <Text
+            style={[
+              styles.macroChange,
+              {
+                color: Number(eurBrl?.regularMarketChangePercent || 0) >= 0
+                  ? colors.positive
+                  : colors.negative,
+              },
+            ]}
+          >
+            {eurBrl
+              ? `${Number(eurBrl.regularMarketChangePercent || 0) >= 0 ? '\u25B2' : '\u25BC'} ${formatPct(Number(eurBrl.regularMarketChangePercent || 0))}`
+              : '---'}
+          </Text>
+        </View>
+
+        {/* BTC */}
+        <View style={styles.macroCard}>
+          <Text style={styles.macroLabel}>BTC</Text>
+          <Text style={styles.macroValue}>
+            {btcBrl
+              ? `R$ ${(Number(btcBrl.regularMarketPrice || 0) / 1000).toFixed(1).replace('.', ',')}K`
+              : '---'}
+          </Text>
+          <Text
+            style={[
+              styles.macroChange,
+              {
+                color: Number(btcBrl?.regularMarketChangePercent || 0) >= 0
+                  ? colors.positive
+                  : colors.negative,
+              },
+            ]}
+          >
+            {btcBrl
+              ? `${Number(btcBrl.regularMarketChangePercent || 0) >= 0 ? '\u25B2' : '\u25BC'} ${formatPct(Number(btcBrl.regularMarketChangePercent || 0))}`
+              : '---'}
+          </Text>
+        </View>
+
+        {/* SELIC */}
+        <View style={styles.macroCard}>
+          <Text style={styles.macroLabel}>SELIC</Text>
+          <Text style={styles.macroValue}>
+            {currentSelic != null ? `${Number(currentSelic).toFixed(2).replace('.', ',')}%` : '---'}
+          </Text>
+          <Text style={[styles.macroChange, { color: colors.info }]}>a.a.</Text>
+        </View>
+      </ScrollView>
+    ),
+    [ibovespa, usdBrl, eurBrl, btcBrl, currentSelic, colors, styles],
+  );
+
   const renderHeader = useCallback(
     () => (
       <View>
-        {/* Macro indicators */}
-        <View style={styles.macroRow}>
-          {/* IBOV */}
-          <View style={styles.macroCard}>
-            <Text style={styles.macroLabel}>IBOV</Text>
-            <Text style={styles.macroValue}>
-              {ibovespa
-                ? Number(ibovespa.regularMarketPrice || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 })
-                : '---'}
-            </Text>
-            <Text
-              style={[
-                styles.macroChange,
-                {
-                  color:
-                    Number(ibovespa?.regularMarketChangePercent || 0) >= 0
-                      ? colors.positive
-                      : colors.negative,
-                },
-              ]}
-            >
-              {ibovespa ? formatPct(Number(ibovespa.regularMarketChangePercent || 0)) : '---'}
-            </Text>
-          </View>
-
-          {/* USD/BRL */}
-          <View style={styles.macroCard}>
-            <Text style={styles.macroLabel}>USD</Text>
-            <Text style={styles.macroValue}>
-              {usdBrl ? `R$ ${Number(usdBrl.bidPrice || 0).toFixed(2).replace('.', ',')}` : '---'}
-            </Text>
-            <Text
-              style={[
-                styles.macroChange,
-                {
-                  color:
-                    Number(usdBrl?.regularMarketChangePercent || 0) >= 0
-                      ? colors.positive
-                      : colors.negative,
-                },
-              ]}
-            >
-              {usdBrl ? formatPct(Number(usdBrl.regularMarketChangePercent || 0)) : '---'}
-            </Text>
-          </View>
-
-          {/* SELIC */}
-          <View style={styles.macroCard}>
-            <Text style={styles.macroLabel}>SELIC</Text>
-            <Text style={styles.macroValue}>
-              {latestSelic ? `${Number(latestSelic.value).toFixed(2).replace('.', ',')}%` : '---'}
-            </Text>
-            <Text style={[styles.macroChange, { color: colors.warning }]}>a.a.</Text>
-          </View>
-
-          {/* IPCA */}
-          <View style={styles.macroCard}>
-            <Text style={styles.macroLabel}>IPCA</Text>
-            <Text style={styles.macroValue}>
-              {latestIpca ? `${Number(latestIpca.value).toFixed(2).replace('.', ',')}%` : '---'}
-            </Text>
-            <Text style={[styles.macroChange, { color: colors.warning }]}>mensal</Text>
-          </View>
-        </View>
+        {renderMacroIndicators()}
 
         {/* Results count */}
         <View style={styles.resultsHeader}>
@@ -249,27 +358,38 @@ export default function MarketScreen() {
         </View>
       </View>
     ),
-    [ibovespa, usdBrl, latestSelic, latestIpca, allStocks.length, colors, styles],
+    [allStocks.length, renderMacroIndicators, styles],
   );
 
   const renderFooter = useCallback(() => {
-    if (!isLoading) return null;
+    if (!isLoading || isSearchMode) return null;
     return (
       <View style={styles.footerLoader}>
         <ActivityIndicator size="small" color={colors.accent} />
         <Text style={styles.footerText}>Carregando mais...</Text>
       </View>
     );
-  }, [isLoading, colors, styles]);
+  }, [isLoading, isSearchMode, colors, styles]);
 
   const renderEmpty = useCallback(() => {
-    if (isLoading) return null;
+    if (isLoading || isSearching) return null;
     return (
       <View style={styles.emptyWrap}>
-        <Text style={styles.emptyText}>Nenhum ativo encontrado</Text>
+        <AppIcon name="search" size={40} color={colors.text.muted} />
+        <Text style={styles.emptyTitle}>
+          {isSearchMode ? 'Nenhum resultado' : 'Nenhum ativo encontrado'}
+        </Text>
+        <Text style={styles.emptyText}>
+          {isSearchMode
+            ? `Nenhum ativo encontrado para "${search}"`
+            : 'Tente novamente em instantes'}
+        </Text>
       </View>
     );
-  }, [isLoading, styles]);
+  }, [isLoading, isSearching, isSearchMode, search, colors, styles]);
+
+  // Data to display
+  const listData = isSearchMode ? searchResults : allStocks;
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -278,7 +398,10 @@ export default function MarketScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <AppIcon name="back" size={20} color={colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Mercado</Text>
+        <View style={styles.headerCenter}>
+          <AppIcon name="trending" size={18} color={colors.accent} />
+          <Text style={styles.headerTitle}>Mercado</Text>
+        </View>
         <View style={styles.backBtn} />
       </View>
 
@@ -287,7 +410,7 @@ export default function MarketScreen() {
         <AppIcon name="search" size={16} color={colors.text.muted} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar ativos..."
+          placeholder="Buscar ações, FIIs, BDRs..."
           placeholderTextColor={colors.text.muted}
           value={search}
           onChangeText={setSearch}
@@ -300,44 +423,58 @@ export default function MarketScreen() {
             <AppIcon name="close" size={16} color={colors.text.muted} />
           </TouchableOpacity>
         )}
+        {isSearching && <ActivityIndicator size="small" color={colors.accent} />}
       </View>
 
-      {/* Filter chips */}
-      <View style={styles.filterRow}>
-        {FILTERS.map((f) => {
-          const active = activeFilter === f.key;
-          return (
-            <TouchableOpacity
-              key={f.key}
-              style={[
-                styles.filterChip,
-                active && { backgroundColor: colors.accent },
-              ]}
-              onPress={() => handleFilterChange(f.key)}
-            >
-              <Text
+      {/* Filter chips (hidden during search) */}
+      {!isSearchMode && (
+        <View style={styles.filterRow}>
+          {FILTERS.map((f) => {
+            const active = activeFilter === f.key;
+            return (
+              <TouchableOpacity
+                key={f.key}
                 style={[
-                  styles.filterChipText,
-                  active && { color: colors.background },
+                  styles.filterChip,
+                  active && { backgroundColor: colors.accent, borderColor: colors.accent },
                 ]}
+                onPress={() => handleFilterChange(f.key)}
               >
-                {f.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    active && { color: colors.background },
+                  ]}
+                >
+                  {f.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+
+      {/* Search results label */}
+      {isSearchMode && (
+        <View style={styles.searchResultsLabel}>
+          <Text style={styles.resultsCount}>
+            {isSearching
+              ? 'Buscando...'
+              : `${searchResults.length} resultado${searchResults.length !== 1 ? 's' : ''}`}
+          </Text>
+        </View>
+      )}
 
       {/* Stock list */}
       <FlatList
-        data={allStocks}
+        data={listData}
         keyExtractor={(item) => item.stock}
-        renderItem={renderStockItem}
-        ListHeaderComponent={renderHeader}
+        renderItem={isSearchMode ? renderSearchItem : renderStockItem}
+        ListHeaderComponent={isSearchMode ? undefined : renderHeader}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}
         onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
+        onEndReachedThreshold={0.3}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
         refreshControl={
@@ -376,6 +513,11 @@ const createStyles = (colors: ThemeColors) =>
       height: 36,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    headerCenter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
     },
     headerTitle: {
       fontSize: 18,
@@ -425,42 +567,48 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.text.secondary,
     },
 
+    // -- Search results label -------------------------------------------------
+    searchResultsLabel: {
+      paddingHorizontal: spacing.xl,
+      marginBottom: spacing.sm,
+    },
+
     // -- List -----------------------------------------------------------------
     listContent: {
       paddingBottom: 100,
     },
 
-    // -- Macro indicators -----------------------------------------------------
-    macroRow: {
-      flexDirection: 'row',
+    // -- Macro indicators (horizontal scroll) ---------------------------------
+    macroScroll: {
       paddingHorizontal: spacing.xl,
       gap: spacing.sm,
       marginBottom: spacing.lg,
     },
     macroCard: {
-      flex: 1,
       backgroundColor: colors.card,
       borderRadius: radius.md,
       borderWidth: 1,
       borderColor: colors.border,
       padding: spacing.md,
       alignItems: 'center',
+      minWidth: 100,
     },
     macroLabel: {
       fontSize: 10,
-      fontWeight: '600',
+      fontWeight: '700',
       color: colors.text.muted,
-      marginBottom: 2,
+      letterSpacing: 0.5,
+      marginBottom: 4,
     },
     macroValue: {
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '700',
       color: colors.text.primary,
       fontVariant: ['tabular-nums'],
       marginBottom: 2,
     },
     macroChange: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: '700',
       fontVariant: ['tabular-nums'],
     },
@@ -492,11 +640,19 @@ const createStyles = (colors: ThemeColors) =>
       flex: 1,
       marginRight: spacing.md,
     },
-    dot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
+    logoWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.elevated,
+      alignItems: 'center',
+      justifyContent: 'center',
       marginRight: spacing.sm,
+    },
+    logoFallback: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.accent,
     },
     stockInfo: {
       flex: 1,
@@ -519,6 +675,7 @@ const createStyles = (colors: ThemeColors) =>
     typeBadgeText: {
       fontSize: 9,
       fontWeight: '700',
+      letterSpacing: 0.3,
     },
     stockName: {
       fontSize: 11,
@@ -562,9 +719,18 @@ const createStyles = (colors: ThemeColors) =>
     emptyWrap: {
       alignItems: 'center',
       paddingTop: 60,
+      gap: spacing.sm,
+    },
+    emptyTitle: {
+      color: colors.text.primary,
+      fontSize: 16,
+      fontWeight: '600',
+      marginTop: spacing.md,
     },
     emptyText: {
       color: colors.text.secondary,
-      fontSize: 14,
+      fontSize: 13,
+      textAlign: 'center',
+      paddingHorizontal: spacing.xxl,
     },
   });
