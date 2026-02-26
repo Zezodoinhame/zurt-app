@@ -21,11 +21,9 @@ import { usePortfolioStore } from '../../src/stores/portfolioStore';
 import { useGoalsStore } from '../../src/stores/goalsStore';
 import { useCardsStore } from '../../src/stores/cardsStore';
 import { useAgentStore } from '../../src/stores/agentStore';
-import { useNotificationStore } from '../../src/stores/notificationStore';
 import { syncAllFinance } from '../../src/services/api';
 
 import { Card } from '../../src/components/ui/Card';
-import { Badge } from '../../src/components/ui/Badge';
 import {
   SkeletonCard,
   SkeletonChart,
@@ -33,7 +31,6 @@ import {
 } from '../../src/components/skeletons/Skeleton';
 import { ErrorState } from '../../src/components/shared/ErrorState';
 import { SectionHeader } from '../../src/components/shared/SectionHeader';
-import { QuickActionButton } from '../../src/components/shared/QuickActionButton';
 import { InsightCard } from '../../src/components/shared/InsightCard';
 import { TransactionRow } from '../../src/components/shared/TransactionRow';
 import { GoalCard } from '../../src/components/shared/GoalCard';
@@ -51,45 +48,60 @@ import { useMarketStore } from '../../src/stores/marketStore';
 import { AppIcon } from '../../src/hooks/useIcon';
 
 // ---------------------------------------------------------------------------
-// Sparkline SVG — lightweight chart for the hero card
+// Helpers
 // ---------------------------------------------------------------------------
 
-function Sparkline({
+const getGreeting = (): string => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'Bom dia';
+  if (hour >= 12 && hour < 18) return 'Boa tarde';
+  return 'Boa noite';
+};
+
+const BAR_HEIGHTS = [55, 40, 48, 65, 58, 50, 56, 70, 74, 68, 72, 80];
+const SPARKLINE_FALLBACK = [24, 20, 22, 18, 15, 17, 12, 14, 8, 10, 6];
+
+// ---------------------------------------------------------------------------
+// HeroSparkline — lightweight SVG sparkline for the hero card
+// ---------------------------------------------------------------------------
+
+function HeroSparkline({
   data,
-  width,
-  height,
   color,
+  width = 80,
+  height = 32,
 }: {
   data: number[];
-  width: number;
-  height: number;
   color: string;
+  width?: number;
+  height?: number;
 }) {
-  if (data.length < 2) return null;
-
-  const min = Math.min(...data);
-  const max = Math.max(...data);
+  const pts = data.length >= 2 ? data : SPARKLINE_FALLBACK;
+  const min = Math.min(...pts);
+  const max = Math.max(...pts);
   const range = max - min || 1;
-  const padY = 4;
+  const pad = 2;
 
-  const points = data.map((v, i) => ({
-    x: (i / (data.length - 1)) * width,
-    y: padY + (1 - (v - min) / range) * (height - padY * 2),
+  const points = pts.map((v, i) => ({
+    x: (i / (pts.length - 1)) * width,
+    y: pad + (1 - (v - min) / range) * (height - pad * 2),
   }));
 
-  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+  const linePath = points
+    .map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+    .join(' ');
   const areaPath = `${linePath} L${width},${height} L0,${height} Z`;
 
   return (
     <Svg width={width} height={height}>
       <Defs>
-        <SvgGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={color} stopOpacity="0.25" />
+        <SvgGradient id="heroSparkFill" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={color} stopOpacity="0.3" />
           <Stop offset="1" stopColor={color} stopOpacity="0" />
         </SvgGradient>
       </Defs>
-      <Path d={areaPath} fill="url(#sparkFill)" />
-      <Path d={linePath} fill="none" stroke={color} strokeWidth={2} />
+      <Path d={areaPath} fill="url(#heroSparkFill)" />
+      <Path d={linePath} fill="none" stroke={color} strokeWidth={1.5} />
     </Svg>
   );
 }
@@ -120,11 +132,9 @@ export default function HomeScreen() {
   const { cards, dashboardTransactions, loadTransactions } = useCardsStore();
   const { loadInitialInsights } = useAgentStore();
   const { articles: newsArticles, loadNews } = useNewsStore();
-  const { getUnreadCount } = useNotificationStore();
   const { loadMarketOverview } = useMarketStore();
   const { t, currency } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
-  const unreadCount = getUnreadCount();
 
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -168,31 +178,33 @@ export default function HomeScreen() {
   }, [isSyncing, refresh]);
 
   // ---- Derived values -------------------------------------------------------
-  const firstName = user?.name?.split(' ')[0] ?? '';
-  const hour = new Date().getHours();
-  const greeting = `${t('greeting.' + (hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'))}, ${firstName}`;
+  const firstName = user?.name?.split(' ')[0] ?? 'Usu\u00E1rio';
 
-  const variation1mVariant: 'positive' | 'negative' =
-    (summary?.variation1m ?? 0) >= 0 ? 'positive' : 'negative';
+  const variation1m = summary?.variation1m ?? 0;
+  const isPositive = variation1m >= 0;
 
-  const monthlyReturn = summary
-    ? summary.totalValue - (summary.investedValue + (summary.profit - (summary.totalValue - summary.investedValue)))
-    : 0;
   const monthlyReturnValue = summary
-    ? summary.totalValue * (summary.variation1m / 100)
+    ? summary.totalValue * (variation1m / 100)
     : 0;
 
-  // ---- Helpers for value display --------------------------------------------
-  const displayValue = (value: number) =>
-    valuesHidden ? maskValue('') : formatCurrency(value, currency);
+  const heroValueParts = useMemo(() => {
+    const value = summary?.totalValue ?? 0;
+    const abs = Math.abs(value);
+    const formatted = new Intl.NumberFormat('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(abs);
+    const [integer, decimal] = formatted.split(',');
+    return {
+      sign: value < 0 ? '-' : '',
+      integer: integer || '0',
+      decimal: `,${decimal || '00'}`,
+    };
+  }, [summary?.totalValue]);
 
-  const displayPct = (value: number) =>
-    valuesHidden ? '••••' : formatPct(value);
-
-  // ---- Sparkline data from history ------------------------------------------
   const sparklineData = useMemo(() => {
     const history = summary?.history ?? [];
-    if (history.length < 2) return [];
+    if (history.length < 2) return SPARKLINE_FALLBACK;
     return history.slice(-12).map((h) => h.value);
   }, [summary?.history]);
 
@@ -211,12 +223,12 @@ export default function HomeScreen() {
 
   // ---- Transaction category label map ---------------------------------------
   const categoryLabelMap: Record<string, string> = {
-    food: 'Alimentação',
+    food: 'Alimenta\u00E7\u00E3o',
     transport: 'Transporte',
     subscriptions: 'Assinaturas',
     shopping: 'Compras',
-    fuel: 'Combustível',
-    health: 'Saúde',
+    fuel: 'Combust\u00EDvel',
+    health: 'Sa\u00FAde',
     travel: 'Viagens',
     tech: 'Tecnologia',
   };
@@ -256,48 +268,40 @@ export default function HomeScreen() {
         }
       >
         {/* ---------------------------------------------------------------- */}
-        {/* 1. Header — Greeting + Actions                                   */}
+        {/* 1. Header \u2014 Greeting + Eye Toggle + ZURT Avatar               */}
         {/* ---------------------------------------------------------------- */}
         <View style={styles.header}>
-          <View style={styles.headerTopRow}>
-            {/* Greeting */}
-            <View style={styles.greetingCol}>
-              <Text style={styles.greeting}>{greeting}</Text>
+          <View style={styles.headerRow}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.greetingText}>{getGreeting()},</Text>
+              <Text style={styles.userName}>{firstName}</Text>
             </View>
-
-            {/* Actions: eye + notifications + avatar */}
-            <View style={styles.headerActions}>
+            <View style={styles.headerRight}>
               <TouchableOpacity
                 onPress={handleToggleValues}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                accessibilityLabel={valuesHidden ? t('home.showValues') : t('home.hideValues')}
-                style={styles.headerIconBtn}
+                style={styles.headerBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <AppIcon name={valuesHidden ? 'eyeOff' : 'eye'} size={18} color={colors.text.secondary} />
+                <AppIcon
+                  name={valuesHidden ? 'eyeOff' : 'eye'}
+                  size={18}
+                  color={colors.text.secondary}
+                />
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => router.push('/(tabs)/alerts')}
-                style={styles.headerIconBtn}
-                accessibilityLabel="Notifications"
-              >
-                <AppIcon name="notification" size={18} color={colors.text.secondary} />
-                {unreadCount > 0 && <View style={styles.notifBadge} />}
-              </TouchableOpacity>
-              {/* ZURT badge / avatar */}
               <View style={styles.avatarBadge}>
-                <Svg width={32} height={32} viewBox="0 0 32 32">
+                <Svg width={36} height={36} viewBox="0 0 36 36">
                   <Defs>
-                    <SvgGradient id="zurt-logo-grad" x1="0" y1="0" x2="1" y2="1">
-                      <Stop offset="0%" stopColor={colors.accent} />
-                      <Stop offset="100%" stopColor={colors.accent + 'BB'} />
+                    <SvgGradient id="zurt-av" x1="0" y1="0" x2="1" y2="1">
+                      <Stop offset="0%" stopColor="#00D4AA" />
+                      <Stop offset="100%" stopColor="#00A888" />
                     </SvgGradient>
                   </Defs>
-                  <Rect width={32} height={32} rx={10} fill="url(#zurt-logo-grad)" />
+                  <Rect width={36} height={36} rx={12} fill="url(#zurt-av)" />
                   <SvgText
-                    x={16}
-                    y={22}
+                    x={18}
+                    y={24}
                     textAnchor="middle"
-                    fill={colors.background}
+                    fill="#FFFFFF"
                     fontWeight="900"
                     fontSize={18}
                   >
@@ -324,52 +328,104 @@ export default function HomeScreen() {
         ) : (
           <>
             {/* -------------------------------------------------------------- */}
-            {/* 2. Hero Card — Patrimônio Consolidado + Sparkline              */}
+            {/* 2. Hero Card \u2014 Patrim\u00F4nio Consolidado                        */}
             {/* -------------------------------------------------------------- */}
             {summary && (
               <View style={styles.heroCard}>
-                <View style={styles.heroTop}>
-                  <View style={styles.heroTextCol}>
-                    <Text style={styles.heroLabel}>{t('home.consolidatedPatrimony').toUpperCase()}</Text>
-                    <Text style={styles.heroValue}>
-                      {displayValue(summary.totalValue)}
+                {/* Radial glow background layers */}
+                <View style={styles.heroGlow1} />
+                <View style={styles.heroGlow2} />
+
+                <View style={styles.heroContent}>
+                  {/* Top row: label + sparkline */}
+                  <View style={styles.heroTopRow}>
+                    <Text style={styles.heroLabel}>
+                      PATRIM\u00D4NIO CONSOLIDADO
                     </Text>
-                    <View style={styles.heroBadgeRow}>
-                      <View style={[
-                        styles.heroBadge,
-                        { backgroundColor: (variation1mVariant === 'positive' ? colors.positive : colors.negative) + '18' },
-                      ]}>
-                        <Text style={[
-                          styles.heroBadgeText,
-                          { color: variation1mVariant === 'positive' ? colors.positive : colors.negative },
-                        ]}>
-                          {variation1mVariant === 'positive' ? '\u25B2' : '\u25BC'} {displayPct(summary.variation1m)}
+                    <HeroSparkline
+                      data={sparklineData}
+                      color={isPositive ? colors.positive : colors.negative}
+                    />
+                  </View>
+
+                  {/* Value: R$ + integer + ,decimal */}
+                  <View style={styles.heroValueRow}>
+                    {valuesHidden ? (
+                      <Text style={styles.heroValueMain}>{'\u2022\u2022\u2022\u2022\u2022'}</Text>
+                    ) : (
+                      <>
+                        <Text style={styles.heroValuePrefix}>
+                          {heroValueParts.sign}R$
                         </Text>
-                      </View>
-                      <Text style={styles.heroMonthly}>
-                        {valuesHidden
-                          ? '\u2022\u2022\u2022\u2022\u2022'
-                          : `${monthlyReturnValue >= 0 ? '+' : ''}${formatCurrency(monthlyReturnValue, currency)} ${t('home.thisMonth').toLowerCase()}`}
+                        <Text style={styles.heroValueMain}>
+                          {heroValueParts.integer}
+                        </Text>
+                        <Text style={styles.heroValueDecimal}>
+                          {heroValueParts.decimal}
+                        </Text>
+                      </>
+                    )}
+                  </View>
+
+                  {/* Variation badge + monthly return */}
+                  <View style={styles.heroBadgeRow}>
+                    <View
+                      style={[
+                        styles.heroBadge,
+                        {
+                          backgroundColor: (isPositive ? '#00D4AA' : '#FF4D4D') + '1F',
+                          borderColor: (isPositive ? '#00D4AA' : '#FF4D4D') + '33',
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.heroBadgeArrow,
+                          { color: isPositive ? '#00D4AA' : '#FF4D4D' },
+                        ]}
+                      >
+                        {isPositive ? '\u25B2' : '\u25BC'}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.heroBadgeValue,
+                          { color: isPositive ? '#00D4AA' : '#FF4D4D' },
+                        ]}
+                      >
+                        {valuesHidden ? '\u2022\u2022\u2022' : formatPct(variation1m)}
                       </Text>
                     </View>
+                    <Text style={styles.heroMonthly}>
+                      {valuesHidden
+                        ? '\u2022\u2022\u2022\u2022\u2022'
+                        : `${monthlyReturnValue >= 0 ? '+' : ''}${formatCurrency(monthlyReturnValue, currency)} este m\u00EAs`}
+                    </Text>
                   </View>
-                  {sparklineData.length >= 2 && (
-                    <View style={styles.sparklineWrap}>
-                      <Sparkline
-                        data={sparklineData}
-                        width={90}
-                        height={40}
-                        color={variation1mVariant === 'positive' ? colors.positive : colors.negative}
-                      />
-                    </View>
-                  )}
-                </View>
 
+                  {/* Mini bar chart \u2014 12 bars */}
+                  <View style={styles.barChartRow}>
+                    {BAR_HEIGHTS.map((h, i) => (
+                      <View
+                        key={i}
+                        style={[
+                          styles.bar,
+                          {
+                            height: (h / 100) * 36,
+                            backgroundColor:
+                              i === BAR_HEIGHTS.length - 1
+                                ? colors.accent + '80'
+                                : colors.accent + '26',
+                          },
+                        ]}
+                      />
+                    ))}
+                  </View>
+                </View>
               </View>
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* Empty State — no connections                                    */}
+            {/* Empty State \u2014 no connections                                 */}
             {/* -------------------------------------------------------------- */}
             {validAllocations.length === 0 && institutions.length === 0 && (
               <Card delay={200}>
@@ -388,29 +444,27 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* 3. Quick Actions (4 buttons)                                   */}
+            {/* 3. Quick Actions                                               */}
             {/* -------------------------------------------------------------- */}
             <View style={styles.quickActions}>
-              <QuickActionButton
-                icon="bank"
-                label={t('home.connectBank')}
-                onPress={() => router.push('/connect-bank')}
-              />
-              <QuickActionButton
-                icon="report"
-                label={t('home.generateReport')}
-                onPress={() => router.push('/report')}
-              />
-              <QuickActionButton
-                icon="refresh"
-                label={t('home.syncData')}
-                onPress={handleSync}
-              />
-              <QuickActionButton
-                icon="share"
-                label={t('home.inviteFriends')}
-                onPress={() => Share.share({ message: 'Conheça o ZURT - inteligência patrimonial na palma da mão! https://zurt.com.br' })}
-              />
+              {[
+                { emoji: '\uD83C\uDFE6', label: 'Conectar\nbanco', accent: true, onPress: () => router.push('/connect-bank') },
+                { emoji: '\uD83D\uDCCA', label: 'Gerar\nrelat\u00F3rio', accent: false, onPress: () => router.push('/report') },
+                { emoji: '\uD83D\uDD04', label: 'Sincronizar', accent: false, onPress: handleSync },
+                { emoji: '\uD83C\uDF81', label: 'Convidar\namigos', accent: false, onPress: () => Share.share({ message: 'Conhe\u00E7a o ZURT - intelig\u00EAncia patrimonial na palma da m\u00E3o! https://zurt.com.br' }) },
+              ].map((btn, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={[styles.qaBtn, btn.accent && styles.qaBtnAccent]}
+                  activeOpacity={0.7}
+                  onPress={btn.onPress}
+                >
+                  <Text style={styles.qaIcon}>{btn.emoji}</Text>
+                  <Text style={[styles.qaLabel, btn.accent && styles.qaLabelAccent]}>
+                    {btn.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
 
             {/* -------------------------------------------------------------- */}
@@ -435,7 +489,7 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* 5. Alocação                                                    */}
+            {/* 5. Aloca\u00E7\u00E3o                                                    */}
             {/* -------------------------------------------------------------- */}
             {validAllocations.length > 0 && (
               <View style={styles.section}>
@@ -450,7 +504,7 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* 6. Metas — horizontal scroll                                   */}
+            {/* 6. Metas \u2014 horizontal scroll                                   */}
             {/* -------------------------------------------------------------- */}
             {goals.length > 0 && (
               <View style={styles.section}>
@@ -488,7 +542,7 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* 7. Cartões — 2 side by side                                    */}
+            {/* 7. Cart\u00F5es \u2014 2 side by side                                    */}
             {/* -------------------------------------------------------------- */}
             {topCards.length > 0 && (
               <View style={styles.section}>
@@ -528,7 +582,7 @@ export default function HomeScreen() {
                           />
                         </View>
                         <Text style={styles.miniCardUsage}>
-                          {valuesHidden ? '••%' : `${(usage * 100).toFixed(0)}%`}
+                          {valuesHidden ? '\u2022\u2022%' : `${(usage * 100).toFixed(0)}%`}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -538,7 +592,7 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* 8. Movimentações — last 4                                      */}
+            {/* 8. Movimenta\u00E7\u00F5es \u2014 last 4                                      */}
             {/* -------------------------------------------------------------- */}
             {recentTransactions.length > 0 && (
               <View style={styles.section}>
@@ -647,98 +701,132 @@ const createStyles = (colors: ThemeColors) =>
       paddingTop: spacing.lg,
       paddingBottom: spacing.md,
     },
-    headerTopRow: {
+    headerRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
     },
-    greetingCol: {
+    headerLeft: {
       flex: 1,
     },
-    greeting: {
+    greetingText: {
+      fontSize: 13,
+      color: colors.text.secondary,
+    },
+    userName: {
       fontSize: 22,
       fontWeight: '700',
       color: colors.text.primary,
       lineHeight: 28,
     },
-    headerActions: {
+    headerRight: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.sm,
     },
-    headerIconBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: radius.md,
-      backgroundColor: colors.card,
+    headerBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      backgroundColor: 'rgba(255,255,255,0.04)',
       borderWidth: 1,
       borderColor: colors.border,
       alignItems: 'center',
       justifyContent: 'center',
     },
     avatarBadge: {
-      width: 38,
-      height: 38,
-      borderRadius: radius.md,
-      alignItems: 'center',
-      justifyContent: 'center',
+      width: 36,
+      height: 36,
+      borderRadius: 12,
       overflow: 'hidden',
     },
-    notifBadge: {
-      position: 'absolute',
-      top: 8,
-      right: 8,
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: '#f87171',
-      borderWidth: 2,
-      borderColor: colors.card,
-    },
 
-    // -- Hero Card (Patrimônio) -----------------------------------------------
+    // -- Hero Card (Patrim\u00F4nio) -----------------------------------------------
     heroCard: {
-      backgroundColor: colors.card,
-      borderRadius: radius.lg,
+      borderRadius: 24,
+      overflow: 'hidden',
       borderWidth: 1,
       borderColor: colors.border,
-      padding: spacing.lg,
+      backgroundColor: colors.card,
       marginBottom: spacing.lg,
     },
-    heroTop: {
+    heroGlow1: {
+      position: 'absolute',
+      top: -40,
+      left: -40,
+      width: 250,
+      height: 200,
+      borderRadius: 999,
+      backgroundColor: '#00D4AA',
+      opacity: 0.05,
+    },
+    heroGlow2: {
+      position: 'absolute',
+      bottom: -40,
+      right: -40,
+      width: 180,
+      height: 180,
+      borderRadius: 999,
+      backgroundColor: '#3B82F6',
+      opacity: 0.03,
+    },
+    heroContent: {
+      paddingVertical: 24,
+      paddingHorizontal: 20,
+    },
+    heroTopRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
     },
-    heroTextCol: {
-      flex: 1,
-    },
     heroLabel: {
       fontSize: 10,
-      fontWeight: '700',
+      fontWeight: '600',
+      letterSpacing: 3,
       color: colors.text.muted,
-      letterSpacing: 1.2,
-      marginBottom: spacing.sm,
     },
-    heroValue: {
-      fontSize: 30,
-      fontWeight: '700',
+    heroValueRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      marginTop: 8,
+    },
+    heroValuePrefix: {
+      fontSize: 14,
+      color: colors.text.secondary,
+      marginRight: 4,
+    },
+    heroValueMain: {
+      fontSize: 42,
+      fontWeight: '800',
       color: colors.text.primary,
-      fontVariant: ['tabular-nums'],
-      marginBottom: spacing.sm,
+      letterSpacing: -2,
+    },
+    heroValueDecimal: {
+      fontSize: 18,
+      fontWeight: '300',
+      color: colors.text.muted,
     },
     heroBadgeRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: spacing.sm,
+      gap: 8,
+      marginTop: 10,
       flexWrap: 'wrap',
     },
     heroBadge: {
-      paddingHorizontal: spacing.sm + 2,
-      paddingVertical: spacing.xs,
-      borderRadius: radius.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 8,
+      borderWidth: 1,
+      gap: 3,
     },
-    heroBadgeText: {
+    heroBadgeArrow: {
+      fontSize: 10,
+      fontWeight: '700',
+    },
+    heroBadgeValue: {
       fontSize: 12,
       fontWeight: '700',
       fontVariant: ['tabular-nums'],
@@ -748,16 +836,51 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.text.secondary,
       fontVariant: ['tabular-nums'],
     },
-    sparklineWrap: {
-      marginLeft: spacing.md,
-      marginTop: spacing.sm,
+    barChartRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: 3,
+      marginTop: 18,
+      height: 36,
     },
+    bar: {
+      flex: 1,
+      borderRadius: 3,
+    },
+
     // -- Quick Actions --------------------------------------------------------
     quickActions: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
-      gap: spacing.sm,
+      gap: 8,
+      marginTop: 14,
       marginBottom: spacing.xl,
+    },
+    qaBtn: {
+      flex: 1,
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: 6,
+      paddingVertical: 12,
+      paddingHorizontal: 4,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    qaBtnAccent: {
+      backgroundColor: '#00D4AA0D',
+      borderColor: '#00D4AA26',
+    },
+    qaIcon: {
+      fontSize: 22,
+    },
+    qaLabel: {
+      fontSize: 10,
+      fontWeight: '600',
+      textAlign: 'center',
+      color: colors.text.secondary,
+    },
+    qaLabelAccent: {
+      color: '#00D4AA',
     },
 
     // -- Sections -------------------------------------------------------------
