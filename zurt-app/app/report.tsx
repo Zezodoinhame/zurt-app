@@ -367,16 +367,15 @@ function buildReportHTML(opts: {
   .page {
     width: 210mm;
     height: 297mm;
-    padding: 40px 50px 50px 50px;
+    padding: 40px 50px;
+    position: relative;
     background: #0A0F1C;
     box-sizing: border-box;
     overflow: hidden;
   }
-  body > .cover + .page,
-  body > .page + .page {
+  body > div.page + div.page {
     page-break-before: always;
   }
-  .page-content { }
   .ph {
     display: flex; justify-content: space-between; align-items: center;
     padding-bottom: 10px; margin-bottom: 18px; border-bottom: 1px solid #C9A84C30;
@@ -387,13 +386,13 @@ function buildReportHTML(opts: {
   .ph-sep { color: #C9A84C40; }
   .ph-type { font-style: italic; color: #C9A84C; }
   .pf {
-    font-size: 8px;
-    color: #6B7280;
-    border-top: 1px solid #1F2937;
-    padding-top: 8px;
-    margin-top: 20px;
     display: flex;
     justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px solid #1F2937;
+    margin-top: 20px;
+    font-size: 8px;
+    color: #6B7280;
   }
   .pf-brand { color: #C9A84C80; letter-spacing: 1px; }
   .pf-conf { font-style: italic; }
@@ -517,7 +516,7 @@ function buildReportHTML(opts: {
   .gold { color: #C9A84C; }
 </style>
 </head>
-<body>${coverHTML}${summaryHTML}${cardsHTML}${transactionsHTML}${aiDisclaimerHTML}</body>
+<body>${coverHTML.trim()}${summaryHTML.trim()}${cardsHTML.trim()}${transactionsHTML.trim()}${aiDisclaimerHTML.trim()}</body>
 </html>`;
 }
 
