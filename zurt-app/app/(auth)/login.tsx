@@ -82,7 +82,6 @@ export default function LoginScreen() {
   // Google Auth via expo-auth-session — uses useIdTokenAuthRequest.
   // Hardcoded auth.expo.io proxy URI — required for Expo Go with Web Client ID.
   // -------------------------------------------------------------------------
-  logger.log('[ZURT Auth] Google redirectUri:', GOOGLE_REDIRECT_URI);
 
   let googleRequest: ReturnType<typeof Google.useIdTokenAuthRequest>[0] = null;
   let googleResponse: ReturnType<typeof Google.useIdTokenAuthRequest>[1] = null;

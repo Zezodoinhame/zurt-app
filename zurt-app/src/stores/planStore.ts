@@ -236,7 +236,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
           limits: PLAN_LIMITS[validTier],
           isLoading: false,
         });
-        logger.log('[PLAN] Loaded subscription:', validTier, data.status);
+        logger.log('[PLAN] Loaded subscription:', validTier, data.status ?? 'active');
       } else {
         // No subscription data → free
         set({ plan: 'free', status: 'none', limits: PLAN_LIMITS.free, isLoading: false });

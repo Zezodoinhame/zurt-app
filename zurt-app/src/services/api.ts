@@ -670,16 +670,26 @@ export async function fetchTransactions(params?: {
   if (params?.search) sp.set('search', params.search);
 
   const query = sp.toString() ? `?${sp}` : '';
-  return fetchWithFallback(
-    `finance:transactions:${query}`,
-    `/finance/transactions${query}`,
-    (data) => ({
-      transactions: data.transactions ?? data.data ?? [],
-      total: data.total ?? 0,
-      page: data.page ?? 1,
-    }),
-    { transactions: [], total: 0, page: 1 },
-  );
+  const empty = { transactions: [], total: 0, page: 1 };
+  try {
+    return await fetchWithFallback(
+      `finance:transactions:${query}`,
+      `/finance/transactions${query}`,
+      (data) => ({
+        transactions: data.transactions ?? data.data ?? [],
+        total: data.total ?? 0,
+        page: data.page ?? 1,
+      }),
+      empty,
+    );
+  } catch (err: any) {
+    // Backend returns 500 for new users with no transactions — treat as empty
+    if (err?.message?.includes('500')) {
+      logger.log('[Transactions] Server error, treating as empty');
+      return empty;
+    }
+    throw err;
+  }
 }
 
 // =============================================================================

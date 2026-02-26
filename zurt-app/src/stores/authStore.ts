@@ -6,7 +6,6 @@ import {
   loginApi,
   registerApi,
   clearToken,
-  fetchUserProfile,
   getToken,
   setDemoMode,
   setOnUnauthorized,
@@ -20,7 +19,10 @@ import { usePushStore } from './pushStore';
 // Settings keys (theme, language, currency, accentColor, iconStyle) are
 // intentionally excluded — they are device preferences, not user data.
 // ---------------------------------------------------------------------------
+const USER_PROFILE_KEY = 'zurt:user_profile';
+
 const USER_DATA_STORAGE_KEYS = [
+  USER_PROFILE_KEY,
   // Backend-synced stores (also cleared in-memory below)
   '@zurt:agent_messages',
   // Local-only user data
@@ -146,6 +148,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
       try {
         const { user } = await loginApi(email, password);
         logger.log('[ZURT Auth] login() success');
+        await AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(user));
         setDemoMode(false);
         set({
           user,
@@ -193,6 +196,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         // Clear any previous session before registering
         await clearToken();
         const { user } = await registerApi(fullName, email, password, invitationToken);
+        await AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(user));
         setDemoMode(false);
         set({
           user,
@@ -231,21 +235,26 @@ export const useAuthStore = create<AuthState>((set, get) => {
       logger.log('[ZURT Auth] restoreSession() token:', token ? 'EXISTS' : 'NONE');
       if (!token) return false;
 
+      // Restore user from local storage instead of calling /users/me (404)
       try {
-        const user = await fetchUserProfile();
-        logger.log('[ZURT Auth] restoreSession() success');
-        setDemoMode(false);
-        set({
-          user,
-          isAuthenticated: true,
-          isDemoMode: false,
-        });
-        return true;
+        const userStr = await AsyncStorage.getItem(USER_PROFILE_KEY);
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          logger.log('[ZURT Auth] restoreSession() restored from local storage');
+          setDemoMode(false);
+          set({
+            user,
+            isAuthenticated: true,
+            isDemoMode: false,
+          });
+          return true;
+        }
+        // No saved user — token is orphaned, clean up
+        logger.log('[ZURT Auth] restoreSession() no saved user, clearing token');
+        await clearToken();
+        return false;
       } catch (err: any) {
-        const msg = err?.message ?? '';
-        const is401or404 = msg.includes('401') || msg.includes('404') || msg.includes('Unauthorized') || msg.includes('Route not found');
-        logger.log('[ZURT Auth] restoreSession() failed:', msg, is401or404 ? '→ silent logout' : '');
-        // Silent logout: clear token, reset state, no error shown
+        logger.log('[ZURT Auth] restoreSession() failed:', err?.message ?? err);
         await clearToken();
         await clearSession().catch(() => {});
         setDemoMode(false);
