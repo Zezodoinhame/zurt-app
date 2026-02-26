@@ -112,11 +112,9 @@ function buildReportHTML(opts: {
 
   const pageFooter = (page: number) => `
     <div class="pf">
-      <div class="pf-row">
-        <span class="pf-brand">ZURT Wealth Intelligence</span>
-        <span class="pf-conf">Confidencial</span>
-        <span class="pf-page">Página ${page}</span>
-      </div>
+      <span class="pf-brand">ZURT Wealth Intelligence</span>
+      <span class="pf-conf">Confidencial</span>
+      <span class="pf-page">Página ${page}</span>
     </div>`;
 
   // ---- PAGE 1: COVER ----
@@ -313,27 +311,25 @@ function buildReportHTML(opts: {
 
   /* ===== COVER ===== */
   .cover {
-    width: 210mm; height: 297mm;
-    background: linear-gradient(180deg, #0A0F1C 0%, #111827 50%, #0A0F1C 100%);
-    display: flex; flex-direction: column; align-items: center;
-    text-align: center; position: relative;
-    page-break-after: always;
-    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    height: 297mm;
     padding: 60px 50px;
+    background: linear-gradient(180deg, #0A0F1C 0%, #111827 50%, #0A0F1C 100%);
+    box-sizing: border-box;
     overflow: hidden;
+  }
+  .cover-accent-top, .cover-accent-bottom {
+    width: 180px; height: 1px;
+    background: linear-gradient(90deg, transparent, #C9A84C, transparent);
+    flex-shrink: 0;
   }
   .cover-body {
     flex: 1; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; z-index: 1;
+    align-items: center; justify-content: center;
   }
-  .cover-accent-top, .cover-accent-bottom {
-    position: absolute; left: 50%; transform: translateX(-50%);
-    width: 180px; height: 1px;
-    background: linear-gradient(90deg, transparent, #C9A84C, transparent);
-  }
-  .cover-accent-top { top: 50px; }
-  .cover-accent-bottom { bottom: 50px; }
-  .cover-body { z-index: 1; }
   .cover-logo {
     font-size: 48px; font-weight: 900; color: #00E99B;
     letter-spacing: 12px; margin-bottom: 6px;
@@ -363,23 +359,24 @@ function buildReportHTML(opts: {
   }
   .cover-date { font-size: 12px; color: #94A3B8; }
   .cover-footer {
-    margin-top: auto; font-size: 9px; color: #4A5568; letter-spacing: 0.5px; z-index: 1;
+    font-size: 9px; color: #6B7280; letter-spacing: 2px; text-transform: uppercase;
+    margin-top: auto;
   }
 
   /* ===== PAGE ===== */
   .page {
-    width: 210mm; height: 297mm;
-    padding: 40px 50px;
-    page-break-after: always;
-    position: relative;
+    width: 210mm;
+    height: 297mm;
+    padding: 40px 50px 50px 50px;
     background: #0A0F1C;
-    display: flex;
-    flex-direction: column;
     box-sizing: border-box;
     overflow: hidden;
   }
-  .page:last-child { page-break-after: avoid; }
-  .page-content { flex: 1; overflow: hidden; }
+  body > .cover + .page,
+  body > .page + .page {
+    page-break-before: always;
+  }
+  .page-content { }
   .ph {
     display: flex; justify-content: space-between; align-items: center;
     padding-bottom: 10px; margin-bottom: 18px; border-bottom: 1px solid #C9A84C30;
@@ -390,11 +387,14 @@ function buildReportHTML(opts: {
   .ph-sep { color: #C9A84C40; }
   .ph-type { font-style: italic; color: #C9A84C; }
   .pf {
-    margin-top: auto; flex-shrink: 0;
-    padding-top: 12px;
+    font-size: 8px;
+    color: #6B7280;
     border-top: 1px solid #1F2937;
+    padding-top: 8px;
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
   }
-  .pf-row { display: flex; justify-content: space-between; font-size: 8px; color: #64748B; }
   .pf-brand { color: #C9A84C80; letter-spacing: 1px; }
   .pf-conf { font-style: italic; }
   .pf-page { color: #94A3B8; }

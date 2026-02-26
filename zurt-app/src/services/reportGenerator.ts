@@ -112,11 +112,9 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
 
   const pageFooter = (page: number) => `
     <div class="page-footer">
-      <div class="footer-content">
-        <span class="footer-brand">ZURT Wealth Intelligence</span>
-        <span class="footer-confidential">Confidencial</span>
-        <span class="footer-page">Página ${page}</span>
-      </div>
+      <span class="footer-brand">ZURT Wealth Intelligence</span>
+      <span class="footer-confidential">Confidencial</span>
+      <span class="footer-page">Página ${page}</span>
     </div>`;
 
   // ======================== COVER ========================
@@ -565,37 +563,26 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
 
     /* ===== COVER ===== */
     .cover {
-      width: 210mm;
-      height: 297mm;
       display: flex;
       flex-direction: column;
       align-items: center;
-      background: linear-gradient(170deg, #080D14 0%, #0C1422 30%, #0A1018 60%, #080D14 100%);
-      page-break-after: always;
       text-align: center;
-      position: relative;
-      box-sizing: border-box;
+      height: 297mm;
       padding: 60px 50px;
+      background: linear-gradient(170deg, #080D14 0%, #0C1422 30%, #0A1018 60%, #080D14 100%);
+      box-sizing: border-box;
       overflow: hidden;
     }
-    .cover-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
     .cover-top-line, .cover-bottom-line {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 200px;
-      height: 1px;
+      width: 200px; height: 1px;
       background: linear-gradient(90deg, transparent, ${gold}, transparent);
+      flex-shrink: 0;
     }
-    .cover-top-line { top: 60px; }
-    .cover-bottom-line { bottom: 60px; }
-    .cover-content { padding: 40px; }
+    .cover-content {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 40px;
+    }
     .cover-logo {
       font-family: -apple-system, 'Helvetica Neue', sans-serif;
       font-size: 64px;
@@ -685,17 +672,16 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
     .page {
       width: 210mm;
       height: 297mm;
-      padding: 40px 50px;
-      page-break-after: always;
-      position: relative;
+      padding: 40px 50px 50px 50px;
       background: #080D14;
-      display: flex;
-      flex-direction: column;
       box-sizing: border-box;
       overflow: hidden;
     }
-    .page:last-child { page-break-after: avoid; }
-    .page-content { flex: 1; overflow: hidden; }
+    body > .cover + .page,
+    body > .page + .page {
+      page-break-before: always;
+    }
+    .page-content { }
     .page-header {
       display: flex;
       justify-content: space-between;
@@ -703,7 +689,6 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
       padding-bottom: 10px;
       margin-bottom: 20px;
       border-bottom: 1px solid ${gold}30;
-      flex-shrink: 0;
     }
     .page-header-left, .page-header-right {
       display: flex;
@@ -726,17 +711,13 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
     }
 
     .page-footer {
-      margin-top: auto;
-      flex-shrink: 0;
-      padding-top: 12px;
+      font-size: 8px;
+      color: #6B7280;
       border-top: 1px solid #1F2937;
-    }
-    .footer-content {
+      padding-top: 8px;
+      margin-top: 20px;
       display: flex;
       justify-content: space-between;
-      font-family: -apple-system, sans-serif;
-      font-size: 8px;
-      color: #64748B;
     }
     .footer-brand { color: ${gold}80; letter-spacing: 1px; }
     .footer-confidential { font-style: italic; }
