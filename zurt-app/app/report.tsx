@@ -287,7 +287,6 @@ function buildReportHTML(opts: {
       </div>
     </div>
     ${pageFooter(lastPage)}
-    <div style="background:#0A0F1C;height:500px;margin:0;padding:0;"></div>
   </div>`;
 
   // ---- FULL HTML ----
