@@ -13,11 +13,21 @@ interface MarketState {
   selic: PrimeRateEntry[];
   ibovespa: BrapiQuote | null;
 
+  // All stocks listing
+  allStocks: any[];
+  filteredStocks: any[];
+  stocksPage: number;
+  stocksTotal: number;
+  stocksLoading: boolean;
+  activeFilter: string;
+  searchQuery: string;
+
   // Loading states
   loading: boolean;
   error: string | null;
 
   // Actions
+  loadAllStocks: (page?: number, search?: string, type?: string) => Promise<void>;
   loadWatchlist: () => Promise<void>;
   searchAssets: (query: string) => Promise<void>;
   loadQuoteDetail: (ticker: string) => Promise<void>;
@@ -42,8 +52,51 @@ export const useMarketStore = create<MarketState>((set, get) => ({
   inflation: [],
   selic: [],
   ibovespa: null,
+  allStocks: [],
+  filteredStocks: [],
+  stocksPage: 1,
+  stocksTotal: 0,
+  stocksLoading: false,
+  activeFilter: 'all',
+  searchQuery: '',
   loading: false,
   error: null,
+
+  loadAllStocks: async (page = 1, search = '', type = '') => {
+    try {
+      set({ stocksLoading: true });
+      const params: any = {
+        limit: 50,
+        page,
+        sortBy: 'volume',
+        sortOrder: 'desc',
+      };
+      if (search) params.search = search;
+      if (type && type !== 'all') params.type = type;
+
+      const data = await brapiService.listQuotes(params);
+      const stocks = data.stocks || [];
+
+      if (page === 1) {
+        set({ allStocks: stocks, filteredStocks: stocks });
+      } else {
+        set((state) => ({
+          allStocks: [...state.allStocks, ...stocks],
+          filteredStocks: [...state.filteredStocks, ...stocks],
+        }));
+      }
+      set({
+        stocksPage: page,
+        stocksTotal: data.totalCount || 0,
+        stocksLoading: false,
+        searchQuery: search,
+        activeFilter: type || 'all',
+      });
+    } catch (error: any) {
+      console.log('[Market] Error loading stocks:', error.message);
+      set({ stocksLoading: false });
+    }
+  },
 
   loadWatchlist: async () => {
     try {
