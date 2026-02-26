@@ -38,7 +38,6 @@ import { TransactionRow } from '../../src/components/shared/TransactionRow';
 import { GoalCard } from '../../src/components/shared/GoalCard';
 import { AllocationBar } from '../../src/components/shared/AllocationBar';
 import PlanCards from '../../src/components/home/PlanCards';
-import { MarketTicker } from '../../src/components/home/MarketTicker';
 
 import {
   formatCurrency,
@@ -124,7 +123,6 @@ export default function HomeScreen() {
   const {
     ibovespa,
     currencies,
-    selic,
     cryptos,
     loadMarketOverview,
   } = useMarketStore();
@@ -227,55 +225,6 @@ export default function HomeScreen() {
     tech: 'Tecnologia',
   };
 
-  // ---- Market indicators for strip ------------------------------------------
-  const marketIndicators = useMemo(() => {
-    const items: { label: string; value: string; change?: number }[] = [];
-
-    if (ibovespa) {
-      items.push({
-        label: 'IBOV',
-        value: ibovespa.regularMarketPrice?.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) ?? '---',
-        change: ibovespa.regularMarketChangePercent,
-      });
-    }
-
-    const usd = currencies.find((c) => c.fromCurrency === 'USD');
-    if (usd) {
-      items.push({
-        label: 'USD/BRL',
-        value: `R$ ${Number(usd.bidPrice).toFixed(2).replace('.', ',')}`,
-        change: usd.regularMarketChangePercent,
-      });
-    }
-
-    const eur = currencies.find((c) => c.fromCurrency === 'EUR');
-    if (eur) {
-      items.push({
-        label: 'EUR/BRL',
-        value: `R$ ${Number(eur.bidPrice).toFixed(2).replace('.', ',')}`,
-        change: eur.regularMarketChangePercent,
-      });
-    }
-
-    const btc = cryptos.find((c) => c.coin === 'BTC');
-    if (btc) {
-      items.push({
-        label: 'BTC',
-        value: `R$ ${(btc.regularMarketPrice / 1000).toFixed(0)}K`,
-        change: btc.regularMarketChangePercent,
-      });
-    }
-
-    if (selic.length > 0) {
-      items.push({
-        label: 'SELIC',
-        value: `${Number(selic[0].value).toFixed(2).replace('.', ',')}%`,
-      });
-    }
-
-    return items;
-  }, [ibovespa, currencies, cryptos, selic]);
-
   // ---- Valid allocations (> 0) ----------------------------------------------
   const validAllocations = useMemo(
     () => allocations.filter((a) => a.value > 0),
@@ -297,9 +246,6 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      {/* Market Ticker — fixed above scroll */}
-      <MarketTicker />
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]}
@@ -372,6 +318,71 @@ export default function HomeScreen() {
           {/* Greeting */}
           <Text style={styles.greeting}>{greeting}</Text>
         </View>
+
+        {/* ---------------------------------------------------------------- */}
+        {/* Market Ticker — real BRAPI data                                  */}
+        {/* ---------------------------------------------------------------- */}
+        {(() => {
+          const usd = currencies?.find((c: any) => c.fromCurrency === 'USD' || c.name?.includes('Dólar'));
+          const eur = currencies?.find((c: any) => c.fromCurrency === 'EUR' || c.name?.includes('Euro'));
+          const btc = cryptos?.find((c: any) => c.coin === 'BTC');
+
+          const tickers = [
+            {
+              label: 'IBOV',
+              value: ibovespa?.regularMarketPrice ? Math.round(ibovespa.regularMarketPrice).toLocaleString('pt-BR') : '—',
+              change: ibovespa?.regularMarketChangePercent ?? 0,
+            },
+            {
+              label: 'USD',
+              value: usd?.bidPrice ? `R$ ${Number(usd.bidPrice).toFixed(2)}` : '—',
+              change: usd?.regularMarketChangePercent ?? 0,
+            },
+            {
+              label: 'EUR',
+              value: eur?.bidPrice ? `R$ ${Number(eur.bidPrice).toFixed(2)}` : '—',
+              change: eur?.regularMarketChangePercent ?? 0,
+            },
+            {
+              label: 'BTC',
+              value: btc?.regularMarketPrice ? `R$ ${(btc.regularMarketPrice / 1000).toFixed(1)}k` : '—',
+              change: btc?.regularMarketChangePercent ?? 0,
+            },
+          ];
+
+          if (!ibovespa && !usd && !eur && !btc) return null;
+
+          return (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.tickerScroll}
+            >
+              {tickers.map((tk) => {
+                const isPositive = tk.change >= 0;
+                return (
+                  <TouchableOpacity
+                    key={tk.label}
+                    onPress={() => router.push('/market')}
+                    activeOpacity={0.7}
+                    style={styles.tickerChip}
+                  >
+                    <Text style={styles.tickerLabel}>{tk.label}</Text>
+                    <Text style={styles.tickerValue}>{tk.value}</Text>
+                    <Text
+                      style={[
+                        styles.tickerChange,
+                        { color: isPositive ? '#00E99B' : '#EF4444' },
+                      ]}
+                    >
+                      {isPositive ? '▲' : '▼'} {Math.abs(tk.change).toFixed(2)}%
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          );
+        })()}
 
         {/* ---------------------------------------------------------------- */}
         {/* Loading / Error                                                  */}
@@ -644,46 +655,7 @@ export default function HomeScreen() {
             )}
 
             {/* -------------------------------------------------------------- */}
-            {/* 9. Market Indicators Strip                                  */}
-            {/* -------------------------------------------------------------- */}
-            {marketIndicators.length > 0 && (
-              <View style={styles.section}>
-                <SectionHeader
-                  title="Indicadores"
-                  onAction={() => router.push('/market')}
-                />
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.indicatorsScroll}
-                >
-                  {marketIndicators.map((item) => (
-                    <TouchableOpacity
-                      key={item.label}
-                      style={styles.indicatorCard}
-                      activeOpacity={0.7}
-                      onPress={() => router.push('/market')}
-                    >
-                      <Text style={styles.indicatorLabel}>{item.label}</Text>
-                      <Text style={styles.indicatorValue}>{item.value}</Text>
-                      {item.change !== undefined && (
-                        <Text
-                          style={[
-                            styles.indicatorChange,
-                            { color: item.change >= 0 ? colors.positive : colors.negative },
-                          ]}
-                        >
-                          {item.change >= 0 ? '+' : ''}{item.change.toFixed(2).replace('.', ',')}%
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-            {/* -------------------------------------------------------------- */}
-            {/* 10. Not\u00EDcias do Mercado                                        */}
+            {/* 9. Not\u00EDcias do Mercado                                        */}
             {/* -------------------------------------------------------------- */}
             {newsArticles.length > 0 && (
               <View style={styles.section}>
@@ -811,6 +783,39 @@ const createStyles = (colors: ThemeColors) =>
       backgroundColor: '#f87171',
       borderWidth: 2,
       borderColor: colors.card,
+    },
+
+    // -- Market Ticker --------------------------------------------------------
+    tickerScroll: {
+      paddingHorizontal: spacing.xl,
+      gap: 8,
+      paddingVertical: 8,
+    },
+    tickerChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      gap: 6,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    tickerLabel: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.text.secondary,
+      letterSpacing: 0.5,
+    },
+    tickerValue: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: colors.text.primary,
+    },
+    tickerChange: {
+      fontSize: 11,
+      fontWeight: '700',
     },
 
     // -- Hero Card ------------------------------------------------------------
@@ -958,39 +963,6 @@ const createStyles = (colors: ThemeColors) =>
     txDivider: {
       height: 1,
       backgroundColor: colors.border,
-    },
-
-    // -- Indicators strip -----------------------------------------------------
-    indicatorsScroll: {
-      gap: spacing.sm,
-    },
-    indicatorCard: {
-      backgroundColor: colors.card,
-      borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.md,
-      minWidth: 110,
-      alignItems: 'center',
-    },
-    indicatorLabel: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: colors.text.muted,
-      marginBottom: spacing.xs,
-    },
-    indicatorValue: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: colors.text.primary,
-      fontVariant: ['tabular-nums'] as any,
-    },
-    indicatorChange: {
-      fontSize: 11,
-      fontWeight: '700',
-      fontVariant: ['tabular-nums'] as any,
-      marginTop: 2,
     },
 
     // -- News section ---------------------------------------------------------
