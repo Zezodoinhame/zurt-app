@@ -1,47 +1,54 @@
 import { create } from 'zustand';
 import { brapiService } from '../services/brapiService';
-import type { BrapiQuote, BrapiCrypto, BrapiCurrency, InflationEntry, PrimeRateEntry } from '../types/brapi';
+import type { BrapiQuote, BrapiCrypto, BrapiCurrency, InflationEntry, PrimeRateEntry, StockListItem } from '../types/brapi';
 
 interface MarketState {
   // Dados
   watchlist: BrapiQuote[];
-  searchResults: any[];
+  searchResults: StockListItem[];
   selectedQuote: BrapiQuote | null;
   cryptos: BrapiCrypto[];
   currencies: BrapiCurrency[];
   inflation: InflationEntry[];
   selic: PrimeRateEntry[];
   ibovespa: BrapiQuote | null;
+  allStocks: StockListItem[];
 
-  // All stocks listing
-  allStocks: any[];
-  filteredStocks: any[];
-  stocksPage: number;
-  stocksTotal: number;
-  stocksLoading: boolean;
-  activeFilter: string;
-  searchQuery: string;
+  // Indicadores macro
+  usdBrl: BrapiCurrency | null;
+  eurBrl: BrapiCurrency | null;
+  btcBrl: BrapiCrypto | null;
+  currentSelic: number | null;
+  currentInflation: number | null;
 
-  // Loading states
-  loading: boolean;
+  // UI
+  isLoading: boolean;
+  isSearching: boolean;
+  isLoadingDetail: boolean;
   error: string | null;
+  currentPage: number;
+  hasMore: boolean;
+  searchQuery: string;
+  activeFilter: 'all' | 'stocks' | 'fiis' | 'bdrs' | 'etfs';
 
   // Actions
-  loadAllStocks: (page?: number, search?: string, type?: string) => Promise<void>;
+  loadMarketOverview: () => Promise<void>;
   loadWatchlist: () => Promise<void>;
   searchAssets: (query: string) => Promise<void>;
   loadQuoteDetail: (ticker: string) => Promise<void>;
+  loadAllStocks: (page?: number, filter?: string) => Promise<void>;
   loadCryptos: () => Promise<void>;
   loadCurrencies: () => Promise<void>;
   loadInflation: () => Promise<void>;
   loadSelic: () => Promise<void>;
   loadIbovespa: () => Promise<void>;
-  loadMarketOverview: () => Promise<void>;
   addToWatchlist: (ticker: string) => void;
   removeFromWatchlist: (ticker: string) => void;
+  setFilter: (filter: 'all' | 'stocks' | 'fiis' | 'bdrs' | 'etfs') => void;
+  clearSearch: () => void;
 }
 
-const DEFAULT_WATCHLIST = ['PETR4', 'VALE3', 'ITUB4', 'MGLU3', 'BBAS3', 'WEGE3'];
+const DEFAULT_WATCHLIST = ['PETR4', 'VALE3', 'ITUB4', 'BBAS3', 'WEGE3', 'MGLU3'];
 
 export const useMarketStore = create<MarketState>((set, get) => ({
   watchlist: [],
@@ -53,172 +60,189 @@ export const useMarketStore = create<MarketState>((set, get) => ({
   selic: [],
   ibovespa: null,
   allStocks: [],
-  filteredStocks: [],
-  stocksPage: 1,
-  stocksTotal: 0,
-  stocksLoading: false,
-  activeFilter: 'all',
-  searchQuery: '',
-  loading: false,
+  usdBrl: null,
+  eurBrl: null,
+  btcBrl: null,
+  currentSelic: null,
+  currentInflation: null,
+  isLoading: false,
+  isSearching: false,
+  isLoadingDetail: false,
   error: null,
+  currentPage: 1,
+  hasMore: true,
+  searchQuery: '',
+  activeFilter: 'all',
 
-  loadAllStocks: async (page = 1, search = '', type = '') => {
+  loadMarketOverview: async () => {
+    set({ isLoading: true, error: null });
     try {
-      set({ stocksLoading: true });
-      const params: any = {
-        limit: 50,
-        page,
-        sortBy: 'volume',
-        sortOrder: 'desc',
-      };
-      if (search) params.search = search;
-      if (type && type !== 'all') params.type = type;
+      const results = await Promise.allSettled([
+        brapiService.getIbovespa(),
+        brapiService.getCurrencies({ currency: 'USD-BRL,EUR-BRL' }),
+        brapiService.getCryptos({ coin: 'BTC', currency: 'BRL' }),
+        brapiService.getPrimeRate({ country: 'brazil' }),
+        brapiService.getInflation({ country: 'brazil' }),
+        brapiService.getMultipleQuotes(DEFAULT_WATCHLIST),
+      ]);
 
-      const data = await brapiService.listQuotes(params);
-      const stocks = data.stocks || [];
+      const ibovespa = results[0].status === 'fulfilled' ? results[0].value : null;
+      const currencies = results[1].status === 'fulfilled' ? results[1].value : [];
+      const cryptos = results[2].status === 'fulfilled' ? results[2].value : [];
+      const selicData = results[3].status === 'fulfilled' ? results[3].value : null;
+      const inflationData = results[4].status === 'fulfilled' ? results[4].value : null;
+      const watchlistQuotes = results[5].status === 'fulfilled' ? results[5].value : [];
 
-      if (page === 1) {
-        set({ allStocks: stocks, filteredStocks: stocks });
-      } else {
-        set((state) => ({
-          allStocks: [...state.allStocks, ...stocks],
-          filteredStocks: [...state.filteredStocks, ...stocks],
-        }));
-      }
+      const usdBrl = currencies.find((c: BrapiCurrency) => c.fromCurrency === 'USD') || null;
+      const eurBrl = currencies.find((c: BrapiCurrency) => c.fromCurrency === 'EUR') || null;
+      const btcBrl = cryptos[0] || null;
+
+      const selicArr = selicData?.['prime-rate'] || selicData?.prime_rate || [];
+      const inflationArr = inflationData?.inflation || [];
+      const currentSelic = selicArr[0]?.value ?? null;
+      const currentInflation = inflationArr[0]?.value ?? null;
+
       set({
-        stocksPage: page,
-        stocksTotal: data.totalCount || 0,
-        stocksLoading: false,
-        searchQuery: search,
-        activeFilter: type || 'all',
+        ibovespa,
+        currencies,
+        cryptos,
+        usdBrl,
+        eurBrl,
+        btcBrl,
+        currentSelic: Number(currentSelic) || null,
+        currentInflation: Number(currentInflation) || null,
+        selic: selicArr,
+        inflation: inflationArr,
+        watchlist: watchlistQuotes,
+        isLoading: false,
       });
-    } catch (error: any) {
-      console.log('[Market] Error loading stocks:', error.message);
-      set({ stocksLoading: false });
+    } catch (error) {
+      console.error('[Market] Overview error:', error);
+      set({ isLoading: false, error: 'Erro ao carregar dados do mercado' });
     }
   },
 
   loadWatchlist: async () => {
     try {
-      set({ loading: true, error: null });
-      const tickers = DEFAULT_WATCHLIST; // TODO: load from AsyncStorage
-      const results = await brapiService.getQuote(tickers, { fundamental: true });
-      set({ watchlist: results, loading: false });
-    } catch (error: any) {
-      console.log('[Market] Error loading watchlist:', error.message);
-      set({ loading: false, error: error.message });
+      const quotes = await brapiService.getMultipleQuotes(DEFAULT_WATCHLIST);
+      set({ watchlist: quotes });
+    } catch (error) {
+      console.error('[Market] Watchlist error:', error);
     }
   },
 
   searchAssets: async (query: string) => {
+    if (!query || query.length < 2) {
+      set({ searchResults: [], searchQuery: '' });
+      return;
+    }
+    set({ isSearching: true, searchQuery: query });
     try {
-      set({ loading: true });
-      const data = await brapiService.listQuotes({ search: query, limit: 20 });
-      set({ searchResults: data.stocks || [], loading: false });
-    } catch (error: any) {
-      set({ loading: false, error: error.message });
+      const results = await brapiService.search(query);
+      set({ searchResults: results, isSearching: false });
+    } catch (error) {
+      console.error('[Market] Search error:', error);
+      set({ isSearching: false, searchResults: [] });
     }
   },
 
   loadQuoteDetail: async (ticker: string) => {
+    set({ isLoadingDetail: true, selectedQuote: null });
     try {
-      set({ loading: true, error: null });
-      const results = await brapiService.getQuote(ticker, {
-        range: '1mo',
-        interval: '1d',
-        fundamental: true,
-        dividends: true,
-        modules: ['summaryProfile', 'financialData', 'defaultKeyStatistics'],
+      const quote = await brapiService.getDetailedQuote(ticker);
+      set({ selectedQuote: quote, isLoadingDetail: false });
+    } catch (error) {
+      console.error('[Market] Detail error:', error);
+      set({ isLoadingDetail: false });
+    }
+  },
+
+  loadAllStocks: async (page = 1, filter?: string) => {
+    set({ isLoading: page === 1 });
+    try {
+      const type = filter === 'fiis' ? 'fund' : filter === 'bdrs' ? 'bdr' : filter === 'stocks' ? 'stock' : undefined;
+      const result = await brapiService.listStocks({
+        limit: 50,
+        page,
+        sortBy: 'volume',
+        sortOrder: 'desc',
+        type,
       });
-      set({ selectedQuote: results?.[0] || null, loading: false });
-    } catch (error: any) {
-      set({ loading: false, error: error.message });
+      const stocks = result.stocks || [];
+      set((state) => ({
+        allStocks: page === 1 ? stocks : [...state.allStocks, ...stocks],
+        currentPage: page,
+        hasMore: stocks.length === 50,
+        isLoading: false,
+      }));
+    } catch (error) {
+      console.error('[Market] All stocks error:', error);
+      set({ isLoading: false, hasMore: false });
     }
   },
 
   loadCryptos: async () => {
     try {
-      set({ loading: true });
-      const coins = await brapiService.getCrypto('BTC,ETH,SOL,BNB,XRP,ADA,DOGE,DOT,AVAX,MATIC', 'BRL');
-      set({ cryptos: coins || [], loading: false });
-    } catch (error: any) {
-      set({ loading: false, error: error.message });
+      const cryptos = await brapiService.getCryptos();
+      set({ cryptos });
+    } catch (error) {
+      console.error('[Market] Cryptos error:', error);
     }
   },
 
   loadCurrencies: async () => {
     try {
-      set({ loading: true });
-      const currencies = await brapiService.getCurrency('USD-BRL,EUR-BRL,GBP-BRL,BTC-BRL,JPY-BRL,ARS-BRL,CNY-BRL');
-      set({ currencies: currencies || [], loading: false });
-    } catch (error: any) {
-      set({ loading: false, error: error.message });
+      const currencies = await brapiService.getCurrencies();
+      set({ currencies });
+    } catch (error) {
+      console.error('[Market] Currencies error:', error);
     }
   },
 
   loadInflation: async () => {
     try {
-      const inflation = await brapiService.getInflation('brazil', { historical: true });
-      set({ inflation: inflation || [] });
-    } catch (error: any) {
-      console.log('[Market] Error loading inflation:', error.message);
+      const data = await brapiService.getInflation({ historical: true });
+      set({ inflation: data?.inflation || [] });
+    } catch (error) {
+      console.error('[Market] Inflation error:', error);
     }
   },
 
   loadSelic: async () => {
     try {
-      const selic = await brapiService.getPrimeRate('brazil', { historical: true });
-      set({ selic: selic || [] });
-    } catch (error: any) {
-      console.log('[Market] Error loading SELIC:', error.message);
+      const data = await brapiService.getPrimeRate({ historical: true });
+      set({ selic: data?.['prime-rate'] || [] });
+    } catch (error) {
+      console.error('[Market] Selic error:', error);
     }
   },
 
   loadIbovespa: async () => {
     try {
-      const results = await brapiService.getQuote('^BVSP', { range: '1d' });
-      set({ ibovespa: results?.[0] || null });
-    } catch (error: any) {
-      console.log('[Market] Error loading Ibovespa:', error.message);
+      const ibovespa = await brapiService.getIbovespa();
+      set({ ibovespa });
+    } catch (error) {
+      console.error('[Market] Ibovespa error:', error);
     }
-  },
-
-  loadMarketOverview: async () => {
-    set({ loading: true, error: null });
-
-    const results = await Promise.allSettled([
-      brapiService.getQuote(['PETR4', 'VALE3', 'ITUB4', 'BBAS3', 'WEGE3', 'MGLU3'], { fundamental: true }),
-      brapiService.getQuote('^BVSP', { range: '1d' }),
-      brapiService.getCurrency('USD-BRL,EUR-BRL,GBP-BRL,BTC-BRL'),
-      brapiService.getCrypto('BTC,ETH,SOL,BNB,XRP', 'BRL'),
-      brapiService.getPrimeRate('brazil', { historical: true }),
-      brapiService.getInflation('brazil', { historical: true }),
-    ]);
-
-    if (results[0].status === 'fulfilled') set({ watchlist: results[0].value || [] });
-    if (results[1].status === 'fulfilled') set({ ibovespa: results[1].value?.[0] || null });
-    if (results[2].status === 'fulfilled') set({ currencies: results[2].value || [] });
-    if (results[3].status === 'fulfilled') set({ cryptos: results[3].value || [] });
-    if (results[4].status === 'fulfilled') set({ selic: results[4].value || [] });
-    if (results[5].status === 'fulfilled') set({ inflation: results[5].value || [] });
-
-    set({ loading: false });
-    console.log('[Market] Overview loaded successfully');
   },
 
   addToWatchlist: (ticker: string) => {
-    // TODO: persist in AsyncStorage
-    const { watchlist } = get();
-    if (!watchlist.find(q => q.symbol === ticker)) {
-      brapiService.getQuote(ticker, { fundamental: true }).then(results => {
-        if (results?.[0]) {
-          set({ watchlist: [...get().watchlist, results[0]] });
-        }
-      });
-    }
+    // TODO: persist to AsyncStorage
+    console.log('[Market] Add to watchlist:', ticker);
   },
 
   removeFromWatchlist: (ticker: string) => {
-    set({ watchlist: get().watchlist.filter(q => q.symbol !== ticker) });
+    set((state) => ({
+      watchlist: state.watchlist.filter((q) => q.symbol !== ticker),
+    }));
+  },
+
+  setFilter: (filter) => {
+    set({ activeFilter: filter, allStocks: [], currentPage: 1, hasMore: true });
+    get().loadAllStocks(1, filter);
+  },
+
+  clearSearch: () => {
+    set({ searchResults: [], searchQuery: '' });
   },
 }));

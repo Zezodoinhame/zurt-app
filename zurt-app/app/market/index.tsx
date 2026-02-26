@@ -51,16 +51,15 @@ export default function MarketScreen() {
 
   const {
     allStocks,
-    stocksPage,
-    stocksTotal,
-    stocksLoading,
+    currentPage,
+    hasMore,
+    isLoading,
     activeFilter,
     searchQuery,
     ibovespa,
     currencies,
     selic,
     inflation,
-    loading,
     loadAllStocks,
     loadMarketOverview,
   } = useMarketStore();
@@ -78,7 +77,7 @@ export default function MarketScreen() {
 
   // Initial load
   useEffect(() => {
-    loadAllStocks(1, '', 'all');
+    loadAllStocks(1, 'all');
     loadMarketOverview();
   }, []);
 
@@ -86,7 +85,7 @@ export default function MarketScreen() {
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      loadAllStocks(1, search, activeFilter);
+      loadAllStocks(1, activeFilter);
     }, 400);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -96,25 +95,24 @@ export default function MarketScreen() {
   const handleFilterChange = useCallback(
     (filter: string) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      loadAllStocks(1, search, filter);
+      loadAllStocks(1, filter);
     },
-    [search, loadAllStocks],
+    [loadAllStocks],
   );
 
   const handleLoadMore = useCallback(() => {
-    if (stocksLoading) return;
-    if (allStocks.length >= stocksTotal) return;
-    loadAllStocks(stocksPage + 1, searchQuery, activeFilter);
-  }, [stocksLoading, allStocks.length, stocksTotal, stocksPage, searchQuery, activeFilter, loadAllStocks]);
+    if (isLoading || !hasMore) return;
+    loadAllStocks(currentPage + 1, activeFilter);
+  }, [isLoading, hasMore, currentPage, activeFilter, loadAllStocks]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.allSettled([
-      loadAllStocks(1, search, activeFilter),
+      loadAllStocks(1, activeFilter),
       loadMarketOverview(),
     ]);
     setRefreshing(false);
-  }, [search, activeFilter, loadAllStocks, loadMarketOverview]);
+  }, [activeFilter, loadAllStocks, loadMarketOverview]);
 
   // ---------------------------------------------------------------------------
   // Render helpers
@@ -246,32 +244,32 @@ export default function MarketScreen() {
         {/* Results count */}
         <View style={styles.resultsHeader}>
           <Text style={styles.resultsCount}>
-            {stocksTotal > 0 ? `${stocksTotal} ativos` : 'Carregando...'}
+            {allStocks.length > 0 ? `${allStocks.length} ativos` : 'Carregando...'}
           </Text>
         </View>
       </View>
     ),
-    [ibovespa, usdBrl, latestSelic, latestIpca, stocksTotal, colors, styles],
+    [ibovespa, usdBrl, latestSelic, latestIpca, allStocks.length, colors, styles],
   );
 
   const renderFooter = useCallback(() => {
-    if (!stocksLoading) return null;
+    if (!isLoading) return null;
     return (
       <View style={styles.footerLoader}>
         <ActivityIndicator size="small" color={colors.accent} />
         <Text style={styles.footerText}>Carregando mais...</Text>
       </View>
     );
-  }, [stocksLoading, colors, styles]);
+  }, [isLoading, colors, styles]);
 
   const renderEmpty = useCallback(() => {
-    if (stocksLoading || loading) return null;
+    if (isLoading) return null;
     return (
       <View style={styles.emptyWrap}>
         <Text style={styles.emptyText}>Nenhum ativo encontrado</Text>
       </View>
     );
-  }, [stocksLoading, loading, styles]);
+  }, [isLoading, styles]);
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>

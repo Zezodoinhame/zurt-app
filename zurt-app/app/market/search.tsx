@@ -80,7 +80,7 @@ export default function SearchScreen() {
       try {
         const params: any = { search: query, limit: 30 };
         if (filter !== 'all') params.type = filter;
-        const data = await brapiService.listQuotes(params);
+        const data = await brapiService.listStocks(params);
         setResults(data.stocks || []);
       } catch (err: any) {
         console.log('[Search] Error:', err.message);

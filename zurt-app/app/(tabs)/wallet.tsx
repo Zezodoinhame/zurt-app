@@ -186,7 +186,7 @@ export default function WalletScreen() {
 
     const unique = [...new Set(tickers)];
     brapiService
-      .getQuote(unique.slice(0, 20))
+      .getMultipleQuotes(unique.slice(0, 20))
       .then((quotes) => {
         const map: Record<string, number> = {};
         for (const q of quotes) {
