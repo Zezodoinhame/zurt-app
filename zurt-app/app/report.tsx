@@ -314,12 +314,14 @@ function buildReportHTML(opts: {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     text-align: center;
-    height: 297mm;
+    min-height: 100vh;
     padding: 60px 50px;
     background: linear-gradient(180deg, #0A0F1C 0%, #111827 50%, #0A0F1C 100%);
+    page-break-after: always;
+    page-break-inside: avoid;
     box-sizing: border-box;
-    overflow: hidden;
   }
   .cover-accent-top, .cover-accent-bottom {
     width: 180px; height: 1px;
@@ -359,22 +361,23 @@ function buildReportHTML(opts: {
   }
   .cover-date { font-size: 12px; color: #94A3B8; }
   .cover-footer {
-    font-size: 9px; color: #6B7280; letter-spacing: 2px; text-transform: uppercase;
-    margin-top: auto;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: #6B7280;
+    text-transform: uppercase;
+    margin-top: 60px;
   }
 
   /* ===== PAGE ===== */
   .page {
-    width: 210mm;
-    height: 297mm;
     padding: 40px 50px;
-    position: relative;
     background: #0A0F1C;
+    page-break-after: always;
+    page-break-inside: avoid;
     box-sizing: border-box;
-    overflow: hidden;
   }
-  body > div.page + div.page {
-    page-break-before: always;
+  .page:last-child {
+    page-break-after: auto;
   }
   .ph {
     display: flex; justify-content: space-between; align-items: center;
@@ -390,7 +393,7 @@ function buildReportHTML(opts: {
     justify-content: space-between;
     padding-top: 8px;
     border-top: 1px solid #1F2937;
-    margin-top: 20px;
+    margin-top: 24px;
     font-size: 8px;
     color: #6B7280;
   }
