@@ -287,6 +287,7 @@ function buildReportHTML(opts: {
       </div>
     </div>
     ${pageFooter(lastPage)}
+    <div style="background:#0A0F1C;height:500px;margin:0;padding:0;"></div>
   </div>`;
 
   // ---- FULL HTML ----
@@ -370,7 +371,7 @@ function buildReportHTML(opts: {
 
   /* ===== PAGE ===== */
   .page {
-    padding: 40px 50px 500px 50px;
+    padding: 40px 50px;
     background: #0A0F1C;
     page-break-after: always;
     page-break-inside: avoid;
