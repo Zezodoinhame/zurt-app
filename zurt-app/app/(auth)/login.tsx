@@ -17,7 +17,6 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import { makeRedirectUri } from 'expo-auth-session';
 import { type ThemeColors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -40,8 +39,8 @@ const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
 
 const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/userinfo/v2/me';
 
-// Dynamic redirect URI — replaces deprecated auth.expo.io proxy
-const GOOGLE_REDIRECT_URI = makeRedirectUri({ scheme: 'zurt', path: 'auth' });
+// Expo Go proxy redirect — the only URI that works with Web Client ID in Expo Go
+const GOOGLE_REDIRECT_URI = 'https://auth.expo.io/@zurt/zurt-app';
 
 type Mode = 'login' | 'register';
 
@@ -79,8 +78,7 @@ export default function LoginScreen() {
 
   // -------------------------------------------------------------------------
   // Google Auth via expo-auth-session — uses useIdTokenAuthRequest.
-  // We use makeRedirectUri({ scheme: 'zurt' }) instead of the deprecated
-  // auth.expo.io proxy which caused "Something went wrong" errors.
+  // Hardcoded auth.expo.io proxy URI — required for Expo Go with Web Client ID.
   // -------------------------------------------------------------------------
   logger.log('[ZURT Auth] Google redirectUri:', GOOGLE_REDIRECT_URI);
 
