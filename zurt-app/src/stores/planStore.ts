@@ -116,7 +116,7 @@ export const PLAN_INFO: PlanInfo[] = [
   { tier: 'pro', price: 19.90, features: ['10 conexões', 'IA Financeira', 'Relatórios ilimitados', 'Alertas', 'Grupo familiar'] },
   { tier: 'unlimited', price: 49.90, features: ['Conexões ilimitadas', 'Tudo do Pro'] },
   { tier: 'consultant', price: 299.90, features: ['Área do cliente', 'Relatórios personalizados'] },
-  { tier: 'enterprise', price: 499.90, features: ['Acesso à API', 'Tudo ilimitado'] },
+  { tier: 'enterprise', price: 99.90, features: ['Acesso à API', 'Tudo ilimitado'] },
 ];
 
 // =============================================================================

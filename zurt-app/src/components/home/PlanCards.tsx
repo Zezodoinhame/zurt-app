@@ -208,7 +208,7 @@ const PLANS = [
   {
     id: 'enterprise' as const,
     nameKey: 'plans.enterprise',
-    priceLabel: `R$ ${PLAN_INFO.find((p) => p.tier === 'enterprise')?.price.toFixed(2).replace('.', ',') ?? '499,90'}`,
+    priceLabel: `R$ ${PLAN_INFO.find((p) => p.tier === 'enterprise')?.price.toFixed(2).replace('.', ',') ?? '99,90'}`,
     periodKey: 'plans.perMonth',
     accentColor: '#F59E0B',
     featuresKey: 'plans.features.enterpriseSummary',
