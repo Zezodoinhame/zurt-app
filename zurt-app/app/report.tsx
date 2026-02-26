@@ -375,6 +375,7 @@ function buildReportHTML(opts: {
     page-break-after: always;
     page-break-inside: avoid;
     box-sizing: border-box;
+    min-height: 100vh;
   }
   .page:last-child {
     page-break-after: auto;
