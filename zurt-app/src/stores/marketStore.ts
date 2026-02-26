@@ -2,6 +2,62 @@ import { create } from 'zustand';
 import { brapiService } from '../services/brapiService';
 import type { BrapiQuote, BrapiCrypto, BrapiCurrency, InflationEntry, PrimeRateEntry, StockListItem } from '../types/brapi';
 
+// ---------------------------------------------------------------------------
+// Curated ticker lists (BRAPI /api/quote/list endpoint no longer works on
+// the free plan — we fetch quotes directly via /api/quote/{tickers}).
+// ---------------------------------------------------------------------------
+const POPULAR_STOCKS = [
+  'PETR4', 'VALE3', 'ITUB4', 'BBAS3', 'BBDC4', 'WEGE3', 'ABEV3', 'RENT3',
+  'RDOR3', 'SUZB3', 'HAPV3', 'GGBR4', 'CSNA3', 'CSAN3', 'JBSS3', 'BRKM5',
+  'RAIL3', 'ENGI11', 'PRIO3', 'RAIZ4', 'AZUL4', 'MGLU3', 'TOTS3', 'KLBN11',
+  'MULT3', 'CPLE6', 'BRFS3', 'EQTL3', 'LREN3', 'NTCO3', 'CCRO3', 'VIVT3',
+  'IRBR3', 'ELET3', 'CMIG4', 'TAEE11', 'B3SA3', 'GOAU4', 'SBSP3', 'UGPA3',
+];
+
+const POPULAR_FIIS = [
+  'KNRI11', 'HGLG11', 'XPML11', 'VISC11', 'MXRF11', 'HGBS11', 'BTLG11',
+  'RECR11', 'KNCR11', 'VGIR11', 'BCFF11', 'IRDM11', 'TGAR11', 'XPLG11',
+  'PVBI11',
+];
+
+const POPULAR_BDRS = [
+  'AAPL34', 'AMZO34', 'GOGL34', 'MSFT34', 'TSLA34', 'NVDC34', 'META34',
+  'NFLX34', 'DISB34', 'MELI34',
+];
+
+/** Convert a BrapiQuote to the StockListItem used by the market list UI. */
+function quoteToListItem(q: BrapiQuote, type: string): StockListItem {
+  return {
+    stock: q.symbol,
+    name: q.shortName || q.longName || q.symbol,
+    close: Number(q.regularMarketPrice || 0),
+    change: Number(q.regularMarketChangePercent || 0),
+    volume: Number(q.regularMarketVolume || 0),
+    market_cap: Number(q.marketCap || 0),
+    logo: '',
+    sector: '',
+    type,
+  };
+}
+
+/** Fetch quotes in batches of `batchSize` to avoid overlong URLs. */
+async function fetchQuotesBatched(tickers: string[], batchSize = 20): Promise<BrapiQuote[]> {
+  const batches: string[][] = [];
+  for (let i = 0; i < tickers.length; i += batchSize) {
+    batches.push(tickers.slice(i, i + batchSize));
+  }
+  const results = await Promise.allSettled(
+    batches.map((b) => brapiService.getMultipleQuotes(b)),
+  );
+  const all: BrapiQuote[] = [];
+  for (const r of results) {
+    if (r.status === 'fulfilled') all.push(...r.value);
+  }
+  return all;
+}
+
+type FilterKey = 'all' | 'stock' | 'fund' | 'bdr';
+
 interface MarketState {
   // Dados
   watchlist: BrapiQuote[];
@@ -29,14 +85,14 @@ interface MarketState {
   currentPage: number;
   hasMore: boolean;
   searchQuery: string;
-  activeFilter: 'all' | 'stocks' | 'fiis' | 'bdrs' | 'etfs';
+  activeFilter: FilterKey;
 
   // Actions
   loadMarketOverview: () => Promise<void>;
   loadWatchlist: () => Promise<void>;
   searchAssets: (query: string) => Promise<void>;
   loadQuoteDetail: (ticker: string) => Promise<void>;
-  loadAllStocks: (page?: number, filter?: string) => Promise<void>;
+  loadAllStocks: (page?: number, filter?: FilterKey) => Promise<void>;
   loadCryptos: () => Promise<void>;
   loadCurrencies: () => Promise<void>;
   loadInflation: () => Promise<void>;
@@ -44,7 +100,7 @@ interface MarketState {
   loadIbovespa: () => Promise<void>;
   addToWatchlist: (ticker: string) => void;
   removeFromWatchlist: (ticker: string) => void;
-  setFilter: (filter: 'all' | 'stocks' | 'fiis' | 'bdrs' | 'etfs') => void;
+  setFilter: (filter: FilterKey) => void;
   clearSearch: () => void;
 }
 
@@ -138,8 +194,20 @@ export const useMarketStore = create<MarketState>((set, get) => ({
     }
     set({ isSearching: true, searchQuery: query });
     try {
-      const results = await brapiService.search(query);
-      set({ searchResults: results, isSearching: false });
+      // Use /api/available to find matching tickers, then fetch their quotes
+      const available: string[] = await brapiService.getAvailable(query);
+      const matches = available.slice(0, 20);
+      if (matches.length === 0) {
+        set({ searchResults: [], isSearching: false });
+        return;
+      }
+      const quotes = await fetchQuotesBatched(matches);
+      const items: StockListItem[] = quotes.map((q) => {
+        const sym = q.symbol || '';
+        const type = sym.endsWith('34') ? 'bdr' : sym.endsWith('11') ? 'fund' : 'stock';
+        return quoteToListItem(q, type);
+      });
+      set({ searchResults: items, isSearching: false });
     } catch (error) {
       console.error('[Market] Search error:', error);
       set({ isSearching: false, searchResults: [] });
@@ -157,27 +225,61 @@ export const useMarketStore = create<MarketState>((set, get) => ({
     }
   },
 
-  loadAllStocks: async (page = 1, filter?: string) => {
-    set({ isLoading: page === 1 });
+  loadAllStocks: async (page = 1, filter?: FilterKey) => {
+    const activeFilter = filter ?? get().activeFilter;
+    if (filter) set({ activeFilter: filter });
+    set({ isLoading: page === 1, error: null });
+
     try {
-      const type = filter === 'fiis' ? 'fund' : filter === 'bdrs' ? 'bdr' : filter === 'stocks' ? 'stock' : undefined;
-      const result = await brapiService.listStocks({
-        limit: 50,
-        page,
-        sortBy: 'volume',
-        sortOrder: 'desc',
-        type,
+      // Pick the right curated list based on filter
+      let tickers: string[];
+      let typeLabel: string;
+      if (activeFilter === 'stock') {
+        tickers = POPULAR_STOCKS;
+        typeLabel = 'stock';
+      } else if (activeFilter === 'fund') {
+        tickers = POPULAR_FIIS;
+        typeLabel = 'fund';
+      } else if (activeFilter === 'bdr') {
+        tickers = POPULAR_BDRS;
+        typeLabel = 'bdr';
+      } else {
+        // 'all' — combine all lists
+        tickers = [...POPULAR_STOCKS, ...POPULAR_FIIS, ...POPULAR_BDRS];
+        typeLabel = '';
+      }
+
+      // Simple pagination: 20 items per page
+      const PAGE_SIZE = 20;
+      const start = (page - 1) * PAGE_SIZE;
+      const slice = tickers.slice(start, start + PAGE_SIZE);
+
+      if (slice.length === 0) {
+        set({ hasMore: false, isLoading: false });
+        return;
+      }
+
+      const quotes = await fetchQuotesBatched(slice);
+
+      // Convert to StockListItem
+      const items: StockListItem[] = quotes.map((q) => {
+        const sym = q.symbol || '';
+        const type = typeLabel || (sym.endsWith('34') ? 'bdr' : sym.endsWith('11') ? 'fund' : 'stock');
+        return quoteToListItem(q, type);
       });
-      const stocks = result.stocks || [];
+
+      // Sort by volume descending
+      items.sort((a, b) => b.volume - a.volume);
+
       set((state) => ({
-        allStocks: page === 1 ? stocks : [...state.allStocks, ...stocks],
+        allStocks: page === 1 ? items : [...state.allStocks, ...items],
         currentPage: page,
-        hasMore: stocks.length === 50,
+        hasMore: start + PAGE_SIZE < tickers.length,
         isLoading: false,
       }));
     } catch (error) {
-      console.error('[Market] All stocks error:', error);
-      set({ isLoading: false, hasMore: false });
+      console.error('[Market] loadAllStocks error:', error);
+      set({ isLoading: false, hasMore: false, error: 'Erro ao carregar ativos' });
     }
   },
 
@@ -237,7 +339,7 @@ export const useMarketStore = create<MarketState>((set, get) => ({
     }));
   },
 
-  setFilter: (filter) => {
+  setFilter: (filter: FilterKey) => {
     set({ activeFilter: filter, allStocks: [], currentPage: 1, hasMore: true });
     get().loadAllStocks(1, filter);
   },

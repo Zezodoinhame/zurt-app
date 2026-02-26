@@ -101,7 +101,7 @@ export default function MarketScreen() {
   const handleFilterChange = useCallback(
     (filter: string) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      loadAllStocks(1, filter);
+      loadAllStocks(1, filter as any);
     },
     [loadAllStocks],
   );

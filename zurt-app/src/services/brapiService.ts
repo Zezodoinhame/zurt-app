@@ -45,12 +45,12 @@ export const brapiService = {
     return data;
   },
 
-  // 3. Ativos disponíveis
-  async getAvailable(search?: string) {
+  // 3. Ativos disponíveis (returns string[] of tickers)
+  async getAvailable(search?: string): Promise<string[]> {
     const { data } = await brapiApi.get('/api/available', {
       params: { search },
     });
-    return data;
+    return data.stocks || data || [];
   },
 
   // 4. Crypto
