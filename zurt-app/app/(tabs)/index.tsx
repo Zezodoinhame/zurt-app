@@ -6,14 +6,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
-  Alert,
-  ActivityIndicator,
   Share,
   Linking,
-  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
+import Svg, { Rect, Text as SvgText, Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 
@@ -24,6 +21,7 @@ import { usePortfolioStore } from '../../src/stores/portfolioStore';
 import { useGoalsStore } from '../../src/stores/goalsStore';
 import { useCardsStore } from '../../src/stores/cardsStore';
 import { useAgentStore } from '../../src/stores/agentStore';
+import { useNotificationStore } from '../../src/stores/notificationStore';
 import { syncAllFinance } from '../../src/services/api';
 
 import { Card } from '../../src/components/ui/Card';
@@ -41,6 +39,7 @@ import { TransactionRow } from '../../src/components/shared/TransactionRow';
 import { GoalCard } from '../../src/components/shared/GoalCard';
 import { AllocationBar } from '../../src/components/shared/AllocationBar';
 import PlanCards from '../../src/components/home/PlanCards';
+import { MarketTicker } from '../../src/components/home/MarketTicker';
 
 import {
   formatCurrency,
@@ -121,8 +120,10 @@ export default function HomeScreen() {
   const { cards, dashboardTransactions, loadTransactions } = useCardsStore();
   const { loadInitialInsights } = useAgentStore();
   const { articles: newsArticles, loadNews } = useNewsStore();
+  const { getUnreadCount } = useNotificationStore();
   const { t, currency } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
+  const unreadCount = getUnreadCount();
 
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -250,6 +251,9 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
+      {/* Market Ticker — fixed above scroll */}
+      <MarketTicker />
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]}
@@ -267,22 +271,60 @@ export default function HomeScreen() {
         {/* 1. Header                                                        */}
         {/* ---------------------------------------------------------------- */}
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.greeting}>{greeting}</Text>
-          </View>
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              onPress={handleToggleValues}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              accessibilityLabel={valuesHidden ? t('home.showValues') : t('home.hideValues')}
-              style={styles.headerIconBtn}
-            >
-              <AppIcon name="eye" size={20} color={colors.text.secondary} />
-            </TouchableOpacity>
-            <View style={styles.zurtBadge}>
-              <Text style={styles.zurtBadgeText}>ZURT</Text>
+          {/* Top row: ZURT logo + actions */}
+          <View style={styles.headerTopRow}>
+            <View style={styles.headerBrand}>
+              <Svg width={30} height={30} viewBox="0 0 30 30">
+                <Defs>
+                  <SvgGradient id="zurt-logo-grad" x1="0" y1="0" x2="1" y2="1">
+                    <Stop offset="0%" stopColor={colors.accent} />
+                    <Stop offset="100%" stopColor={colors.accent + 'BB'} />
+                  </SvgGradient>
+                </Defs>
+                <Rect width={30} height={30} rx={8} fill="url(#zurt-logo-grad)" />
+                <SvgText
+                  x={15}
+                  y={21}
+                  textAnchor="middle"
+                  fill={colors.background}
+                  fontWeight="900"
+                  fontSize={18}
+                >
+                  Z
+                </SvgText>
+              </Svg>
+              <Text style={styles.brandText}>ZURT</Text>
+            </View>
+
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                onPress={handleToggleValues}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityLabel={valuesHidden ? t('home.showValues') : t('home.hideValues')}
+                style={styles.headerIconBtn}
+              >
+                <AppIcon name={valuesHidden ? 'eyeOff' : 'eye'} size={18} color={colors.text.secondary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push('/(tabs)/alerts')}
+                style={styles.headerIconBtn}
+                accessibilityLabel="Notifications"
+              >
+                <AppIcon name="notification" size={18} color={colors.text.secondary} />
+                {unreadCount > 0 && <View style={styles.notifBadge} />}
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push('/(tabs)/profile')}
+                style={styles.headerIconBtn}
+                accessibilityLabel="Settings"
+              >
+                <AppIcon name="settings" size={18} color={colors.text.secondary} />
+              </TouchableOpacity>
             </View>
           </View>
+
+          {/* Greeting */}
+          <Text style={styles.greeting}>{greeting}</Text>
         </View>
 
         {/* ---------------------------------------------------------------- */}
@@ -633,19 +675,31 @@ const createStyles = (colors: ThemeColors) =>
 
     // -- Header ---------------------------------------------------------------
     header: {
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.lg,
+    },
+    headerTopRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingTop: spacing.md,
-      paddingBottom: spacing.lg,
+      marginBottom: spacing.md,
     },
-    headerLeft: {
-      flex: 1,
+    headerBrand: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 9,
+    },
+    brandText: {
+      color: colors.text.primary,
+      fontWeight: '800',
+      fontSize: 17,
+      letterSpacing: 3.5,
     },
     greeting: {
-      fontSize: 22,
+      fontSize: 24,
       fontWeight: '700',
       color: colors.text.primary,
+      lineHeight: 30,
     },
     headerActions: {
       flexDirection: 'row',
@@ -653,24 +707,25 @@ const createStyles = (colors: ThemeColors) =>
       gap: spacing.sm,
     },
     headerIconBtn: {
-      width: 36,
-      height: 36,
+      width: 40,
+      height: 40,
+      borderRadius: radius.md,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    zurtBadge: {
-      backgroundColor: colors.accent + '20',
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.xs,
-      borderRadius: radius.full,
-      borderWidth: 1,
-      borderColor: colors.accent + '40',
-    },
-    zurtBadgeText: {
-      fontSize: 11,
-      fontWeight: '800',
-      color: colors.accent,
-      letterSpacing: 1,
+    notifBadge: {
+      position: 'absolute',
+      top: 9,
+      right: 10,
+      width: 7,
+      height: 7,
+      borderRadius: 3.5,
+      backgroundColor: '#f87171',
+      borderWidth: 2,
+      borderColor: colors.card,
     },
 
     // -- Hero Card ------------------------------------------------------------

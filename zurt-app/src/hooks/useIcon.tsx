@@ -13,6 +13,7 @@ const ICON_MAP: Record<string, { lib: 'ion' | 'mci'; name: string; emoji: string
   education:    { lib: 'ion', name: 'school-outline', emoji: '\uD83C\uDF93' },
   mail:         { lib: 'ion', name: 'mail-outline', emoji: '\u2709\uFE0F' },
   eye:          { lib: 'ion', name: 'eye-outline', emoji: '\uD83D\uDC41\uFE0F' },
+  eyeOff:       { lib: 'ion', name: 'eye-off-outline', emoji: '\uD83D\uDE48' },
   unlock:       { lib: 'ion', name: 'lock-open-outline', emoji: '\uD83D\uDD13' },
   spouse:       { lib: 'ion', name: 'heart-outline', emoji: '\uD83D\uDC91' },
   child:        { lib: 'ion', name: 'happy-outline', emoji: '\uD83D\uDC76' },
