@@ -161,6 +161,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
   const execSummaryHTML = `
   <div class="page">
     ${pageHeader(p1)}
+    <div class="page-content">
     <div class="section-heading">
       <div class="section-number">01</div>
       <div>
@@ -247,7 +248,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
         </tbody>
       </table>
     </div>
-
+    </div>
     ${pageFooter(p1)}
   </div>`;
 
@@ -256,6 +257,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
   const portfolioHTML = `
   <div class="page">
     ${pageHeader(p2)}
+    <div class="page-content">
     <div class="section-heading">
       <div class="section-number">02</div>
       <div>
@@ -320,7 +322,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
       </table>
     </div>
     ` : ''}
-
+    </div>
     ${pageFooter(p2)}
   </div>`;
 
@@ -329,6 +331,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
   const institutionsHTML = `
   <div class="page">
     ${pageHeader(p3)}
+    <div class="page-content">
     <div class="section-heading">
       <div class="section-number">03</div>
       <div>
@@ -412,7 +415,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
       </table>
     </div>
     ` : ''}
-
+    </div>
     ${pageFooter(p3)}
   </div>`;
 
@@ -424,6 +427,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
     return `
   <div class="page">
     ${pageHeader(p4)}
+    <div class="page-content">
     <div class="section-heading">
       <div class="section-number">04</div>
       <div>
@@ -456,7 +460,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
         }).join('')}
       </tbody>
     </table>
-
+    </div>
     ${pageFooter(p4)}
   </div>`;
   })() : '';
@@ -474,6 +478,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
     return `
   <div class="page">
     ${pageHeader(p5)}
+    <div class="page-content">
     <div class="section-heading">
       <div class="section-number">${String(p5).padStart(2, '0')}</div>
       <div>
@@ -502,7 +507,7 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
       da sua carteira. Eles não constituem recomendação de investimento. Consulte sempre um profissional
       qualificado.
     </div>
-
+    </div>
     ${pageFooter(p5)}
   </div>`;
   })() : '';
@@ -545,29 +550,34 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    @page { margin: 0; size: A4; }
+    @page { size: A4; margin: 0; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    body {
+    html, body {
+      margin: 0; padding: 0;
       font-family: 'Georgia', 'Times New Roman', -apple-system, serif;
       background: #080D14;
       color: #E8E8E8;
       font-size: 10px;
       line-height: 1.55;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
 
     /* ===== COVER ===== */
     .cover {
-      width: 100%;
-      height: 100vh;
+      width: 210mm;
+      height: 297mm;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       background: linear-gradient(170deg, #080D14 0%, #0C1422 30%, #0A1018 60%, #080D14 100%);
       page-break-after: always;
+      page-break-inside: avoid;
       text-align: center;
       position: relative;
+      overflow: hidden;
     }
     .cover-top-line, .cover-bottom-line {
       position: absolute;
@@ -667,18 +677,27 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
 
     /* ===== PAGE LAYOUT ===== */
     .page {
-      padding: 36px 40px;
-      page-break-before: always;
+      width: 210mm;
+      height: 297mm;
+      padding: 28px 32px;
+      page-break-after: always;
+      page-break-inside: avoid;
       position: relative;
-      min-height: 100vh;
+      background: #080D14;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
+    .page:last-child { page-break-after: auto; }
+    .page-content { flex: 1; }
     .page-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding-bottom: 10px;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
       border-bottom: 1px solid ${gold}30;
+      flex-shrink: 0;
     }
     .page-header-left, .page-header-right {
       display: flex;
@@ -701,10 +720,9 @@ function buildReportHTML(data: ReportData, user: User, accentColor: string): str
     }
 
     .page-footer {
-      position: absolute;
-      bottom: 20px;
-      left: 40px;
-      right: 40px;
+      margin-top: auto;
+      flex-shrink: 0;
+      padding-top: 8px;
     }
     .footer-line {
       height: 1px;
@@ -1082,6 +1100,7 @@ export async function generatePatrimonialReport(
     html,
     width: 595,
     height: 842,
+    margins: { top: 0, bottom: 0, left: 0, right: 0 },
   });
   await Sharing.shareAsync(uri, {
     mimeType: 'application/pdf',

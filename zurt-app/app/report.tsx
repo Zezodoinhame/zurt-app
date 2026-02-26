@@ -161,31 +161,32 @@ function buildReportHTML(opts: {
   const summaryHTML = `
   <div class="page">
     ${pageHeader(2)}
-    <div class="sh"><div class="sh-num">01</div><div><div class="sh-title">Resumo Executivo</div><div class="sh-sub">Visão consolidada do patrimônio</div></div></div>
+    <div class="page-content">
+      <div class="sh"><div class="sh-num">01</div><div><div class="sh-title">Resumo Executivo</div><div class="sh-sub">Visão consolidada do patrimônio</div></div></div>
 
-    <div class="kpi-row">
-      <div class="kpi kpi-hl">
-        <div class="kpi-label">Patrimônio Total</div>
-        <div class="kpi-val green">${fmtBRL(totalValue)}</div>
-        <div class="kpi-badge ${var1m >= 0 ? 'badge-pos' : 'badge-neg'}">${fmtPct(var1m)} no mês</div>
+      <div class="kpi-row">
+        <div class="kpi kpi-hl">
+          <div class="kpi-label">Patrimônio Total</div>
+          <div class="kpi-val green">${fmtBRL(totalValue)}</div>
+          <div class="kpi-badge ${var1m >= 0 ? 'badge-pos' : 'badge-neg'}">${fmtPct(var1m)} no mês</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Total Faturas</div>
+          <div class="kpi-val red">${fmtBRL(totalFaturas)}</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Instituições</div>
+          <div class="kpi-val gold">${institutions.length}</div>
+        </div>
       </div>
-      <div class="kpi">
-        <div class="kpi-label">Total Faturas</div>
-        <div class="kpi-val red">${fmtBRL(totalFaturas)}</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">Instituições</div>
-        <div class="kpi-val gold">${institutions.length}</div>
-      </div>
+
+      <div class="block-title">Distribuição por Instituição</div>
+      <div class="alloc-bar">${allocBar}</div>
+      <table>
+        <thead><tr><th>Instituição</th><th class="td-r">Saldo</th><th class="td-r">% Total</th></tr></thead>
+        <tbody>${instRows}</tbody>
+      </table>
     </div>
-
-    <div class="block-title">Distribuição por Instituição</div>
-    <div class="alloc-bar">${allocBar}</div>
-    <table>
-      <thead><tr><th>Instituição</th><th class="td-r">Saldo</th><th class="td-r">% Total</th></tr></thead>
-      <tbody>${instRows}</tbody>
-    </table>
-
     ${pageFooter(2)}
   </div>`;
 
@@ -215,18 +216,19 @@ function buildReportHTML(opts: {
   const cardsHTML = cards.length > 0 ? `
   <div class="page">
     ${pageHeader(3)}
-    <div class="sh"><div class="sh-num">02</div><div><div class="sh-title">Cartões de Crédito</div><div class="sh-sub">Faturas e limites consolidados</div></div></div>
+    <div class="page-content">
+      <div class="sh"><div class="sh-num">02</div><div><div class="sh-title">Cartões de Crédito</div><div class="sh-sub">Faturas e limites consolidados</div></div></div>
 
-    ${cardBlocks}
+      ${cardBlocks}
 
-    <div class="totals-bar">
-      <div class="totals-item"><div class="totals-label">Total Faturas</div><div class="totals-val red">${fmtBRL(totalFaturas)}</div></div>
-      <div class="totals-sep"></div>
-      <div class="totals-item"><div class="totals-label">Limite Total</div><div class="totals-val">${fmtBRL(totalLimite)}</div></div>
-      <div class="totals-sep"></div>
-      <div class="totals-item"><div class="totals-label">Disponível Total</div><div class="totals-val green">${fmtBRL(totalLimite - totalFaturas)}</div></div>
+      <div class="totals-bar">
+        <div class="totals-item"><div class="totals-label">Total Faturas</div><div class="totals-val red">${fmtBRL(totalFaturas)}</div></div>
+        <div class="totals-sep"></div>
+        <div class="totals-item"><div class="totals-label">Limite Total</div><div class="totals-val">${fmtBRL(totalLimite)}</div></div>
+        <div class="totals-sep"></div>
+        <div class="totals-item"><div class="totals-label">Disponível Total</div><div class="totals-val green">${fmtBRL(totalLimite - totalFaturas)}</div></div>
+      </div>
     </div>
-
     ${pageFooter(3)}
   </div>` : '';
 
@@ -244,13 +246,14 @@ function buildReportHTML(opts: {
   const transactionsHTML = recentTx.length > 0 ? `
   <div class="page">
     ${pageHeader(4)}
-    <div class="sh"><div class="sh-num">03</div><div><div class="sh-title">Movimentações Recentes</div><div class="sh-sub">Últimas ${recentTx.length} transações</div></div></div>
+    <div class="page-content">
+      <div class="sh"><div class="sh-num">03</div><div><div class="sh-title">Movimentações Recentes</div><div class="sh-sub">Últimas ${recentTx.length} transações</div></div></div>
 
-    <table class="table-striped">
-      <thead><tr><th>Data</th><th>Descrição</th><th>Instituição</th><th class="td-r">Valor</th></tr></thead>
-      <tbody>${txRows}</tbody>
-    </table>
-
+      <table class="table-striped">
+        <thead><tr><th>Data</th><th>Descrição</th><th>Instituição</th><th class="td-r">Valor</th></tr></thead>
+        <tbody>${txRows}</tbody>
+      </table>
+    </div>
     ${pageFooter(4)}
   </div>` : '';
 
@@ -263,28 +266,29 @@ function buildReportHTML(opts: {
   const aiDisclaimerHTML = `
   <div class="page">
     ${pageHeader(lastPage)}
-    <div class="sh"><div class="sh-num">${String(lastPage - 1).padStart(2, '0')}</div><div><div class="sh-title">Análise & Aviso Legal</div><div class="sh-sub">Inteligência artificial e informações legais</div></div></div>
+    <div class="page-content">
+      <div class="sh"><div class="sh-num">${String(lastPage - 1).padStart(2, '0')}</div><div><div class="sh-title">Análise & Aviso Legal</div><div class="sh-sub">Inteligência artificial e informações legais</div></div></div>
 
-    ${aiSection}
+      ${aiSection}
 
-    <div class="disclaimer">
-      <div class="disclaimer-title">Aviso Legal & Confidencialidade</div>
-      <p>Este relatório foi gerado automaticamente pela plataforma ZURT Wealth Intelligence com base nos dados
-      sincronizados das contas e instituições financeiras do titular.</p>
-      <p>Os valores, rentabilidades e análises apresentados são meramente informativos e não constituem
-      recomendação, consultoria ou aconselhamento de investimento. Rentabilidade passada não garante
-      rentabilidade futura.</p>
-      <p>As informações podem apresentar atraso ou divergência em relação aos valores reais das instituições
-      financeiras. Consulte sempre um profissional qualificado (CVM/CFA) antes de tomar decisões de investimento.</p>
-      <p><strong>Confidencialidade:</strong> Este documento é pessoal e confidencial, destinado exclusivamente
-      ao titular identificado na capa.</p>
+      <div class="disclaimer">
+        <div class="disclaimer-title">Aviso Legal & Confidencialidade</div>
+        <p>Este relatório foi gerado automaticamente pela plataforma ZURT Wealth Intelligence com base nos dados
+        sincronizados das contas e instituições financeiras do titular.</p>
+        <p>Os valores, rentabilidades e análises apresentados são meramente informativos e não constituem
+        recomendação, consultoria ou aconselhamento de investimento. Rentabilidade passada não garante
+        rentabilidade futura.</p>
+        <p>As informações podem apresentar atraso ou divergência em relação aos valores reais das instituições
+        financeiras. Consulte sempre um profissional qualificado (CVM/CFA) antes de tomar decisões de investimento.</p>
+        <p><strong>Confidencialidade:</strong> Este documento é pessoal e confidencial, destinado exclusivamente
+        ao titular identificado na capa.</p>
+      </div>
+
+      <div class="gen-info">
+        <div class="gen-brand">ZURT Wealth Intelligence</div>
+        <div class="gen-date">Gerado em ${dateStr} às ${timeStr}</div>
+      </div>
     </div>
-
-    <div class="gen-info">
-      <div class="gen-brand">ZURT Wealth Intelligence</div>
-      <div class="gen-date">Gerado em ${dateStr} às ${timeStr}</div>
-    </div>
-
     ${pageFooter(lastPage)}
   </div>`;
 
@@ -295,9 +299,10 @@ function buildReportHTML(opts: {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-  @page { margin: 0; size: A4; }
+  @page { size: A4; margin: 0; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
+  html, body {
+    margin: 0; padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
     background: #0A0F1C;
     color: #E8E8E8;
@@ -309,11 +314,13 @@ function buildReportHTML(opts: {
 
   /* ===== COVER ===== */
   .cover {
-    width: 100%; height: 100vh;
+    width: 210mm; height: 297mm;
     background: linear-gradient(180deg, #0A0F1C 0%, #111827 50%, #0A0F1C 100%);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     text-align: center; position: relative;
     page-break-after: always;
+    page-break-inside: avoid;
+    overflow: hidden;
   }
   .cover-accent-top, .cover-accent-bottom {
     position: absolute; left: 50%; transform: translateX(-50%);
@@ -357,18 +364,31 @@ function buildReportHTML(opts: {
 
   /* ===== PAGE ===== */
   .page {
-    padding: 36px 40px; page-break-before: always; position: relative; min-height: 100vh;
+    width: 210mm; height: 297mm;
+    padding: 28px 32px;
+    page-break-after: always;
+    page-break-inside: avoid;
+    position: relative;
     background: #0A0F1C;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
+  .page:last-child { page-break-after: auto; }
+  .page-content { flex: 1; }
   .ph {
     display: flex; justify-content: space-between; align-items: center;
-    padding-bottom: 10px; margin-bottom: 22px; border-bottom: 1px solid #C9A84C30;
+    padding-bottom: 10px; margin-bottom: 18px; border-bottom: 1px solid #C9A84C30;
+    flex-shrink: 0;
   }
   .ph-left, .ph-right { display: flex; align-items: center; gap: 6px; font-size: 9px; color: #94A3B8; }
   .ph-logo { font-size: 13px; font-weight: 800; color: #00E99B; letter-spacing: 3px; }
   .ph-sep { color: #C9A84C40; }
   .ph-type { font-style: italic; color: #C9A84C; }
-  .pf { position: absolute; bottom: 18px; left: 40px; right: 40px; }
+  .pf {
+    margin-top: auto; flex-shrink: 0;
+    padding-top: 8px;
+  }
   .pf-line { height: 1px; background: #C9A84C20; margin-bottom: 6px; }
   .pf-row { display: flex; justify-content: space-between; font-size: 8px; color: #64748B; }
   .pf-brand { color: #C9A84C80; letter-spacing: 1px; }
@@ -620,7 +640,11 @@ export default function ReportScreen() {
       logger.log('[Report] HTML generated, length:', html.length);
 
       // 5. Generate PDF
-      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      const { uri } = await Print.printToFileAsync({
+        html,
+        base64: false,
+        margins: { top: 0, bottom: 0, left: 0, right: 0 },
+      });
       logger.log('[Report] PDF created at:', uri);
 
       // 6. Share
