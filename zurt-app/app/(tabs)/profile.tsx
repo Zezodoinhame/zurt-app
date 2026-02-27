@@ -1303,22 +1303,24 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* Admin */}
-      <View style={{ marginTop: 8 }}>
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.settingRow}
-            onPress={() => router.push('/admin/login')}
-            activeOpacity={0.7}
-          >
-            <View style={styles.settingIcon}>
-              <AppIcon name="shield" size={16} color={colors.text.muted} />
-            </View>
-            <Text style={[styles.settingLabel, { color: colors.text.muted }]}>Administracao</Text>
-            <AppIcon name="chevron" size={20} color={colors.text.muted} />
-          </TouchableOpacity>
+      {/* Admin — visible only for admin email */}
+      {user?.email?.toLowerCase() === 'diego@zurt.com.br' && (
+        <View style={{ marginTop: 8 }}>
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.settingRow}
+              onPress={() => router.push('/admin/login')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.settingIcon}>
+                <AppIcon name="shield" size={16} color={colors.text.muted} />
+              </View>
+              <Text style={[styles.settingLabel, { color: colors.text.muted }]}>Administracao</Text>
+              <AppIcon name="chevron" size={20} color={colors.text.muted} />
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Logout */}
       <View>
