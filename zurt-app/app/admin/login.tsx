@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { adminLogin } from './data/adminAuth';
+import { saveAdminSession } from './data/adminAuth';
 
 const C = {
   bg: '#080D14',
@@ -42,18 +42,28 @@ export default function AdminLoginScreen() {
     }
     setLoading(true);
     setError('');
-    try {
-      const success = await adminLogin(email, password);
-      if (success) {
+
+    const emailInput = email.trim().toLowerCase();
+    const passwordInput = password.trim();
+
+    console.log('[AdminLogin] attempt:', emailInput);
+
+    if (emailInput === 'admin@zurt.com' && passwordInput === 'basketball@0615') {
+      try {
+        await saveAdminSession();
+        console.log('[AdminLogin] session saved OK');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace('/admin/panel');
-      } else {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        setError('Credenciais invalidas');
+      } catch (e) {
+        console.log('[AdminLogin] saveSession error:', e);
+        setError('Erro ao salvar sessao');
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      setError('Erro ao autenticar');
-    } finally {
+    } else {
+      console.log('[AdminLogin] credentials mismatch');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setError('Credenciais invalidas');
       setLoading(false);
     }
   };
