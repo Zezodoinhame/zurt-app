@@ -190,7 +190,7 @@ export async function fetchLoginHistory(params?: {
   const qs = query.toString();
   const path = qs ? `/admin/login-history?${qs}` : '/admin/login-history';
   const data = await adminApiRequest<any>(path);
-  return (data.history ?? data.logins ?? data ?? []).map((entry: any) => ({
+  return (data.loginHistory ?? data ?? []).map((entry: any) => ({
     id: String(entry.id ?? ''),
     userId: String(entry.userId ?? entry.user_id ?? ''),
     userName: entry.userName ?? entry.user_name ?? '',
