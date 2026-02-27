@@ -1,39 +1,11 @@
 // ---------------------------------------------------------------------------
-// Admin Panel — Mock Data & Types
+// Admin Panel — Mock Data (fallback when API is unavailable)
 // ---------------------------------------------------------------------------
 
-export interface AdminUser {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  status: 'active' | 'inactive' | 'suspended';
-  role: 'admin' | 'tester' | 'user';
-  plan: 'PRO' | 'FREE';
-  createdAt: string;
-  lastLogin: string;
-  openFinance: boolean;
-  b3Connected: boolean;
-  patrimony: number;
-  devices: string[];
-  totalLogins: number;
-  photoUrl: string | null;
-}
+import type { AdminUser, LogEntry, B3ChecklistItem, ActivityFeedItem } from './types';
 
-export interface LogEntry {
-  id: string;
-  timestamp: string;
-  level: 'info' | 'warn' | 'error';
-  message: string;
-  userId?: string;
-  metadata?: Record<string, any>;
-}
-
-export interface B3ChecklistItem {
-  id: string;
-  label: string;
-  completed: boolean;
-}
+// Re-export types for backward compatibility
+export type { AdminUser, LogEntry, B3ChecklistItem, ActivityFeedItem };
 
 export const mockUsers: AdminUser[] = [
   {
@@ -43,7 +15,7 @@ export const mockUsers: AdminUser[] = [
     phone: '(92) 99999-0001',
     status: 'active',
     role: 'admin',
-    plan: 'PRO',
+    plan: 'pro',
     createdAt: '2026-02-26',
     lastLogin: '2026-02-27 00:32',
     openFinance: true,
@@ -60,7 +32,7 @@ export const mockUsers: AdminUser[] = [
     phone: '(92) 99999-0002',
     status: 'active',
     role: 'tester',
-    plan: 'PRO',
+    plan: 'pro',
     createdAt: '2026-02-27',
     lastLogin: '2026-02-27 10:15',
     openFinance: false,
@@ -77,7 +49,7 @@ export const mockUsers: AdminUser[] = [
     phone: '(92) 99999-0003',
     status: 'active',
     role: 'tester',
-    plan: 'FREE',
+    plan: 'free',
     createdAt: '2026-02-27',
     lastLogin: '2026-02-27 08:45',
     openFinance: false,
@@ -94,7 +66,7 @@ export const mockUsers: AdminUser[] = [
     phone: '',
     status: 'active',
     role: 'tester',
-    plan: 'PRO',
+    plan: 'unlimited',
     createdAt: '2026-02-27',
     lastLogin: '2026-02-27 14:20',
     openFinance: true,
@@ -111,7 +83,7 @@ export const mockUsers: AdminUser[] = [
     phone: '',
     status: 'inactive',
     role: 'tester',
-    plan: 'FREE',
+    plan: 'basic',
     createdAt: '2026-02-27',
     lastLogin: '2026-02-26 22:00',
     openFinance: false,
@@ -134,7 +106,7 @@ export const mockLogs: LogEntry[] = [
   { id: '8', timestamp: '2026-02-26 18:00:55', level: 'error', message: 'Pluggy webhook failed: 500 Internal Server Error' },
 ];
 
-export const mockActivityFeed = [
+export const mockActivityFeed: ActivityFeedItem[] = [
   { id: '1', userName: 'Diego', action: 'fez login', timestamp: '00:32', initial: 'D' },
   { id: '2', userName: 'Alpha', action: 'sync Open Finance', timestamp: '00:28', initial: 'A' },
   { id: '3', userName: 'Marcelo', action: 'criou conta', timestamp: '00:15', initial: 'M' },

@@ -1,7 +1,9 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { mockUsers, mockActivityFeed, defaultB3Checklist } from '../data/mockData';
+import { fetchAdminStats, fetchActivityFeed } from '../services/adminService';
+import { defaultB3Checklist } from '../data/mockData';
+import type { AdminStats, ActivityFeedItem } from '../data/types';
 
 const C = {
   bg: '#0A0E14',
@@ -32,12 +34,40 @@ function MetricCard({ title, value, icon, iconColor }: {
 }
 
 export default function AdminHome({ onNavigateToConnections }: { onNavigateToConnections: () => void }) {
-  const totalUsers = mockUsers.length;
-  const activeUsers = mockUsers.filter((u) => u.status === 'active').length;
-  const openFinanceCount = mockUsers.filter((u) => u.openFinance).length;
-  const b3Count = mockUsers.filter((u) => u.b3Connected).length;
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [statsData, feedData] = await Promise.all([
+        fetchAdminStats(),
+        fetchActivityFeed(),
+      ]);
+      setStats(statsData);
+      setActivityFeed(feedData);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   const miniChecklist = defaultB3Checklist.slice(0, 4);
+
+  if (isLoading) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator color={C.accent} size="large" />
+      </View>
+    );
+  }
+
+  const totalUsers = stats?.totalUsers ?? 0;
+  const activeUsers = stats?.activeUsers ?? 0;
+  const openFinanceCount = stats?.openFinanceCount ?? 0;
+  const b3Count = stats?.b3Count ?? 0;
 
   return (
     <ScrollView
@@ -63,10 +93,10 @@ export default function AdminHome({ onNavigateToConnections }: { onNavigateToCon
       </View>
 
       <View style={styles.feedCard}>
-        {mockActivityFeed.map((item, idx) => (
+        {activityFeed.map((item, idx) => (
           <View
             key={item.id}
-            style={[styles.feedItem, idx < mockActivityFeed.length - 1 && styles.feedItemBorder]}
+            style={[styles.feedItem, idx < activityFeed.length - 1 && styles.feedItemBorder]}
           >
             <View style={[styles.feedDot, {
               backgroundColor: item.action.includes('erro') ? C.negative
@@ -121,6 +151,7 @@ export default function AdminHome({ onNavigateToConnections }: { onNavigateToCon
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 20, paddingTop: 12 },
+  loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

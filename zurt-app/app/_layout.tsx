@@ -20,6 +20,7 @@ import { notificationService } from '../src/services/notificationService';
 import { useAppLock } from '../src/hooks/useAppLock';
 import { RateLimitToast } from '../src/components/ui/RateLimitToast';
 import { OfflineBanner } from '../src/components/ui/OfflineBanner';
+import { ImpersonateBanner } from '../src/components/ui/ImpersonateBanner';
 import { LockOverlay } from '../src/components/ui/LockOverlay';
 
 SplashScreen.preventAutoHideAsync();
@@ -140,6 +141,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={colors.background} />
         <OfflineBanner />
+        <ImpersonateBanner />
         <Stack
           screenOptions={{
             headerShown: false,

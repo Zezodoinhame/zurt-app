@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,15 @@ import {
   StyleSheet,
   Modal,
   Alert,
+  ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { mockUsers, type AdminUser } from '../data/mockData';
+import { fetchAdminUsers, addAdminUser } from '../services/adminService';
+import type { AdminUser, AdminPlan } from '../data/types';
+import { ADMIN_PLAN_CONFIG } from '../data/types';
 
 const C = {
   bg: '#0A0E14',
@@ -37,10 +41,14 @@ const roleFilters: { key: RoleFilter; label: string }[] = [
   { key: 'user', label: 'Usuario' },
 ];
 
+const planOptions: AdminPlan[] = ['free', 'basic', 'pro', 'unlimited', 'enterprise'];
+
 const roleBadgeColor: Record<string, string> = { admin: C.accent, tester: C.info, user: C.textMuted };
 const statusBadgeColor: Record<string, string> = { active: C.positive, inactive: C.textMuted, suspended: C.negative };
 
 function UserRow({ user, onPress }: { user: AdminUser; onPress: () => void }) {
+  const planConfig = ADMIN_PLAN_CONFIG[user.plan] ?? ADMIN_PLAN_CONFIG.free;
+
   return (
     <TouchableOpacity style={styles.userRow} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.userAvatar}>
@@ -63,8 +71,10 @@ function UserRow({ user, onPress }: { user: AdminUser; onPress: () => void }) {
               {user.status === 'active' ? 'Ativo' : user.status === 'inactive' ? 'Inativo' : 'Suspenso'}
             </Text>
           </View>
-          <View style={[styles.badge, { backgroundColor: user.plan === 'PRO' ? C.warning + '20' : C.textMuted + '20' }]}>
-            <Text style={[styles.badgeText, { color: user.plan === 'PRO' ? C.warning : C.textMuted }]}>{user.plan}</Text>
+          <View style={[styles.badge, { backgroundColor: planConfig.color + '20' }]}>
+            <Text style={[styles.badgeText, { color: planConfig.color }]}>
+              {planConfig.label.toUpperCase()}
+            </Text>
           </View>
         </View>
       </View>
@@ -79,41 +89,66 @@ function UserRow({ user, onPress }: { user: AdminUser; onPress: () => void }) {
 
 export default function AdminUsers() {
   const router = useRouter();
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState<AdminUser['role']>('tester');
-  const [newPlan, setNewPlan] = useState<AdminUser['plan']>('FREE');
+  const [newPlan, setNewPlan] = useState<AdminPlan>('free');
+
+  const loadUsers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await fetchAdminUsers();
+      setUsers(data);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadUsers(); }, [loadUsers]);
 
   const filteredUsers = useMemo(() => {
-    return mockUsers.filter((u) => {
+    return users.filter((u) => {
       const matchSearch = !search
         || u.name.toLowerCase().includes(search.toLowerCase())
         || u.email.toLowerCase().includes(search.toLowerCase());
       const matchRole = roleFilter === 'all' || u.role === roleFilter;
       return matchSearch && matchRole;
     });
-  }, [search, roleFilter]);
+  }, [users, search, roleFilter]);
 
   const handleUserPress = (user: AdminUser) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({ pathname: '/admin/user-detail', params: { id: user.id } });
   };
 
-  const handleAddUser = () => {
+  const handleAddUser = async () => {
     if (!newName.trim() || !newEmail.trim()) {
       Alert.alert('Erro', 'Preencha nome e email');
       return;
     }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert('Sucesso', `Usuario ${newName} seria adicionado (mock)`);
+    const result = await addAdminUser({
+      name: newName.trim(),
+      email: newEmail.trim(),
+      role: newRole,
+      plan: newPlan,
+    });
+    if (result) {
+      setUsers((prev) => [...prev, result]);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      Alert.alert('Aviso', 'Backend nao disponivel. Usuario nao foi salvo.');
+    }
     setShowAddModal(false);
     setNewName('');
     setNewEmail('');
     setNewRole('tester');
-    setNewPlan('FREE');
+    setNewPlan('free');
   };
 
   return (
@@ -153,18 +188,24 @@ export default function AdminUsers() {
       </View>
 
       {/* User List */}
-      <FlatList
-        data={filteredUsers}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <UserRow user={item} onPress={() => handleUserPress(item)} />}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="people-outline" size={40} color={C.textMuted} />
-            <Text style={styles.emptyText}>Nenhum usuario encontrado</Text>
-          </View>
-        }
-      />
+      {isLoading ? (
+        <View style={styles.loader}>
+          <ActivityIndicator color={C.accent} size="large" />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredUsers}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <UserRow user={item} onPress={() => handleUserPress(item)} />}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="people-outline" size={40} color={C.textMuted} />
+              <Text style={styles.emptyText}>Nenhum usuario encontrado</Text>
+            </View>
+          }
+        />
+      )}
 
       {/* FAB */}
       <TouchableOpacity
@@ -222,17 +263,27 @@ export default function AdminUsers() {
             </View>
 
             <Text style={styles.fieldLabel}>Plano</Text>
-            <View style={styles.roleSelector}>
-              {(['FREE', 'PRO'] as const).map((p) => (
-                <TouchableOpacity
-                  key={p}
-                  style={[styles.roleOption, newPlan === p && styles.roleOptionActive]}
-                  onPress={() => setNewPlan(p)}
-                >
-                  <Text style={[styles.roleOptionText, newPlan === p && styles.roleOptionTextActive]}>{p}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.roleSelector}>
+                {planOptions.map((p) => {
+                  const config = ADMIN_PLAN_CONFIG[p];
+                  return (
+                    <TouchableOpacity
+                      key={p}
+                      style={[
+                        styles.planOption,
+                        newPlan === p && { backgroundColor: config.color + '20', borderColor: config.color + '50' },
+                      ]}
+                      onPress={() => setNewPlan(p)}
+                    >
+                      <Text style={[styles.roleOptionText, newPlan === p && { color: config.color }]}>
+                        {config.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
 
             <TouchableOpacity style={styles.modalSubmitBtn} onPress={handleAddUser}>
               <Text style={styles.modalSubmitText}>Adicionar</Text>
@@ -246,6 +297,7 @@ export default function AdminUsers() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
+  loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -377,6 +429,16 @@ const styles = StyleSheet.create({
   roleOption: {
     flex: 1,
     paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: C.bg,
+    borderWidth: 1,
+    borderColor: C.border,
+    alignItems: 'center',
+  },
+  planOption: {
+    minWidth: 70,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 8,
     backgroundColor: C.bg,
     borderWidth: 1,

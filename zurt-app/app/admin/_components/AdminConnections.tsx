@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
-import { mockUsers, defaultB3Checklist, type B3ChecklistItem } from '../data/mockData';
+import { defaultB3Checklist, type B3ChecklistItem } from '../data/mockData';
+import { fetchAdminStats } from '../services/adminService';
+import type { AdminStats } from '../data/types';
 
 const C = {
   bg: '#0A0E14',
@@ -23,15 +25,21 @@ const B3_CHECKLIST_KEY = 'zurt:admin:b3checklist';
 
 export default function AdminConnections() {
   const [checklist, setChecklist] = useState<B3ChecklistItem[]>(defaultB3Checklist);
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const openFinanceCount = mockUsers.filter((u) => u.openFinance).length;
-  const b3Count = mockUsers.filter((u) => u.b3Connected).length;
+  const openFinanceCount = stats?.openFinanceCount ?? 0;
+  const b3Count = stats?.b3Count ?? 0;
+  const totalUsers = stats?.totalUsers ?? 0;
   const completedCount = checklist.filter((c) => c.completed).length;
 
   useEffect(() => {
-    AsyncStorage.getItem(B3_CHECKLIST_KEY).then((raw) => {
-      if (raw) { try { setChecklist(JSON.parse(raw)); } catch { /* ignore */ } }
-    });
+    Promise.all([
+      fetchAdminStats().then(setStats),
+      AsyncStorage.getItem(B3_CHECKLIST_KEY).then((raw) => {
+        if (raw) { try { setChecklist(JSON.parse(raw)); } catch { /* ignore */ } }
+      }),
+    ]).finally(() => setIsLoading(false));
   }, []);
 
   const toggleItem = async (id: string) => {
@@ -71,7 +79,7 @@ export default function AdminConnections() {
           </View>
           <View style={styles.metricDivider} />
           <View style={styles.metric}>
-            <Text style={styles.metricValue}>{mockUsers.length - openFinanceCount}</Text>
+            <Text style={styles.metricValue}>{totalUsers - openFinanceCount}</Text>
             <Text style={styles.metricLabel}>Pendentes</Text>
           </View>
           <View style={styles.metricDivider} />

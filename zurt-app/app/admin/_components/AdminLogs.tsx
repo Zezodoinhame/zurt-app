@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { mockLogs, type LogEntry } from '../data/mockData';
+import { fetchAdminLogs } from '../services/adminService';
+import type { LogEntry } from '../data/types';
 
 const C = {
   bg: '#0A0E14',
@@ -48,18 +49,32 @@ function LogRow({ log }: { log: LogEntry }) {
 
 export default function AdminLogs() {
   const [filter, setFilter] = useState<LevelFilter>('all');
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadLogs = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await fetchAdminLogs();
+      setLogs(data);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadLogs(); }, [loadLogs]);
 
   const filteredLogs = useMemo(() => {
-    if (filter === 'all') return mockLogs;
-    return mockLogs.filter((l) => l.level === filter);
-  }, [filter]);
+    if (filter === 'all') return logs;
+    return logs.filter((l) => l.level === filter);
+  }, [logs, filter]);
 
   const counts = useMemo(() => ({
-    all: mockLogs.length,
-    info: mockLogs.filter((l) => l.level === 'info').length,
-    warn: mockLogs.filter((l) => l.level === 'warn').length,
-    error: mockLogs.filter((l) => l.level === 'error').length,
-  }), []);
+    all: logs.length,
+    info: logs.filter((l) => l.level === 'info').length,
+    warn: logs.filter((l) => l.level === 'warn').length,
+    error: logs.filter((l) => l.level === 'error').length,
+  }), [logs]);
 
   return (
     <View style={styles.container}>
@@ -83,24 +98,31 @@ export default function AdminLogs() {
         ))}
       </View>
 
-      <FlatList
-        data={filteredLogs}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <LogRow log={item} />}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="terminal-outline" size={40} color={C.textMuted} />
-            <Text style={styles.emptyText}>Nenhum log encontrado</Text>
-          </View>
-        }
-      />
+      {isLoading ? (
+        <View style={styles.loader}>
+          <ActivityIndicator color={C.accent} size="large" />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredLogs}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <LogRow log={item} />}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="terminal-outline" size={40} color={C.textMuted} />
+              <Text style={styles.emptyText}>Nenhum log encontrado</Text>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
+  loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   filtersRow: {
     flexDirection: 'row',
     paddingHorizontal: 20,
