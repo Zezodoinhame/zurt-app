@@ -958,12 +958,42 @@ export async function deleteGoal(id: string): Promise<void> {
 // =============================================================================
 
 export async function fetchSubscription(): Promise<any> {
-  return fetchWithFallback(
-    'subscription:current',
-    '/subscriptions/me',
-    (data) => data,
-    null,
-  );
+  if (_isDemoMode) return null;
+
+  // Try Stripe subscription-status first (source of truth for paid plans)
+  try {
+    const stripeData = await apiRequest<any>('/stripe/subscription-status');
+    if (stripeData && (stripeData.plan || stripeData.subscription)) {
+      const result = {
+        plan: stripeData.plan ?? stripeData.subscription?.plan ?? null,
+        status: stripeData.subscription?.status ?? stripeData.status ?? 'active',
+        stripeCustomerId: stripeData.subscription?.stripeCustomerId ?? stripeData.stripeCustomerId,
+        stripeSubscriptionId: stripeData.subscription?.stripeSubscriptionId ?? stripeData.subscription?.id ?? stripeData.stripeSubscriptionId,
+        currentPeriodEnd: stripeData.subscription?.currentPeriodEnd ?? stripeData.currentPeriodEnd,
+        planName: stripeData.planName ?? null,
+      };
+      logger.log('[ZURT API] Stripe subscription loaded:', result.plan, result.status);
+      await setCache('subscription:current', result);
+      return result;
+    }
+  } catch (err: any) {
+    logger.log('[ZURT API] Stripe subscription-status failed, trying /subscriptions/me:', err?.message);
+  }
+
+  // Fallback to legacy /subscriptions/me
+  try {
+    const data = await apiRequest<any>('/subscriptions/me');
+    if (data) {
+      await setCache('subscription:current', data);
+      return data;
+    }
+  } catch (err: any) {
+    logger.log('[ZURT API] /subscriptions/me failed:', err?.message);
+    const cached = await getCached<any>('subscription:current');
+    if (cached) return cached;
+  }
+
+  return null;
 }
 
 export async function fetchSubscriptionHistory(): Promise<any[]> {

@@ -10,10 +10,8 @@ export default function SubscriptionSuccess() {
   const { t } = useSettingsStore();
 
   useEffect(() => {
-    // Reload subscription status after successful payment
-    const store = usePlanStore.getState();
-    store.reset();
-    store.loadSubscription(store.userEmail);
+    // Force refresh subscription status after successful Stripe payment
+    usePlanStore.getState().refreshSubscription();
 
     const timer = setTimeout(() => {
       router.replace('/(tabs)');

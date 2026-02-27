@@ -29,6 +29,7 @@ export default function RootLayout() {
   const restoreSession = useAuthStore((s) => s.restoreSession);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isDemoMode = useAuthStore((s) => s.isDemoMode);
+  const userEmail = useAuthStore((s) => s.user?.email);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
   const colors = useSettingsStore((s) => s.colors);
   const isDark = useSettingsStore((s) => s.isDark);
@@ -86,7 +87,7 @@ export default function RootLayout() {
   // Initialize push notifications & load subscription when authenticated
   useEffect(() => {
     if (ready && isAuthenticated) {
-      loadSubscription();
+      loadSubscription(userEmail ?? undefined);
       if (!isDemoMode) {
         initializePush().catch((err: any) => {
           logger.log('[ZURT App] Push init error:', err?.message ?? err);

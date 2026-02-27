@@ -197,6 +197,7 @@ interface PlanState {
   overrides: Record<string, PlanTier>;
 
   loadSubscription: (userEmail?: string) => Promise<void>;
+  refreshSubscription: () => Promise<void>;
   checkLimit: (feature: LimitFeature) => boolean;
   incrementUsage: (feature: LimitFeature) => void;
   resetDailyUsage: () => void;
@@ -213,6 +214,9 @@ interface PlanState {
   // Plan hierarchy
   isAtLeast: (target: PlanTier) => boolean;
   getUpgradePlan: () => PlanTier | null;
+
+  // Internal
+  _fetchAndApplyPlan: () => Promise<void>;
 }
 
 export const usePlanStore = create<PlanState>((set, get) => ({
@@ -282,28 +286,30 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       return;
     }
 
-    try {
-      const data = await fetchSubscription();
-      if (data) {
-        const tier: PlanTier = data.plan ?? data.tier ?? data.planId ?? 'free';
-        const validTier = PLAN_LIMITS[tier] ? tier : 'free';
-        set({
-          plan: validTier,
-          status: data.status ?? 'active',
-          stripeCustomerId: data.stripeCustomerId,
-          stripeSubscriptionId: data.stripeSubscriptionId ?? data.subscriptionId,
-          currentPeriodEnd: data.currentPeriodEnd ?? data.expiresAt,
-          limits: PLAN_LIMITS[validTier],
-          isLoading: false,
-        });
-        logger.log('[PLAN] Loaded subscription:', validTier, data.status ?? 'active');
-      } else {
-        set({ plan: 'free', status: 'none', limits: PLAN_LIMITS.free, isLoading: false });
-      }
-    } catch (err: any) {
-      logger.log('[PLAN] Error loading subscription:', err?.message);
-      set({ plan: 'free', status: 'none', limits: PLAN_LIMITS.free, isLoading: false });
+    // Fetch from backend (tries /stripe/subscription-status first, then /subscriptions/me)
+    await get()._fetchAndApplyPlan();
+  },
+
+  refreshSubscription: async () => {
+    // Force reload — bypasses _initialized guard
+    const { userEmail } = get();
+    set({ isLoading: true });
+
+    if (isDemoMode()) {
+      set({ plan: 'pro', status: 'active', limits: PLAN_LIMITS.pro, isLoading: false });
+      return;
     }
+
+    // Check admin override
+    const overrides = get().overrides;
+    if (userEmail && overrides[userEmail]) {
+      const overrideTier = overrides[userEmail];
+      set({ plan: overrideTier, status: 'active', limits: PLAN_LIMITS[overrideTier], isLoading: false });
+      return;
+    }
+
+    await get()._fetchAndApplyPlan();
+    logger.log('[PLAN] Subscription refreshed, plan:', get().plan, 'status:', get().status);
   },
 
   checkLimit: (feature: LimitFeature): boolean => {
@@ -444,5 +450,46 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     const currentIdx = tierOrder.indexOf(get().plan);
     if (currentIdx < tierOrder.length - 1) return tierOrder[currentIdx + 1];
     return null;
+  },
+
+  // =========================================================================
+  // Internal: fetch plan from API and apply to store
+  // =========================================================================
+
+  _fetchAndApplyPlan: async () => {
+    try {
+      const data = await fetchSubscription();
+      if (data) {
+        // Handle multiple response formats from /stripe/subscription-status and /subscriptions/me
+        const rawPlan = data.plan ?? data.tier ?? data.planId
+          ?? data.subscription?.plan ?? data.subscription?.tier;
+        const tier: PlanTier = rawPlan ?? 'free';
+        const validTier = PLAN_LIMITS[tier] ? tier : 'free';
+
+        const rawStatus = data.status ?? data.subscription?.status;
+        // If we have a stripeSubscriptionId, the subscription is active unless explicitly canceled
+        const hasStripeId = !!(data.stripeSubscriptionId ?? data.subscription?.stripeSubscriptionId ?? data.subscription?.id);
+        const effectiveStatus: PlanStatus = rawStatus
+          ? rawStatus
+          : (hasStripeId && validTier !== 'free' ? 'active' : 'none');
+
+        set({
+          plan: validTier,
+          status: effectiveStatus,
+          stripeCustomerId: data.stripeCustomerId ?? data.subscription?.stripeCustomerId,
+          stripeSubscriptionId: data.stripeSubscriptionId ?? data.subscription?.stripeSubscriptionId ?? data.subscription?.id ?? data.subscriptionId,
+          currentPeriodEnd: data.currentPeriodEnd ?? data.subscription?.currentPeriodEnd ?? data.expiresAt,
+          limits: PLAN_LIMITS[validTier],
+          isLoading: false,
+        });
+        logger.log('[PLAN] Loaded subscription:', validTier, effectiveStatus);
+      } else {
+        set({ plan: 'free', status: 'none', limits: PLAN_LIMITS.free, isLoading: false });
+        logger.log('[PLAN] No subscription data, defaulting to free');
+      }
+    } catch (err: any) {
+      logger.log('[PLAN] Error loading subscription:', err?.message);
+      set({ plan: 'free', status: 'none', limits: PLAN_LIMITS.free, isLoading: false });
+    }
   },
 }));

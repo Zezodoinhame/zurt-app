@@ -243,6 +243,8 @@ export default function PlansScreen() {
     setCheckoutLoading(plan.id);
     try {
       await stripeService.openCheckout(plan.id, billing);
+      // Browser closed — refresh subscription in case payment completed
+      await usePlanStore.getState().refreshSubscription();
     } catch (err: any) {
       logger.log('[Plans] Checkout error:', err?.message);
       Alert.alert('Erro', 'Nao foi possivel abrir o checkout. Tente novamente.');
@@ -261,6 +263,8 @@ export default function PlansScreen() {
     setPortalLoading(true);
     try {
       await stripeService.openCustomerPortal();
+      // Browser closed — refresh in case user changed/cancelled subscription
+      await usePlanStore.getState().refreshSubscription();
     } catch (err: any) {
       logger.log('[Plans] Portal error:', err?.message);
       Alert.alert('Erro', 'Nao foi possivel abrir o portal. Tente novamente.');
