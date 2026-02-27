@@ -35,10 +35,10 @@ export const exportService = {
       Ativo: a.ticker,
       Nome: a.name,
       Quantidade: a.quantity,
-      'Preco Medio': a.avgPrice,
-      'Preco Atual': a.currentPrice,
+      'Preço Médio': a.avgPrice,
+      'Preço Atual': a.currentPrice,
       'Valor Total': a.totalValue,
-      'Lucro/Prejuizo': a.profitLoss,
+      'Lucro/Prejuízo': a.profitLoss,
       'Rentabilidade %': a.profitPct,
     }));
 
@@ -74,7 +74,7 @@ export const exportService = {
   // Card expenses → CSV
   // ---------------------------------------------------------------------------
   async exportCardExpensesCSV(transactions: CardExpenseRow[]) {
-    const header = 'Data,Descricao,Categoria,Valor,Cartao\n';
+    const header = 'Data,Descrição,Categoria,Valor,Cartão\n';
     const rows = transactions
       .map(
         (t) =>
