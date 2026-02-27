@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo, useState } from 'react';
+import React, { useEffect, useCallback, useMemo, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,12 @@ import {
   RefreshControl,
   Linking,
   Share,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Rect, Text as SvgText, Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 
 import { type ThemeColors } from '../../src/theme/colors';
 import { spacing, radius } from '../../src/theme/spacing';
@@ -43,6 +44,7 @@ import { useSettingsStore } from '../../src/stores/settingsStore';
 import { useNewsStore } from '../../src/stores/newsStore';
 import { useMarketStore } from '../../src/stores/marketStore';
 import { AppIcon } from '../../src/hooks/useIcon';
+import { useAvatarState } from '../../src/components/ui/UserAvatar';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -141,6 +143,48 @@ export default function HomeScreen() {
 
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // ---- Avatar ----------------------------------------------------------------
+  const { customUri: avatarUri, presetId: avatarPresetId } = useAvatarState();
+
+  // ---- Counting animation ----------------------------------------------------
+  const [animatedValue, setAnimatedValue] = useState(0);
+  const animFrameRef = useRef<number>(0);
+
+  const targetValue = summary?.totalValue ?? 0;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+
+      if (valuesHidden || !summary) {
+        setAnimatedValue(targetValue);
+        return;
+      }
+
+      const duration = 1500;
+      const startTime = performance.now();
+      const endValue = targetValue;
+      const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+      setAnimatedValue(0);
+
+      const animate = (now: number) => {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        setAnimatedValue(endValue * easeOutCubic(progress));
+        if (progress < 1) {
+          animFrameRef.current = requestAnimationFrame(animate);
+        }
+      };
+
+      animFrameRef.current = requestAnimationFrame(animate);
+
+      return () => {
+        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      };
+    }, [targetValue, valuesHidden, summary])
+  );
+
   // ---- Memoised styles ------------------------------------------------------
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -190,7 +234,7 @@ export default function HomeScreen() {
     : 0;
 
   const heroValueParts = useMemo(() => {
-    const value = summary?.totalValue ?? 0;
+    const value = animatedValue;
     const abs = Math.abs(value);
     const formatted = new Intl.NumberFormat('pt-BR', {
       minimumFractionDigits: 2,
@@ -202,7 +246,7 @@ export default function HomeScreen() {
       integer: integer || '0',
       decimal: `,${decimal || '00'}`,
     };
-  }, [summary?.totalValue]);
+  }, [animatedValue]);
 
   const sparklineData = useMemo(() => {
     const history = summary?.history ?? [];
@@ -312,25 +356,32 @@ export default function HomeScreen() {
                 />
               </TouchableOpacity>
               <View style={styles.avatarBadge}>
-                <Svg width={36} height={36} viewBox="0 0 36 36">
-                  <Defs>
-                    <SvgGradient id="zurt-av" x1="0" y1="0" x2="1" y2="1">
-                      <Stop offset="0%" stopColor="#00D4AA" />
-                      <Stop offset="100%" stopColor="#00A888" />
-                    </SvgGradient>
-                  </Defs>
-                  <Rect width={36} height={36} rx={12} fill="url(#zurt-av)" />
-                  <SvgText
-                    x={18}
-                    y={24}
-                    textAnchor="middle"
-                    fill="#FFFFFF"
-                    fontWeight="900"
-                    fontSize={18}
-                  >
-                    Z
-                  </SvgText>
-                </Svg>
+                {avatarUri ? (
+                  <Image
+                    source={{ uri: avatarUri }}
+                    style={styles.avatarImage}
+                  />
+                ) : (
+                  <Svg width={36} height={36} viewBox="0 0 36 36">
+                    <Defs>
+                      <SvgGradient id="zurt-av" x1="0" y1="0" x2="1" y2="1">
+                        <Stop offset="0%" stopColor="#00D4AA" />
+                        <Stop offset="100%" stopColor="#00A888" />
+                      </SvgGradient>
+                    </Defs>
+                    <Rect width={36} height={36} rx={12} fill="url(#zurt-av)" />
+                    <SvgText
+                      x={18}
+                      y={24}
+                      textAnchor="middle"
+                      fill="#FFFFFF"
+                      fontWeight="900"
+                      fontSize={18}
+                    >
+                      {user?.initials?.[0] ?? 'Z'}
+                    </SvgText>
+                  </Svg>
+                )}
               </View>
             </View>
           </View>
@@ -805,8 +856,13 @@ const createStyles = (colors: ThemeColors) =>
     avatarBadge: {
       width: 36,
       height: 36,
-      borderRadius: 12,
+      borderRadius: 18,
       overflow: 'hidden',
+    },
+    avatarImage: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
     },
 
     // -- Hero Card (Patrimônio) -----------------------------------------------
