@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
+import { ToolsHub } from '../../src/components/ToolsHub';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -93,6 +94,7 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
 
   return (
+    <View style={{ flex: 1 }}>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -176,6 +178,8 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    <ToolsHub />
+    </View>
   );
 }
 
