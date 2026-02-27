@@ -1471,3 +1471,32 @@ export async function updateMemberDelegation(memberId: string, canViewMembers: s
     body: JSON.stringify({ canViewMembers }),
   });
 }
+
+// =============================================================================
+// Stripe
+// =============================================================================
+
+export async function fetchStripePlans(role: string = 'customer'): Promise<any[]> {
+  const data = await apiRequest<any>(`/stripe/plans?role=${role}`);
+  return data.plans ?? data ?? [];
+}
+
+export async function createStripeCheckout(
+  planId: string,
+  billing: 'monthly' | 'annual' = 'monthly',
+): Promise<{ url: string }> {
+  return apiRequest<{ url: string }>('/stripe/create-checkout', {
+    method: 'POST',
+    body: JSON.stringify({ planId, billing }),
+  });
+}
+
+export async function createStripeCustomerPortal(): Promise<{ url: string }> {
+  return apiRequest<{ url: string }>('/stripe/customer-portal', {
+    method: 'POST',
+  });
+}
+
+export async function fetchStripeSubscriptionStatus(): Promise<any> {
+  return apiRequest<any>('/stripe/subscription-status');
+}
