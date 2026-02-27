@@ -1,16 +1,17 @@
 // ---------------------------------------------------------------------------
-// Admin Panel — API Service
-// Backend endpoints: /admin/* (not yet implemented — all functions fall back to mock)
+// Admin Panel — API Service (aligned with real backend endpoints)
 // ---------------------------------------------------------------------------
 
 import { getToken } from '../../../src/services/api';
-import { logger } from '../../../src/utils/logger';
-import type { AdminUser, LogEntry, AdminStats, ActivityFeedItem } from '../data/types';
-import {
-  mockUsers,
-  mockLogs,
-  mockActivityFeed,
-} from '../data/mockData';
+import type {
+  AdminUser,
+  AdminRole,
+  AdminStatus,
+  BackendPlan,
+  DashboardMetrics,
+  LoginHistoryEntry,
+  IntegrationData,
+} from '../data/types';
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://zurt.com.br/api';
 const ADMIN_TIMEOUT = 15000;
@@ -43,7 +44,8 @@ async function adminApiRequest<T>(path: string, options?: RequestInit): Promise<
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error(`Admin API ${response.status}`);
+      const text = await response.text().catch(() => '');
+      throw new Error(`Admin API ${response.status}: ${text}`);
     }
 
     return await response.json();
@@ -54,159 +56,203 @@ async function adminApiRequest<T>(path: string, options?: RequestInit): Promise<
 }
 
 // ---------------------------------------------------------------------------
-// Mapper (handles camelCase + snake_case from backend)
+// Dashboard Metrics — GET /admin/dashboard/metrics
 // ---------------------------------------------------------------------------
 
-function mapAdminUser(raw: any): AdminUser {
+export async function fetchDashboardMetrics(): Promise<DashboardMetrics> {
+  const data = await adminApiRequest<any>('/admin/dashboard/metrics');
+  return {
+    kpis: {
+      activeUsers: data.kpis?.activeUsers ?? 0,
+      newUsers: data.kpis?.newUsers ?? 0,
+      mrr: data.kpis?.mrr ?? 0,
+      churnRate: data.kpis?.churnRate ?? 0,
+      totalUsers: data.kpis?.totalUsers ?? 0,
+      totalRevenue: data.kpis?.totalRevenue ?? 0,
+    },
+    userGrowth: data.userGrowth ?? [],
+    revenue: data.revenue ?? [],
+    recentRegistrations: data.recentRegistrations ?? [],
+    subscriptionStats: data.subscriptionStats ?? {},
+    alerts: data.alerts ?? [],
+    roleDistribution: data.roleDistribution ?? {},
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Users — GET /admin/users
+// ---------------------------------------------------------------------------
+
+export async function fetchAdminUsers(params?: {
+  search?: string;
+  role?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{ users: AdminUser[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> {
+  const query = new URLSearchParams();
+  if (params?.search) query.set('search', params.search);
+  if (params?.role && params.role !== 'all') query.set('role', params.role);
+  if (params?.status && params.status !== 'all') query.set('status', params.status);
+  query.set('page', String(params?.page ?? 1));
+  query.set('limit', String(params?.limit ?? 50));
+
+  const qs = query.toString();
+  const data = await adminApiRequest<any>(`/admin/users?${qs}`);
+  const users: AdminUser[] = (data.users ?? []).map(mapBackendUser);
+  return {
+    users,
+    pagination: data.pagination ?? { page: 1, limit: 50, total: users.length, totalPages: 1 },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// User Detail — GET /admin/users/:id
+// ---------------------------------------------------------------------------
+
+export async function fetchAdminUserById(id: string): Promise<AdminUser | null> {
+  const data = await adminApiRequest<any>(`/admin/users/${id}`);
+  const raw = data.user ?? data;
+  return mapBackendUser(raw);
+}
+
+// ---------------------------------------------------------------------------
+// User Finance — GET /admin/users/:id/finance (for "Ver como usuario")
+// ---------------------------------------------------------------------------
+
+export async function fetchUserFinance(id: string): Promise<any> {
+  return adminApiRequest<any>(`/admin/users/${id}/finance`);
+}
+
+// ---------------------------------------------------------------------------
+// Update User Role — PATCH /admin/users/:id/role
+// ---------------------------------------------------------------------------
+
+export async function updateUserRole(id: string, role: AdminRole): Promise<any> {
+  return adminApiRequest<any>(`/admin/users/${id}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Update User Status — PATCH /admin/users/:id/status
+// ---------------------------------------------------------------------------
+
+export async function updateUserStatus(id: string, status: AdminStatus): Promise<any> {
+  return adminApiRequest<any>(`/admin/users/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Update User Plan — PATCH /admin/users/:id/plan (uses UUID planId)
+// ---------------------------------------------------------------------------
+
+export async function updateUserPlan(id: string, planId: string): Promise<any> {
+  return adminApiRequest<any>(`/admin/users/${id}/plan`, {
+    method: 'PATCH',
+    body: JSON.stringify({ planId }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Delete User — DELETE /admin/users/:id
+// ---------------------------------------------------------------------------
+
+export async function deleteAdminUser(id: string): Promise<boolean> {
+  await adminApiRequest<any>(`/admin/users/${id}`, { method: 'DELETE' });
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Plans — GET /admin/plans
+// ---------------------------------------------------------------------------
+
+export async function fetchPlans(): Promise<BackendPlan[]> {
+  const data = await adminApiRequest<any>('/admin/plans');
+  return data.plans ?? [];
+}
+
+// ---------------------------------------------------------------------------
+// Login History — GET /admin/login-history
+// ---------------------------------------------------------------------------
+
+export async function fetchLoginHistory(params?: {
+  page?: number;
+  userId?: string;
+}): Promise<LoginHistoryEntry[]> {
+  const query = new URLSearchParams();
+  if (params?.page) query.set('page', String(params.page));
+  if (params?.userId) query.set('userId', params.userId);
+
+  const qs = query.toString();
+  const path = qs ? `/admin/login-history?${qs}` : '/admin/login-history';
+  const data = await adminApiRequest<any>(path);
+  return (data.history ?? data.logins ?? data ?? []).map((entry: any) => ({
+    id: String(entry.id ?? ''),
+    userId: String(entry.userId ?? entry.user_id ?? ''),
+    userName: entry.userName ?? entry.user_name ?? '',
+    userEmail: entry.userEmail ?? entry.user_email ?? '',
+    ip: entry.ip ?? entry.ipAddress ?? '',
+    device: entry.device ?? entry.userAgent ?? '',
+    success: entry.success ?? true,
+    createdAt: entry.createdAt ?? entry.created_at ?? '',
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Integrations — GET /admin/integrations
+// ---------------------------------------------------------------------------
+
+export async function fetchIntegrations(): Promise<IntegrationData> {
+  const data = await adminApiRequest<any>('/admin/integrations');
+  return {
+    integrations: data.integrations ?? [],
+    stats: {
+      healthy: data.stats?.healthy ?? 0,
+      degraded: data.stats?.degraded ?? 0,
+      down: data.stats?.down ?? 0,
+      total: data.stats?.total ?? 0,
+    },
+    logs: data.logs ?? [],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Backend → AdminUser mapper
+// ---------------------------------------------------------------------------
+
+function mapBackendUser(raw: any): AdminUser {
+  const subscription = raw.subscription ?? raw.plan_info ?? undefined;
+  const planCode = subscription?.plan?.code ?? raw.planTier ?? raw.plan ?? 'free';
+
   return {
     id: String(raw.id ?? ''),
     name: raw.name ?? raw.full_name ?? '',
     email: raw.email ?? '',
     phone: raw.phone ?? '',
-    status: raw.status ?? 'active',
-    role: raw.role ?? 'user',
-    plan: raw.plan ?? raw.planTier ?? raw.plan_tier ?? 'free',
+    status: raw.status === 'blocked' ? 'blocked' : 'active',
+    role: raw.role ?? 'customer',
+    plan: planCode as AdminUser['plan'],
     createdAt: raw.createdAt ?? raw.created_at ?? '',
     lastLogin: raw.lastLogin ?? raw.last_login ?? '',
-    openFinance: raw.openFinance ?? raw.open_finance ?? false,
+    openFinance: raw.openFinance ?? raw.open_finance ?? (raw.stats?.connections ?? 0) > 0,
     b3Connected: raw.b3Connected ?? raw.b3_connected ?? false,
-    patrimony: raw.patrimony ?? raw.net_worth ?? 0,
+    patrimony: raw.financialSummary?.netWorth ?? raw.patrimony ?? raw.net_worth ?? 0,
     devices: raw.devices ?? [],
-    totalLogins: raw.totalLogins ?? raw.total_logins ?? 0,
+    totalLogins: raw.totalLogins ?? raw.total_logins ?? raw.stats?.logins ?? 0,
     photoUrl: raw.photoUrl ?? raw.photo_url ?? null,
+    subscription: subscription ? {
+      plan: subscription.plan ? {
+        id: subscription.plan.id ?? '',
+        code: subscription.plan.code ?? '',
+        name: subscription.plan.name ?? '',
+      } : undefined,
+      status: subscription.status,
+    } : undefined,
+    financialSummary: raw.financialSummary ?? undefined,
+    stats: raw.stats ?? undefined,
   };
-}
-
-// ---------------------------------------------------------------------------
-// Users
-// ---------------------------------------------------------------------------
-
-export async function fetchAdminUsers(): Promise<AdminUser[]> {
-  try {
-    const data = await adminApiRequest<any>('/admin/users');
-    const users: any[] = data.users ?? data ?? [];
-    return users.map(mapAdminUser);
-  } catch (err: any) {
-    logger.log('[ADMIN] fetchAdminUsers fallback to mock:', err?.message);
-    return mockUsers;
-  }
-}
-
-export async function fetchAdminUserById(id: string): Promise<AdminUser | null> {
-  try {
-    const data = await adminApiRequest<any>(`/admin/users/${id}`);
-    return mapAdminUser(data.user ?? data);
-  } catch (err: any) {
-    logger.log('[ADMIN] fetchAdminUserById fallback to mock:', err?.message);
-    return mockUsers.find((u) => u.id === id) ?? null;
-  }
-}
-
-export async function updateAdminUser(
-  id: string,
-  updates: Partial<Pick<AdminUser, 'role' | 'plan' | 'status'>>,
-): Promise<AdminUser | null> {
-  try {
-    const data = await adminApiRequest<any>(`/admin/users/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(updates),
-    });
-    return mapAdminUser(data.user ?? data);
-  } catch (err: any) {
-    logger.log('[ADMIN] updateAdminUser failed:', err?.message);
-    const user = mockUsers.find((u) => u.id === id);
-    return user ? { ...user, ...updates } as AdminUser : null;
-  }
-}
-
-export async function deleteAdminUser(id: string): Promise<boolean> {
-  try {
-    await adminApiRequest<any>(`/admin/users/${id}`, { method: 'DELETE' });
-    return true;
-  } catch (err: any) {
-    logger.log('[ADMIN] deleteAdminUser failed:', err?.message);
-    return false;
-  }
-}
-
-export async function addAdminUser(user: {
-  name: string;
-  email: string;
-  role: AdminUser['role'];
-  plan: AdminUser['plan'];
-}): Promise<AdminUser | null> {
-  try {
-    const data = await adminApiRequest<any>('/admin/users', {
-      method: 'POST',
-      body: JSON.stringify(user),
-    });
-    return mapAdminUser(data.user ?? data);
-  } catch (err: any) {
-    logger.log('[ADMIN] addAdminUser failed:', err?.message);
-    return null;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Stats / Dashboard
-// ---------------------------------------------------------------------------
-
-export async function fetchAdminStats(): Promise<AdminStats> {
-  try {
-    const data = await adminApiRequest<any>('/admin/stats');
-    return {
-      totalUsers: data.totalUsers ?? 0,
-      activeUsers: data.activeUsers ?? 0,
-      openFinanceCount: data.openFinanceCount ?? 0,
-      b3Count: data.b3Count ?? 0,
-    };
-  } catch (err: any) {
-    logger.log('[ADMIN] fetchAdminStats fallback to mock:', err?.message);
-    return {
-      totalUsers: mockUsers.length,
-      activeUsers: mockUsers.filter((u) => u.status === 'active').length,
-      openFinanceCount: mockUsers.filter((u) => u.openFinance).length,
-      b3Count: mockUsers.filter((u) => u.b3Connected).length,
-    };
-  }
-}
-
-export async function fetchActivityFeed(): Promise<ActivityFeedItem[]> {
-  try {
-    const data = await adminApiRequest<any>('/admin/activity');
-    return data.activities ?? data ?? [];
-  } catch (err: any) {
-    logger.log('[ADMIN] fetchActivityFeed fallback to mock:', err?.message);
-    return mockActivityFeed;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Logs
-// ---------------------------------------------------------------------------
-
-export async function fetchAdminLogs(): Promise<LogEntry[]> {
-  try {
-    const data = await adminApiRequest<any>('/admin/logs');
-    return data.logs ?? data ?? [];
-  } catch (err: any) {
-    logger.log('[ADMIN] fetchAdminLogs fallback to mock:', err?.message);
-    return mockLogs;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Impersonation
-// ---------------------------------------------------------------------------
-
-export async function impersonateUser(userId: string): Promise<{ token: string } | null> {
-  try {
-    const data = await adminApiRequest<any>(`/admin/impersonate/${userId}`, {
-      method: 'POST',
-    });
-    return { token: data.token };
-  } catch (err: any) {
-    logger.log('[ADMIN] impersonateUser failed (backend not ready?):', err?.message);
-    return null;
-  }
 }

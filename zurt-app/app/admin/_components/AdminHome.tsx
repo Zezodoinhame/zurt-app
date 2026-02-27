@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { fetchAdminStats, fetchActivityFeed } from '../services/adminService';
+import { fetchDashboardMetrics, fetchLoginHistory } from '../services/adminService';
 import { defaultB3Checklist } from '../data/mockData';
-import type { AdminStats, ActivityFeedItem } from '../data/types';
+import type { DashboardMetrics, LoginHistoryEntry } from '../data/types';
 
 const C = {
   bg: '#0A0E14',
@@ -33,20 +33,29 @@ function MetricCard({ title, value, icon, iconColor }: {
   );
 }
 
+function formatMRR(value: number): string {
+  if (value >= 1000) return `R$ ${(value / 100).toFixed(0)}`;
+  return `R$ ${(value / 100).toFixed(2)}`;
+}
+
 export default function AdminHome({ onNavigateToConnections }: { onNavigateToConnections: () => void }) {
-  const [stats, setStats] = useState<AdminStats | null>(null);
-  const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>([]);
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [loginHistory, setLoginHistory] = useState<LoginHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
-      const [statsData, feedData] = await Promise.all([
-        fetchAdminStats(),
-        fetchActivityFeed(),
+      const [metricsData, historyData] = await Promise.all([
+        fetchDashboardMetrics(),
+        fetchLoginHistory({ page: 1 }),
       ]);
-      setStats(statsData);
-      setActivityFeed(feedData);
+      setMetrics(metricsData);
+      setLoginHistory(historyData.slice(0, 10));
+    } catch (err: any) {
+      setError(err?.message ?? 'Erro ao carregar dados');
     } finally {
       setIsLoading(false);
     }
@@ -64,10 +73,22 @@ export default function AdminHome({ onNavigateToConnections }: { onNavigateToCon
     );
   }
 
-  const totalUsers = stats?.totalUsers ?? 0;
-  const activeUsers = stats?.activeUsers ?? 0;
-  const openFinanceCount = stats?.openFinanceCount ?? 0;
-  const b3Count = stats?.b3Count ?? 0;
+  if (error) {
+    return (
+      <View style={styles.loader}>
+        <Ionicons name="alert-circle-outline" size={40} color={C.negative} />
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={loadData}>
+          <Text style={styles.retryText}>Tentar novamente</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const totalUsers = metrics?.kpis?.totalUsers ?? metrics?.kpis?.activeUsers ?? 0;
+  const activeUsers = metrics?.kpis?.activeUsers ?? 0;
+  const newUsers = metrics?.kpis?.newUsers ?? 0;
+  const mrr = metrics?.kpis?.mrr ?? 0;
 
   return (
     <ScrollView
@@ -79,40 +100,74 @@ export default function AdminHome({ onNavigateToConnections }: { onNavigateToCon
       <View style={styles.metricsGrid}>
         <MetricCard title="Total usuarios" value={totalUsers} icon="people" iconColor={C.accent} />
         <MetricCard title="Ativos" value={activeUsers} icon="checkmark-circle" iconColor={C.positive} />
-        <MetricCard title="Open Finance" value={openFinanceCount} icon="link" iconColor={C.info} />
-        <MetricCard title="B3 conectados" value={b3Count} icon="trending-up" iconColor={C.warning} />
+        <MetricCard title="Novos" value={newUsers} icon="person-add" iconColor={C.info} />
+        <MetricCard title="MRR" value={formatMRR(mrr)} icon="cash" iconColor={C.warning} />
       </View>
 
-      {/* Activity Feed */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Atividade Recente</Text>
+      {/* Recent Registrations */}
+      {(metrics?.recentRegistrations?.length ?? 0) > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>Registros Recentes</Text>
+          <View style={styles.feedCard}>
+            {metrics!.recentRegistrations.slice(0, 5).map((reg, idx) => (
+              <View
+                key={reg.id ?? idx}
+                style={[styles.feedItem, idx < Math.min(metrics!.recentRegistrations.length, 5) - 1 && styles.feedItemBorder]}
+              >
+                <View style={[styles.feedDot, { backgroundColor: C.info }]} />
+                <View style={styles.feedContent}>
+                  <Text style={styles.feedText}>
+                    <Text style={styles.feedBold}>{reg.name || reg.email}</Text>
+                    {' '}se registrou
+                  </Text>
+                </View>
+                <Text style={styles.feedTime}>
+                  {reg.createdAt ? new Date(reg.createdAt).toLocaleDateString('pt-BR') : ''}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
+
+      {/* Login Activity */}
+      <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+        <Text style={styles.sectionTitle}>Atividade de Login</Text>
         <View style={styles.liveBadge}>
           <View style={styles.liveDot} />
-          <Text style={styles.liveText}>Ao vivo</Text>
+          <Text style={styles.liveText}>Recente</Text>
         </View>
       </View>
 
       <View style={styles.feedCard}>
-        {activityFeed.map((item, idx) => (
-          <View
-            key={item.id}
-            style={[styles.feedItem, idx < activityFeed.length - 1 && styles.feedItemBorder]}
-          >
-            <View style={[styles.feedDot, {
-              backgroundColor: item.action.includes('erro') ? C.negative
-                : item.action.includes('sync') ? C.info
-                : item.action.includes('criou') ? C.warning
-                : C.accent,
-            }]} />
-            <View style={styles.feedContent}>
-              <Text style={styles.feedText}>
-                <Text style={styles.feedBold}>{item.userName}</Text>
-                {' '}{item.action}
+        {loginHistory.length === 0 ? (
+          <View style={styles.emptyFeed}>
+            <Text style={styles.emptyText}>Nenhum login registrado</Text>
+          </View>
+        ) : (
+          loginHistory.map((entry, idx) => (
+            <View
+              key={entry.id ?? idx}
+              style={[styles.feedItem, idx < loginHistory.length - 1 && styles.feedItemBorder]}
+            >
+              <View style={[styles.feedDot, {
+                backgroundColor: entry.success ? C.accent : C.negative,
+              }]} />
+              <View style={styles.feedContent}>
+                <Text style={styles.feedText}>
+                  <Text style={styles.feedBold}>{entry.userName || entry.userEmail}</Text>
+                  {entry.success ? ' fez login' : ' falhou login'}
+                </Text>
+                {entry.device ? (
+                  <Text style={styles.feedSubtext}>{entry.device.substring(0, 40)}</Text>
+                ) : null}
+              </View>
+              <Text style={styles.feedTime}>
+                {entry.createdAt ? new Date(entry.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
               </Text>
             </View>
-            <Text style={styles.feedTime}>{item.timestamp}</Text>
-          </View>
-        ))}
+          ))
+        )}
       </View>
 
       {/* Mini B3 Checklist */}
@@ -124,11 +179,11 @@ export default function AdminHome({ onNavigateToConnections }: { onNavigateToCon
             style={[styles.checkItem, idx < miniChecklist.length - 1 && styles.feedItemBorder]}
           >
             {item.completed ? (
-              <Text style={styles.checkEmoji}>{'✅'}</Text>
+              <Ionicons name="checkmark-circle" size={16} color={C.positive} />
             ) : item.id === 'sandbox' ? (
-              <Text style={styles.checkEmoji}>{'⏳'}</Text>
+              <Ionicons name="time" size={16} color={C.warning} />
             ) : (
-              <Text style={styles.checkEmoji}>{'❌'}</Text>
+              <Ionicons name="close-circle" size={16} color={C.negative} />
             )}
             <Text style={[styles.checkLabel, item.completed && styles.checkLabelDone]}>
               {item.label}
@@ -151,7 +206,16 @@ export default function AdminHome({ onNavigateToConnections }: { onNavigateToCon
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 20, paddingTop: 12 },
-  loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loader: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  errorText: { fontSize: 14, color: '#FF6B6B', textAlign: 'center', marginTop: 8 },
+  retryBtn: {
+    marginTop: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#00D4AA20',
+  },
+  retryText: { fontSize: 14, fontWeight: '600', color: '#00D4AA' },
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -250,11 +314,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: C.text,
   },
+  feedSubtext: {
+    fontSize: 10,
+    color: C.textMuted,
+    marginTop: 2,
+  },
   feedTime: {
     fontSize: 11,
     color: C.textMuted,
     fontFamily: 'monospace',
   },
+  emptyFeed: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  emptyText: { fontSize: 13, color: C.textMuted },
   checkItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -262,7 +336,6 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     gap: 10,
   },
-  checkEmoji: { fontSize: 14 },
   checkLabel: {
     flex: 1,
     fontSize: 13,

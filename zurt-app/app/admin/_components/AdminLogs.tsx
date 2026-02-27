@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { fetchAdminLogs } from '../services/adminService';
-import type { LogEntry } from '../data/types';
+import { fetchLoginHistory } from '../services/adminService';
+import type { LogEntry, LoginHistoryEntry } from '../data/types';
 
 const C = {
   bg: '#0A0E14',
@@ -21,7 +21,6 @@ type LevelFilter = 'all' | 'info' | 'warn' | 'error';
 const levelFilters: { key: LevelFilter; label: string }[] = [
   { key: 'all', label: 'Todos' },
   { key: 'info', label: 'Info' },
-  { key: 'warn', label: 'Warn' },
   { key: 'error', label: 'Error' },
 ];
 
@@ -47,16 +46,45 @@ function LogRow({ log }: { log: LogEntry }) {
   );
 }
 
+function mapHistoryToLogs(history: LoginHistoryEntry[]): LogEntry[] {
+  return history.map((entry) => {
+    const level: LogEntry['level'] = entry.success ? 'info' : 'error';
+    const deviceInfo = entry.device ? ` (${entry.device.substring(0, 30)})` : '';
+    const ipInfo = entry.ip ? ` [${entry.ip}]` : '';
+    const message = entry.success
+      ? `Login: ${entry.userName || entry.userEmail}${deviceInfo}`
+      : `Login falhou: ${entry.userName || entry.userEmail}${ipInfo}${deviceInfo}`;
+
+    const timestamp = entry.createdAt
+      ? new Date(entry.createdAt).toLocaleString('pt-BR', {
+          day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+        })
+      : '';
+
+    return {
+      id: entry.id,
+      timestamp,
+      level,
+      message,
+      userId: entry.userId,
+    };
+  });
+}
+
 export default function AdminLogs() {
   const [filter, setFilter] = useState<LevelFilter>('all');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const loadLogs = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
-      const data = await fetchAdminLogs();
-      setLogs(data);
+      const history = await fetchLoginHistory({ page: 1 });
+      setLogs(mapHistoryToLogs(history));
+    } catch (err: any) {
+      setError(err?.message ?? 'Erro ao carregar logs');
     } finally {
       setIsLoading(false);
     }
@@ -102,6 +130,14 @@ export default function AdminLogs() {
         <View style={styles.loader}>
           <ActivityIndicator color={C.accent} size="large" />
         </View>
+      ) : error ? (
+        <View style={styles.loader}>
+          <Ionicons name="alert-circle-outline" size={40} color={C.negative} />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={loadLogs}>
+            <Text style={styles.retryText}>Tentar novamente</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <FlatList
           data={filteredLogs}
@@ -122,7 +158,16 @@ export default function AdminLogs() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loader: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  errorText: { fontSize: 14, color: '#FF6B6B', textAlign: 'center' },
+  retryBtn: {
+    marginTop: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#00D4AA20',
+  },
+  retryText: { fontSize: 14, fontWeight: '600', color: '#00D4AA' },
   filtersRow: {
     flexDirection: 'row',
     paddingHorizontal: 20,

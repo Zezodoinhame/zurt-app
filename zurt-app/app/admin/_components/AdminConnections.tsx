@@ -4,8 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { defaultB3Checklist, type B3ChecklistItem } from '../data/mockData';
-import { fetchAdminStats } from '../services/adminService';
-import type { AdminStats } from '../data/types';
+import { fetchIntegrations } from '../services/adminService';
+import type { IntegrationData } from '../data/types';
 
 const C = {
   bg: '#0A0E14',
@@ -25,17 +25,17 @@ const B3_CHECKLIST_KEY = 'zurt:admin:b3checklist';
 
 export default function AdminConnections() {
   const [checklist, setChecklist] = useState<B3ChecklistItem[]>(defaultB3Checklist);
-  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [integrations, setIntegrations] = useState<IntegrationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const openFinanceCount = stats?.openFinanceCount ?? 0;
-  const b3Count = stats?.b3Count ?? 0;
-  const totalUsers = stats?.totalUsers ?? 0;
   const completedCount = checklist.filter((c) => c.completed).length;
 
   useEffect(() => {
     Promise.all([
-      fetchAdminStats().then(setStats),
+      fetchIntegrations().then(setIntegrations).catch((err: any) => {
+        setError(err?.message ?? 'Erro ao carregar integracoes');
+      }),
       AsyncStorage.getItem(B3_CHECKLIST_KEY).then((raw) => {
         if (raw) { try { setChecklist(JSON.parse(raw)); } catch { /* ignore */ } }
       }),
@@ -51,72 +51,94 @@ export default function AdminConnections() {
     await AsyncStorage.setItem(B3_CHECKLIST_KEY, JSON.stringify(updated)).catch(() => {});
   };
 
+  const healthy = integrations?.stats?.healthy ?? 0;
+  const degraded = integrations?.stats?.degraded ?? 0;
+  const down = integrations?.stats?.down ?? 0;
+  const total = integrations?.stats?.total ?? 0;
+
+  const overallStatus = down > 0 ? 'down' : degraded > 0 ? 'degraded' : 'healthy';
+  const statusConfig = {
+    healthy: { color: C.positive, label: 'Operacional', icon: 'checkmark-circle' },
+    degraded: { color: C.warning, label: 'Degradado', icon: 'warning' },
+    down: { color: C.negative, label: 'Indisponivel', icon: 'alert-circle' },
+  };
+  const currentStatus = statusConfig[overallStatus];
+
   return (
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 40 }}
     >
-      {/* Open Finance Status */}
+      {/* Integration Status */}
       <View style={styles.statusCard}>
         <View style={styles.statusHeader}>
-          <View style={[styles.statusIcon, { backgroundColor: C.positive + '18' }]}>
-            <Ionicons name="link" size={22} color={C.positive} />
+          <View style={[styles.statusIcon, { backgroundColor: currentStatus.color + '18' }]}>
+            <Ionicons name="cloud" size={22} color={currentStatus.color} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.statusTitle}>Open Finance (Pluggy)</Text>
-            <Text style={styles.statusSubtitle}>Integracao ativa</Text>
+            <Text style={styles.statusTitle}>Integracoes</Text>
+            <Text style={styles.statusSubtitle}>{total} integracoes configuradas</Text>
           </View>
-          <View style={[styles.statusPill, { backgroundColor: C.positive + '20' }]}>
-            <View style={[styles.dot, { backgroundColor: C.positive }]} />
-            <Text style={[styles.statusPillText, { color: C.positive }]}>Operacional</Text>
-          </View>
+          {isLoading ? (
+            <ActivityIndicator size="small" color={C.accent} />
+          ) : (
+            <View style={[styles.statusPill, { backgroundColor: currentStatus.color + '20' }]}>
+              <View style={[styles.dot, { backgroundColor: currentStatus.color }]} />
+              <Text style={[styles.statusPillText, { color: currentStatus.color }]}>{currentStatus.label}</Text>
+            </View>
+          )}
         </View>
-        <View style={styles.metricsRow}>
-          <View style={styles.metric}>
-            <Text style={styles.metricValue}>{openFinanceCount}</Text>
-            <Text style={styles.metricLabel}>Conectados</Text>
+        {!isLoading && !error && (
+          <View style={styles.metricsRow}>
+            <View style={styles.metric}>
+              <Text style={[styles.metricValue, { color: C.positive }]}>{healthy}</Text>
+              <Text style={styles.metricLabel}>Saudaveis</Text>
+            </View>
+            <View style={styles.metricDivider} />
+            <View style={styles.metric}>
+              <Text style={[styles.metricValue, { color: C.warning }]}>{degraded}</Text>
+              <Text style={styles.metricLabel}>Degradados</Text>
+            </View>
+            <View style={styles.metricDivider} />
+            <View style={styles.metric}>
+              <Text style={[styles.metricValue, { color: C.negative }]}>{down}</Text>
+              <Text style={styles.metricLabel}>Indisponiveis</Text>
+            </View>
           </View>
-          <View style={styles.metricDivider} />
-          <View style={styles.metric}>
-            <Text style={styles.metricValue}>{totalUsers - openFinanceCount}</Text>
-            <Text style={styles.metricLabel}>Pendentes</Text>
-          </View>
-          <View style={styles.metricDivider} />
-          <View style={styles.metric}>
-            <Text style={[styles.metricValue, { color: C.negative }]}>1</Text>
-            <Text style={styles.metricLabel}>Erros</Text>
-          </View>
-        </View>
+        )}
+        {error && (
+          <Text style={styles.errorText}>{error}</Text>
+        )}
       </View>
 
-      {/* B3 Status */}
-      <View style={styles.statusCard}>
-        <View style={styles.statusHeader}>
-          <View style={[styles.statusIcon, { backgroundColor: C.warning + '18' }]}>
-            <Ionicons name="trending-up" size={22} color={C.warning} />
+      {/* Integration List */}
+      {(integrations?.integrations?.length ?? 0) > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>Detalhes</Text>
+          <View style={styles.checklistCard}>
+            {integrations!.integrations.map((integ, idx) => {
+              const intColor = integ.status === 'healthy' ? C.positive
+                : integ.status === 'degraded' ? C.warning : C.negative;
+              return (
+                <View
+                  key={integ.id ?? idx}
+                  style={[styles.integItem, idx < integrations!.integrations.length - 1 && styles.checkItemBorder]}
+                >
+                  <View style={[styles.dot, { backgroundColor: intColor }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.integName}>{integ.name}</Text>
+                    <Text style={styles.integType}>{integ.type}</Text>
+                  </View>
+                  <Text style={[styles.integStatus, { color: intColor }]}>
+                    {integ.status === 'healthy' ? 'OK' : integ.status === 'degraded' ? 'Lento' : 'Fora'}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.statusTitle}>B3</Text>
-            <Text style={styles.statusSubtitle}>Integracao em andamento</Text>
-          </View>
-          <View style={[styles.statusPill, { backgroundColor: C.warning + '20' }]}>
-            <View style={[styles.dot, { backgroundColor: C.warning }]} />
-            <Text style={[styles.statusPillText, { color: C.warning }]}>Aguardando acesso</Text>
-          </View>
-        </View>
-        <View style={styles.metricsRow}>
-          <View style={styles.metric}>
-            <Text style={styles.metricValue}>{b3Count}</Text>
-            <Text style={styles.metricLabel}>Conectados</Text>
-          </View>
-          <View style={styles.metricDivider} />
-          <View style={styles.metric}>
-            <Text style={styles.metricValue}>{completedCount}/{checklist.length}</Text>
-            <Text style={styles.metricLabel}>Checklist</Text>
-          </View>
-        </View>
-      </View>
+        </>
+      )}
 
       {/* B3 Checklist */}
       <Text style={styles.sectionTitle}>Checklist B3 Producao</Text>
@@ -138,11 +160,11 @@ export default function AdminConnections() {
             </View>
             <Text style={[styles.checkLabel, item.completed && styles.checkLabelDone]}>{item.label}</Text>
             {item.completed ? (
-              <Text style={styles.checkEmoji}>{'✅'}</Text>
+              <Ionicons name="checkmark-circle" size={16} color={C.positive} />
             ) : item.id === 'sandbox' ? (
-              <Text style={styles.checkEmoji}>{'⏳'}</Text>
+              <Ionicons name="time" size={16} color={C.warning} />
             ) : (
-              <Text style={styles.checkEmoji}>{'❌'}</Text>
+              <Ionicons name="close-circle" size={16} color={C.negative} />
             )}
           </TouchableOpacity>
         ))}
@@ -196,6 +218,7 @@ const styles = StyleSheet.create({
   metricValue: { fontSize: 20, fontWeight: '800', color: C.text },
   metricLabel: { fontSize: 10, color: C.textMuted, marginTop: 2 },
   metricDivider: { width: StyleSheet.hairlineWidth, backgroundColor: C.border, marginVertical: 4 },
+  errorText: { fontSize: 12, color: '#FF6B6B', textAlign: 'center', marginTop: 8 },
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
@@ -209,7 +232,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
     padding: 14,
+    marginBottom: 12,
   },
+  integItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 11,
+    gap: 10,
+  },
+  integName: { fontSize: 13, fontWeight: '600', color: C.text },
+  integType: { fontSize: 10, color: C.textMuted, marginTop: 1 },
+  integStatus: { fontSize: 11, fontWeight: '700' },
   progressBarBg: {
     height: 5,
     backgroundColor: C.border,
@@ -241,5 +274,4 @@ const styles = StyleSheet.create({
   checkboxChecked: { backgroundColor: C.accent, borderColor: C.accent },
   checkLabel: { flex: 1, fontSize: 13, color: C.text },
   checkLabelDone: { color: C.textMuted, textDecorationLine: 'line-through' },
-  checkEmoji: { fontSize: 14 },
 });

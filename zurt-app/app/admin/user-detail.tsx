@@ -12,12 +12,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { ADMIN_PLAN_CONFIG, type AdminPlan } from './data/types';
-import type { AdminUser } from './data/types';
+import { ADMIN_PLAN_CONFIG, ADMIN_ROLE_CONFIG } from './data/types';
+import type { AdminUser, AdminRole, BackendPlan } from './data/types';
 import {
   fetchAdminUserById,
-  updateAdminUser,
-  impersonateUser,
+  updateUserRole,
+  updateUserStatus,
+  updateUserPlan,
+  deleteAdminUser,
+  fetchPlans,
+  fetchUserFinance,
 } from './services/adminService';
 import { useImpersonateStore } from '../../src/stores/impersonateStore';
 
@@ -35,13 +39,7 @@ const C = {
   info: '#3A86FF',
 };
 
-const roleBadgeColor: Record<string, string> = {
-  admin: C.accent,
-  tester: C.info,
-  user: C.textMuted,
-};
-
-const planOptions: AdminPlan[] = ['free', 'basic', 'pro', 'unlimited', 'enterprise'];
+const roleOptions: AdminRole[] = ['customer', 'consultant', 'admin'];
 
 // ---------------------------------------------------------------------------
 // Data row
@@ -68,19 +66,32 @@ export default function UserDetailScreen() {
 
   const [user, setUser] = useState<AdminUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [role, setRole] = useState<AdminUser['role']>('user');
-  const [plan, setPlan] = useState<AdminPlan>('free');
+  const [error, setError] = useState<string | null>(null);
+  const [role, setRole] = useState<AdminRole>('customer');
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [status, setStatus] = useState<AdminUser['status']>('active');
+  const [plans, setPlans] = useState<BackendPlan[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setIsLoading(true);
-    fetchAdminUserById(id).then((u) => {
+    setError(null);
+    Promise.all([
+      fetchAdminUserById(id),
+      fetchPlans().catch(() => []),
+    ]).then(([u, plansData]) => {
       setUser(u);
+      setPlans(plansData);
       if (u) {
         setRole(u.role);
-        setPlan(u.plan);
         setStatus(u.status);
+        const currentPlanCode = u.subscription?.plan?.code ?? u.plan;
+        const matchedPlan = plansData.find((p) => p.code === currentPlanCode);
+        if (matchedPlan) setSelectedPlanId(matchedPlan.id);
       }
+    }).catch((err: any) => {
+      setError(err?.message ?? 'Erro ao carregar usuario');
+    }).finally(() => {
       setIsLoading(false);
     });
   }, [id]);
@@ -102,7 +113,7 @@ export default function UserDetailScreen() {
     );
   }
 
-  if (!user) {
+  if (error || !user) {
     return (
       <View style={[styles.screen, { paddingTop: insets.top }]}>
         <View style={styles.header}>
@@ -113,7 +124,11 @@ export default function UserDetailScreen() {
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>Usuario nao encontrado</Text>
+          <Ionicons name="alert-circle-outline" size={40} color={C.negative} />
+          <Text style={styles.emptyText}>{error ?? 'Usuario nao encontrado'}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => router.back()}>
+            <Text style={styles.retryText}>Voltar</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -128,16 +143,19 @@ export default function UserDetailScreen() {
     return `${v < 0 ? '-' : ''}R$ ${formatted}`;
   };
 
-  const planConfig = ADMIN_PLAN_CONFIG[plan] ?? ADMIN_PLAN_CONFIG.free;
+  const currentPlanCode = user.subscription?.plan?.code ?? user.plan ?? 'free';
+  const planConfig = ADMIN_PLAN_CONFIG[currentPlanCode as keyof typeof ADMIN_PLAN_CONFIG] ?? ADMIN_PLAN_CONFIG.free;
+  const roleConfig = ADMIN_ROLE_CONFIG[role] ?? ADMIN_ROLE_CONFIG.customer;
+  const patrimony = user.financialSummary?.netWorth ?? user.patrimony ?? 0;
 
-  const handleSuspendToggle = () => {
+  const handleBlockToggle = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (status === 'suspended') {
+    if (status === 'blocked') {
       setStatus('active');
     } else {
-      Alert.alert('Suspender usuario', `Tem certeza que deseja suspender ${user.name}?`, [
+      Alert.alert('Bloquear usuario', `Tem certeza que deseja bloquear ${user.name}?`, [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Suspender', style: 'destructive', onPress: () => setStatus('suspended') },
+        { text: 'Bloquear', style: 'destructive', onPress: () => setStatus('blocked') },
       ]);
     }
   };
@@ -152,8 +170,14 @@ export default function UserDetailScreen() {
         {
           text: 'Remover',
           style: 'destructive',
-          onPress: () => {
-            router.back();
+          onPress: async () => {
+            try {
+              await deleteAdminUser(user.id);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              router.back();
+            } catch (err: any) {
+              Alert.alert('Erro', err?.message ?? 'Falha ao remover usuario');
+            }
           },
         },
       ]
@@ -162,27 +186,56 @@ export default function UserDetailScreen() {
 
   const handleSaveChanges = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const result = await updateAdminUser(user.id, { role, plan, status });
-    if (result) {
-      setUser(result);
+    setIsSaving(true);
+    try {
+      const promises: Promise<any>[] = [];
+
+      if (role !== user.role) {
+        promises.push(updateUserRole(user.id, role));
+      }
+      if (status !== user.status) {
+        promises.push(updateUserStatus(user.id, status));
+      }
+      if (selectedPlanId) {
+        const currentPlan = plans.find((p) => p.code === (user.subscription?.plan?.code ?? user.plan));
+        if (!currentPlan || currentPlan.id !== selectedPlanId) {
+          promises.push(updateUserPlan(user.id, selectedPlanId));
+        }
+      }
+
+      if (promises.length === 0) {
+        Alert.alert('Info', 'Nenhuma alteracao para salvar');
+        setIsSaving(false);
+        return;
+      }
+
+      await Promise.all(promises);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Salvo', 'Alteracoes salvas com sucesso');
-    } else {
-      Alert.alert('Aviso', 'Backend nao disponivel. Alteracoes nao foram persistidas.');
+
+      // Refresh user data
+      const updated = await fetchAdminUserById(user.id);
+      if (updated) setUser(updated);
+    } catch (err: any) {
+      Alert.alert('Erro', err?.message ?? 'Falha ao salvar alteracoes');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleImpersonate = async () => {
+  const handleViewAsUser = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const result = await impersonateUser(user.id);
-    await startImpersonation(
-      { id: user.id, name: user.name, email: user.email },
-      result?.token ?? null,
-    );
-    router.replace('/(tabs)');
+    try {
+      const financeData = await fetchUserFinance(user.id);
+      await startImpersonation(
+        { id: user.id, name: user.name, email: user.email },
+        null,
+      );
+      router.replace('/(tabs)');
+    } catch (err: any) {
+      Alert.alert('Erro', err?.message ?? 'Falha ao carregar dados do usuario');
+    }
   };
-
-  const roleOptions: AdminUser['role'][] = ['admin', 'tester', 'user'];
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -203,21 +256,21 @@ export default function UserDetailScreen() {
         <View style={styles.profileHeader}>
           <View style={styles.profileAvatar}>
             <Text style={styles.profileAvatarText}>
-              {user.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+              {user.name ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2) : '?'}
             </Text>
           </View>
-          <Text style={styles.profileName}>{user.name}</Text>
+          <Text style={styles.profileName}>{user.name || user.email}</Text>
           <Text style={styles.profileEmail}>{user.email}</Text>
           <View style={styles.profileBadges}>
-            <View style={[styles.profileBadge, { backgroundColor: (roleBadgeColor[role] || C.textMuted) + '20' }]}>
-              <Text style={[styles.profileBadgeText, { color: roleBadgeColor[role] || C.textMuted }]}>
-                {role.toUpperCase()}
+            <View style={[styles.profileBadge, { backgroundColor: roleConfig.color + '20' }]}>
+              <Text style={[styles.profileBadgeText, { color: roleConfig.color }]}>
+                {roleConfig.label.toUpperCase()}
               </Text>
             </View>
             <View style={[styles.profileBadge, { backgroundColor: (status === 'active' ? C.positive : C.negative) + '20' }]}>
               <View style={[styles.statusDot, { backgroundColor: status === 'active' ? C.positive : C.negative }]} />
               <Text style={[styles.profileBadgeText, { color: status === 'active' ? C.positive : C.negative }]}>
-                {status === 'active' ? 'Ativo' : status === 'inactive' ? 'Inativo' : 'Suspenso'}
+                {status === 'active' ? 'Ativo' : 'Bloqueado'}
               </Text>
             </View>
             <View style={[styles.profileBadge, { backgroundColor: planConfig.color + '20' }]}>
@@ -228,8 +281,8 @@ export default function UserDetailScreen() {
           </View>
         </View>
 
-        {/* Impersonate button */}
-        <TouchableOpacity style={styles.impersonateBtn} onPress={handleImpersonate}>
+        {/* View as user button */}
+        <TouchableOpacity style={styles.impersonateBtn} onPress={handleViewAsUser}>
           <Ionicons name="eye-outline" size={18} color="#0A0E14" />
           <Text style={styles.impersonateBtnText}>Ver como este usuario</Text>
         </TouchableOpacity>
@@ -239,13 +292,21 @@ export default function UserDetailScreen() {
         <View style={styles.dataCard}>
           <DataRow
             label="Patrimonio"
-            value={formatPatrimony(user.patrimony)}
-            valueColor={user.patrimony >= 0 ? C.positive : C.negative}
+            value={formatPatrimony(patrimony)}
+            valueColor={patrimony >= 0 ? C.positive : C.negative}
           />
+          {user.financialSummary && (
+            <>
+              <DataRow label="Investimentos" value={formatPatrimony(user.financialSummary.investments)} />
+              <DataRow label="Dividas" value={formatPatrimony(user.financialSummary.debt)} valueColor={C.negative} />
+            </>
+          )}
           <DataRow label="Total de logins" value={String(user.totalLogins)} />
-          <DataRow label="Ultimo acesso" value={user.lastLogin} />
-          <DataRow label="Data de cadastro" value={user.createdAt} />
-          <DataRow label="Dispositivos" value={user.devices.join(', ') || '-'} />
+          <DataRow label="Ultimo acesso" value={user.lastLogin || '-'} />
+          <DataRow label="Data de cadastro" value={user.createdAt || '-'} />
+          {user.stats && (
+            <DataRow label="Conexoes" value={String(user.stats.connections)} />
+          )}
           <DataRow label="Telefone" value={user.phone || '-'} />
         </View>
 
@@ -285,73 +346,79 @@ export default function UserDetailScreen() {
         <View style={styles.actionCard}>
           <Text style={styles.actionLabel}>Perfil</Text>
           <View style={styles.roleSelector}>
-            {roleOptions.map((r) => (
-              <TouchableOpacity
-                key={r}
-                style={[styles.roleOption, role === r && styles.roleOptionActive]}
-                onPress={() => { setRole(r); Haptics.selectionAsync(); }}
-              >
-                <Text style={[styles.roleOptionText, role === r && styles.roleOptionTextActive]}>
-                  {r.charAt(0).toUpperCase() + r.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {roleOptions.map((r) => {
+              const cfg = ADMIN_ROLE_CONFIG[r];
+              return (
+                <TouchableOpacity
+                  key={r}
+                  style={[styles.roleOption, role === r && { backgroundColor: cfg.color + '20', borderColor: cfg.color + '50' }]}
+                  onPress={() => { setRole(r); Haptics.selectionAsync(); }}
+                >
+                  <Text style={[styles.roleOptionText, role === r && { color: cfg.color }]}>
+                    {cfg.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
         {/* Plan selector */}
-        <View style={styles.actionCard}>
-          <Text style={styles.actionLabel}>Plano</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.roleSelector}>
-              {planOptions.map((p) => {
-                const cfg = ADMIN_PLAN_CONFIG[p];
-                return (
-                  <TouchableOpacity
-                    key={p}
-                    style={[
-                      styles.planOption,
-                      plan === p && { backgroundColor: cfg.color + '20', borderColor: cfg.color + '50' },
-                    ]}
-                    onPress={() => { setPlan(p); Haptics.selectionAsync(); }}
-                  >
-                    <Text style={[styles.roleOptionText, plan === p && { color: cfg.color }]}>
-                      {cfg.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </ScrollView>
-        </View>
+        {plans.length > 0 && (
+          <View style={styles.actionCard}>
+            <Text style={styles.actionLabel}>Plano</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.roleSelector}>
+                {plans.filter((p) => p.isActive).map((p) => {
+                  const planCfg = ADMIN_PLAN_CONFIG[p.code as keyof typeof ADMIN_PLAN_CONFIG] ?? { color: C.textMuted, label: p.name };
+                  const isSelected = selectedPlanId === p.id;
+                  return (
+                    <TouchableOpacity
+                      key={p.id}
+                      style={[
+                        styles.planOption,
+                        isSelected && { backgroundColor: planCfg.color + '20', borderColor: planCfg.color + '50' },
+                      ]}
+                      onPress={() => { setSelectedPlanId(p.id); Haptics.selectionAsync(); }}
+                    >
+                      <Text style={[styles.roleOptionText, isSelected && { color: planCfg.color }]}>
+                        {p.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+        )}
 
         {/* Save changes */}
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSaveChanges}>
-          <Ionicons name="checkmark-circle-outline" size={18} color="#000" />
-          <Text style={styles.saveBtnText}>Salvar alteracoes</Text>
+        <TouchableOpacity
+          style={[styles.saveBtn, isSaving && { opacity: 0.6 }]}
+          onPress={handleSaveChanges}
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <ActivityIndicator size="small" color="#000" />
+          ) : (
+            <Ionicons name="checkmark-circle-outline" size={18} color="#000" />
+          )}
+          <Text style={styles.saveBtnText}>{isSaving ? 'Salvando...' : 'Salvar alteracoes'}</Text>
         </TouchableOpacity>
 
         {/* Action buttons */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.secondaryBtn} onPress={() => Haptics.selectionAsync()}>
-            <Ionicons name="key-outline" size={16} color={C.info} />
-            <Text style={[styles.secondaryBtnText, { color: C.info }]}>Resetar senha</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryBtn} onPress={() => Haptics.selectionAsync()}>
-            <Ionicons name="notifications-outline" size={16} color={C.accent} />
-            <Text style={[styles.secondaryBtnText, { color: C.accent }]}>Enviar push</Text>
-          </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.secondaryBtn, { borderColor: status === 'suspended' ? C.positive + '40' : C.warning + '40' }]}
-            onPress={handleSuspendToggle}
+            style={[styles.secondaryBtn, { borderColor: status === 'blocked' ? C.positive + '40' : C.warning + '40' }]}
+            onPress={handleBlockToggle}
           >
             <Ionicons
-              name={status === 'suspended' ? 'checkmark-circle-outline' : 'ban-outline'}
+              name={status === 'blocked' ? 'checkmark-circle-outline' : 'ban-outline'}
               size={16}
-              color={status === 'suspended' ? C.positive : C.warning}
+              color={status === 'blocked' ? C.positive : C.warning}
             />
-            <Text style={[styles.secondaryBtnText, { color: status === 'suspended' ? C.positive : C.warning }]}>
-              {status === 'suspended' ? 'Reativar' : 'Suspender'}
+            <Text style={[styles.secondaryBtnText, { color: status === 'blocked' ? C.positive : C.warning }]}>
+              {status === 'blocked' ? 'Desbloquear' : 'Bloquear'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -409,11 +476,20 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 12,
   },
   emptyText: {
     fontSize: 14,
     color: C.textMuted,
   },
+  retryBtn: {
+    marginTop: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#00D4AA20',
+  },
+  retryText: { fontSize: 14, fontWeight: '600', color: '#00D4AA' },
 
   // Profile header
   profileHeader: {
@@ -597,17 +673,10 @@ const styles = StyleSheet.create({
     borderColor: C.border,
     alignItems: 'center',
   },
-  roleOptionActive: {
-    backgroundColor: C.accent + '20',
-    borderColor: C.accent + '50',
-  },
   roleOptionText: {
     fontSize: 12,
     fontWeight: '600',
     color: C.textMuted,
-  },
-  roleOptionTextActive: {
-    color: C.accent,
   },
 
   // Save
