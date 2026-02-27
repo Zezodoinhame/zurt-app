@@ -273,6 +273,11 @@ export const translations: Record<Language, Record<string, string>> = {
     'common.featureInDevelopment': 'Funcionalidade em desenvolvimento',
     'common.you': 'Você',
 
+    // Export
+    'export.proRequired': 'Recurso Pro+',
+    'export.upgradeMessage': 'A exportação de dados está disponível a partir do plano Pro. Deseja conhecer os planos?',
+    'export.seePlans': 'Ver planos',
+
     // Languages
     'lang.pt': 'Português',
     'lang.en': 'English',
@@ -707,6 +712,11 @@ export const translations: Record<Language, Record<string, string>> = {
     'push.insight': 'Insights',
     'push.system': 'Sistema',
     'push.permissionDenied': 'Notificações bloqueadas nas configurações do dispositivo. Ative nas Configurações > ZURT.',
+    'push.localSection': 'Lembretes locais',
+    'push.syncReminder': 'Lembrete de sincronização',
+    'push.weeklySummary': 'Resumo semanal',
+    'push.dueDates': 'Vencimento de faturas',
+    'push.marketAlerts': 'Alertas de mercado',
 
     // Goals
     'goals.title': 'Metas financeiras',
@@ -1942,6 +1952,11 @@ export const translations: Record<Language, Record<string, string>> = {
     'common.featureInDevelopment': 'Feature under development',
     'common.you': 'You',
 
+    // Export
+    'export.proRequired': 'Pro+ Feature',
+    'export.upgradeMessage': 'Data export is available from the Pro plan. Would you like to see the plans?',
+    'export.seePlans': 'See plans',
+
     // Languages
     'lang.pt': 'Português',
     'lang.en': 'English',
@@ -2377,6 +2392,11 @@ export const translations: Record<Language, Record<string, string>> = {
     'push.insight': 'Insights',
     'push.system': 'System',
     'push.permissionDenied': 'Notifications are blocked in device settings. Enable them in Settings > ZURT.',
+    'push.localSection': 'Local reminders',
+    'push.syncReminder': 'Sync reminder',
+    'push.weeklySummary': 'Weekly summary',
+    'push.dueDates': 'Invoice due dates',
+    'push.marketAlerts': 'Market alerts',
 
     // Goals
     'goals.title': 'Financial goals',
@@ -3612,6 +3632,11 @@ export const translations: Record<Language, Record<string, string>> = {
     'common.featureInDevelopment': '功能开发中',
     'common.you': '您',
 
+    // Export
+    'export.proRequired': 'Pro+功能',
+    'export.upgradeMessage': '数据导出从Pro计划开始可用。您想查看计划吗？',
+    'export.seePlans': '查看计划',
+
     // Languages
     'lang.pt': 'Português',
     'lang.en': 'English',
@@ -4047,6 +4072,11 @@ export const translations: Record<Language, Record<string, string>> = {
     'push.insight': '洞察',
     'push.system': '系统',
     'push.permissionDenied': '通知已在设备设置中被阻止。请在设置 > ZURT中启用。',
+    'push.localSection': '本地提醒',
+    'push.syncReminder': '同步提醒',
+    'push.weeklySummary': '每周总结',
+    'push.dueDates': '账单到期日',
+    'push.marketAlerts': '市场警报',
 
     // Goals
     'goals.title': '财务目标',
@@ -5282,6 +5312,11 @@ export const translations: Record<Language, Record<string, string>> = {
     'common.featureInDevelopment': 'ميزة قيد التطوير',
     'common.you': 'أنت',
 
+    // Export
+    'export.proRequired': 'ميزة Pro+',
+    'export.upgradeMessage': 'تصدير البيانات متاح من خطة Pro. هل تريد رؤية الخطط؟',
+    'export.seePlans': 'عرض الخطط',
+
     // Languages
     'lang.pt': 'Português',
     'lang.en': 'English',
@@ -5717,6 +5752,11 @@ export const translations: Record<Language, Record<string, string>> = {
     'push.insight': 'الرؤى',
     'push.system': 'النظام',
     'push.permissionDenied': 'الإشعارات محظورة في إعدادات الجهاز. قم بتفعيلها في الإعدادات > ZURT.',
+    'push.localSection': 'تذكيرات محلية',
+    'push.syncReminder': 'تذكير المزامنة',
+    'push.weeklySummary': 'ملخص أسبوعي',
+    'push.dueDates': 'مواعيد استحقاق الفواتير',
+    'push.marketAlerts': 'تنبيهات السوق',
 
     // Goals
     'goals.title': 'الأهداف المالية',

@@ -16,6 +16,7 @@ import { usePlanStore } from '../src/stores/planStore';
 import { ONBOARDING_KEY } from './onboarding';
 import { logger } from '../src/utils/logger';
 import { initAnalytics, startSession, stopAnalytics } from '../src/services/analytics';
+import { notificationService } from '../src/services/notificationService';
 import { useAppLock } from '../src/hooks/useAppLock';
 import { RateLimitToast } from '../src/components/ui/RateLimitToast';
 import { OfflineBanner } from '../src/components/ui/OfflineBanner';
@@ -90,6 +91,12 @@ export default function RootLayout() {
           logger.log('[ZURT App] Push init error:', err?.message ?? err);
         });
       }
+      // Schedule local recurring notifications
+      notificationService.requestPermissions().then((granted) => {
+        if (granted) {
+          notificationService.rescheduleAll();
+        }
+      });
     }
   }, [ready, isAuthenticated, isDemoMode]);
 
@@ -112,6 +119,14 @@ export default function RootLayout() {
         router.push('/(tabs)/agent');
       } else if (type === 'distribution' || type === 'maturity' || type === 'invoice' || type === 'system') {
         router.push('/(tabs)/alerts');
+      } else if (type === 'market_alert' && data.ticker) {
+        router.push(`/market/${data.ticker}`);
+      } else if (type === 'card_due') {
+        router.push('/(tabs)/cards');
+      } else if (type === 'sync_reminder') {
+        router.push('/(tabs)');
+      } else if (type === 'weekly_summary') {
+        router.push('/(tabs)/wallet');
       }
     });
 

@@ -40,6 +40,7 @@ import { AppIcon, type AppIconName } from '../../src/hooks/useIcon';
 import { BankLogo } from '../../src/components/icons/BankLogo';
 import * as ImagePicker from 'expo-image-picker';
 import { getAnalyticsOptOut, setAnalyticsOptOut } from '../../src/services/analytics';
+import { notificationService, type LocalNotifPreferences } from '../../src/services/notificationService';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -600,10 +601,17 @@ export default function ProfileScreen() {
   const planUsage = usePlanStore((s) => s.usage);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [analyticsOptOut, setAnalyticsOptOutState] = useState(false);
+  const [localNotifPrefs, setLocalNotifPrefs] = useState<LocalNotifPreferences>({
+    syncReminder: true,
+    weeklySummary: true,
+    dueDates: true,
+    marketAlerts: true,
+  });
 
-  // Load analytics opt-out and PIN status
+  // Load analytics opt-out, PIN status, and local notification prefs
   React.useEffect(() => {
     getAnalyticsOptOut().then(setAnalyticsOptOutState);
+    notificationService.loadPreferences().then(setLocalNotifPrefs);
   }, []);
 
   const {
@@ -724,6 +732,18 @@ export default function ProfileScreen() {
       setTypePreference(type, value);
     },
     [setTypePreference]
+  );
+
+  const toggleLocalNotif = useCallback(
+    async (key: keyof LocalNotifPreferences, value: boolean) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const updated = { ...localNotifPrefs, [key]: value };
+      setLocalNotifPrefs(updated);
+      await notificationService.savePreferences(updated);
+      // Re-schedule recurring notifications with updated prefs
+      notificationService.rescheduleAll();
+    },
+    [localNotifPrefs]
   );
 
   const toggleHideValues = useCallback(
@@ -1033,6 +1053,30 @@ export default function ProfileScreen() {
               />
             </>
           )}
+
+          {/* Local notification toggles */}
+          <Text style={styles.subSectionLabel}>{t('push.localSection')}</Text>
+          <SettingRow
+            iconName="sync"
+            label={t('push.syncReminder')}
+            rightElement={<Toggle value={localNotifPrefs.syncReminder} onValueChange={(v) => toggleLocalNotif('syncReminder', v)} accessibilityLabel={t('push.syncReminder')} />}
+          />
+          <SettingRow
+            iconName="chart"
+            label={t('push.weeklySummary')}
+            rightElement={<Toggle value={localNotifPrefs.weeklySummary} onValueChange={(v) => toggleLocalNotif('weeklySummary', v)} accessibilityLabel={t('push.weeklySummary')} />}
+          />
+          <SettingRow
+            iconName="card"
+            label={t('push.dueDates')}
+            rightElement={<Toggle value={localNotifPrefs.dueDates} onValueChange={(v) => toggleLocalNotif('dueDates', v)} accessibilityLabel={t('push.dueDates')} />}
+          />
+          <SettingRow
+            iconName="trending"
+            label={t('push.marketAlerts')}
+            rightElement={<Toggle value={localNotifPrefs.marketAlerts} onValueChange={(v) => toggleLocalNotif('marketAlerts', v)} accessibilityLabel={t('push.marketAlerts')} />}
+          />
+
           <SettingRow
             iconName="eye"
             label={t('profile.hideValuesOnOpen')}
@@ -1477,6 +1521,14 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.text.primary,
+  },
+  subSectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text.secondary,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
   },
   section: {
     backgroundColor: colors.card,

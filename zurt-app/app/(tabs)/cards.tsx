@@ -9,6 +9,7 @@ import {
   LayoutAnimation,
   UIManager,
   Platform,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +24,9 @@ import { formatCurrency, maskValue } from '../../src/utils/formatters';
 import { AppIcon } from '../../src/hooks/useIcon';
 import { SkeletonCard, SkeletonList } from '../../src/components/skeletons/Skeleton';
 import { ErrorState } from '../../src/components/shared/ErrorState';
+import { usePlanStore } from '../../src/stores/planStore';
+import { exportService, type CardExpenseRow } from '../../src/services/exportService';
+import { useRouter } from 'expo-router';
 
 // Enable LayoutAnimation on Android
 if (
@@ -170,6 +174,9 @@ export default function CardsScreen() {
     refresh,
   } = useCardsStore();
 
+  const checkLimit = usePlanStore((s) => s.checkLimit);
+  const { t } = useSettingsStore();
+  const router = useRouter();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [expandedCard, setExpandedCard] = useState<number | null>(null);
 
@@ -190,6 +197,32 @@ export default function CardsScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     refresh();
   }, [refresh]);
+
+  const handleExportCSV = useCallback(async () => {
+    if (!checkLimit('exportData')) {
+      Alert.alert(
+        t('export.proRequired'),
+        t('export.upgradeMessage'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('export.seePlans'), onPress: () => router.push('/plans') },
+        ],
+      );
+      return;
+    }
+    try {
+      const rows: CardExpenseRow[] = dashboardTransactions.map((tx) => ({
+        date: tx.date,
+        description: tx.description || tx.merchant || '',
+        category: tx.category || '',
+        amount: Math.abs(tx.amount),
+        card: tx.account_name || tx.institution_name || '',
+      }));
+      await exportService.exportCardExpensesCSV(rows);
+    } catch (err: any) {
+      Alert.alert(t('common.error'), err?.message ?? 'Export failed');
+    }
+  }, [dashboardTransactions, checkLimit, t, router]);
 
   // ---- Derived data -------------------------------------------------------
   const displayCards: CardDisplay[] = useMemo(() => {
@@ -400,9 +433,15 @@ export default function CardsScreen() {
             <View style={styles.catSection}>
               <View style={styles.secHeader}>
                 <Text style={styles.secTitle}>Gastos por categoria</Text>
-                <TouchableOpacity>
-                  <Text style={styles.secAction}>Este mês ›</Text>
-                </TouchableOpacity>
+                <View style={styles.secHeaderRight}>
+                  <TouchableOpacity style={styles.csvBtn} onPress={handleExportCSV} activeOpacity={0.7}>
+                    <AppIcon name="share" size={14} color={colors.accent} />
+                    <Text style={styles.csvBtnText}>CSV</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity>
+                    <Text style={styles.secAction}>Este mês ›</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {displayCategories.map((cat, i) => (
@@ -640,6 +679,27 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 15,
       fontWeight: '700',
       color: colors.text.primary,
+    },
+    secHeaderRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    csvBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.accent + '40',
+      backgroundColor: colors.accent + '10',
+    },
+    csvBtnText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: colors.accent,
     },
     secAction: {
       fontSize: 12,

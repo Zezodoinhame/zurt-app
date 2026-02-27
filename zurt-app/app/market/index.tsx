@@ -65,8 +65,12 @@ export default function MarketScreen() {
     btcBrl,
     currentSelic,
     currentInflation,
+    userWatchlist,
+    watchlistQuotes,
     loadAllStocks,
     loadMarketOverview,
+    loadUserWatchlist,
+    removeFromWatchlist,
     searchAssets,
     clearSearch,
   } = useMarketStore();
@@ -81,6 +85,7 @@ export default function MarketScreen() {
   useEffect(() => {
     loadAllStocks(1, 'all');
     loadMarketOverview();
+    loadUserWatchlist();
   }, []);
 
   // Debounced search
@@ -116,9 +121,10 @@ export default function MarketScreen() {
     await Promise.allSettled([
       loadAllStocks(1, activeFilter),
       loadMarketOverview(),
+      loadUserWatchlist(),
     ]);
     setRefreshing(false);
-  }, [activeFilter, loadAllStocks, loadMarketOverview]);
+  }, [activeFilter, loadAllStocks, loadMarketOverview, loadUserWatchlist]);
 
   // ---------------------------------------------------------------------------
   // Render helpers
@@ -345,10 +351,103 @@ export default function MarketScreen() {
     [ibovespa, usdBrl, eurBrl, btcBrl, currentSelic, colors, styles],
   );
 
+  const handleRemoveFromWatchlist = useCallback(
+    (ticker: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      removeFromWatchlist(ticker);
+    },
+    [removeFromWatchlist],
+  );
+
+  const renderWatchlistSection = useCallback(
+    () => {
+      if (userWatchlist.length === 0) {
+        return (
+          <View style={styles.watchlistSection}>
+            <View style={styles.watchlistHeader}>
+              <View style={styles.watchlistTitleRow}>
+                <AppIcon name="star-filled" size={16} color="#F59E0B" />
+                <Text style={styles.watchlistTitle}>Minha Watchlist</Text>
+              </View>
+            </View>
+            <View style={styles.watchlistEmpty}>
+              <AppIcon name="star-outline" size={28} color={colors.text.muted} />
+              <Text style={styles.watchlistEmptyText}>
+                Adicione ativos tocando na estrela
+              </Text>
+            </View>
+          </View>
+        );
+      }
+
+      return (
+        <View style={styles.watchlistSection}>
+          <View style={styles.watchlistHeader}>
+            <View style={styles.watchlistTitleRow}>
+              <AppIcon name="star-filled" size={16} color="#F59E0B" />
+              <Text style={styles.watchlistTitle}>Minha Watchlist</Text>
+            </View>
+            <Text style={styles.watchlistCount}>{userWatchlist.length} ativos</Text>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.watchlistScroll}
+          >
+            {watchlistQuotes.map((q) => {
+              const change = Number(q.regularMarketChangePercent || 0);
+              const changeColor = change >= 0 ? colors.positive : colors.negative;
+              const arrow = change > 0 ? '\u25B2' : change < 0 ? '\u25BC' : '';
+              return (
+                <TouchableOpacity
+                  key={q.symbol}
+                  style={styles.watchlistCard}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.push(`/market/${q.symbol}`);
+                  }}
+                  onLongPress={() => handleRemoveFromWatchlist(q.symbol)}
+                >
+                  <View style={styles.watchlistCardTop}>
+                    <Text style={styles.watchlistTicker}>{q.symbol}</Text>
+                    <TouchableOpacity
+                      onPress={() => handleRemoveFromWatchlist(q.symbol)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <AppIcon name="close" size={14} color={colors.text.muted} />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.watchlistPrice}>
+                    {formatBRL(Number(q.regularMarketPrice || 0))}
+                  </Text>
+                  <Text style={[styles.watchlistChange, { color: changeColor }]}>
+                    {arrow} {formatPct(change)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+            {/* Show placeholder for tickers still loading */}
+            {userWatchlist
+              .filter((t) => !watchlistQuotes.some((q) => q.symbol === t))
+              .map((t) => (
+                <View key={t} style={styles.watchlistCard}>
+                  <Text style={styles.watchlistTicker}>{t}</Text>
+                  <ActivityIndicator size="small" color={colors.accent} style={{ marginTop: 8 }} />
+                </View>
+              ))}
+          </ScrollView>
+        </View>
+      );
+    },
+    [userWatchlist, watchlistQuotes, colors, styles, router, handleRemoveFromWatchlist],
+  );
+
   const renderHeader = useCallback(
     () => (
       <View>
         {renderMacroIndicators()}
+        {renderWatchlistSection()}
 
         {/* Results count */}
         <View style={styles.resultsHeader}>
@@ -358,7 +457,7 @@ export default function MarketScreen() {
         </View>
       </View>
     ),
-    [allStocks.length, renderMacroIndicators, styles],
+    [allStocks.length, renderMacroIndicators, renderWatchlistSection, styles],
   );
 
   const renderFooter = useCallback(() => {
@@ -616,6 +715,79 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 11,
       fontWeight: '700',
       fontVariant: ['tabular-nums'],
+    },
+
+    // -- Watchlist section ----------------------------------------------------
+    watchlistSection: {
+      marginBottom: spacing.lg,
+    },
+    watchlistHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.xl,
+      marginBottom: spacing.sm,
+    },
+    watchlistTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    watchlistTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.text.primary,
+    },
+    watchlistCount: {
+      fontSize: 12,
+      color: colors.text.muted,
+    },
+    watchlistScroll: {
+      paddingHorizontal: spacing.xl,
+      gap: spacing.sm,
+    },
+    watchlistCard: {
+      backgroundColor: colors.card,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.md,
+      minWidth: 120,
+      width: 120,
+    },
+    watchlistCardTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: spacing.xs,
+    },
+    watchlistTicker: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.text.primary,
+    },
+    watchlistPrice: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.text.primary,
+      fontVariant: ['tabular-nums'],
+      marginTop: 2,
+    },
+    watchlistChange: {
+      fontSize: 12,
+      fontWeight: '700',
+      fontVariant: ['tabular-nums'],
+      marginTop: 2,
+    },
+    watchlistEmpty: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+      gap: spacing.sm,
+    },
+    watchlistEmptyText: {
+      fontSize: 13,
+      color: colors.text.muted,
+      textAlign: 'center',
     },
 
     // -- Results header -------------------------------------------------------

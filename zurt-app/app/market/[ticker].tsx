@@ -56,15 +56,15 @@ export default function TickerDetailScreen() {
   const colors = useSettingsStore((s) => s.colors);
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const { watchlist, addToWatchlist, removeFromWatchlist } = useMarketStore();
+  const addToWatchlist = useMarketStore((s) => s.addToWatchlist);
+  const removeFromWatchlist = useMarketStore((s) => s.removeFromWatchlist);
+  const isInWatchlist = useMarketStore((s) => s.userWatchlist.includes(ticker || ''));
 
   const [quote, setQuote] = useState<BrapiQuote | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedRange, setSelectedRange] = useState<RangeKey>('1mo');
   const [chartLoading, setChartLoading] = useState(false);
   const [showFullSummary, setShowFullSummary] = useState(false);
-
-  const isInWatchlist = watchlist.some((q) => q.symbol === ticker);
 
   // Load quote data
   const loadQuote = useCallback(
@@ -186,9 +186,9 @@ export default function TickerDetailScreen() {
         </View>
         <TouchableOpacity onPress={handleWatchlistToggle} style={styles.backBtn}>
           <AppIcon
-            name={isInWatchlist ? 'heart' : 'heart-outline'}
+            name={isInWatchlist ? 'star-filled' : 'star-outline'}
             size={22}
-            color={isInWatchlist ? colors.negative : colors.text.secondary}
+            color={isInWatchlist ? '#F59E0B' : colors.text.secondary}
           />
         </TouchableOpacity>
       </View>
@@ -465,16 +465,16 @@ export default function TickerDetailScreen() {
         {/* ================================================================ */}
         <View style={styles.actionsRow}>
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: colors.accent }]}
+            style={[styles.actionBtn, { backgroundColor: isInWatchlist ? '#F59E0B20' : colors.accent }]}
             onPress={handleWatchlistToggle}
             activeOpacity={0.8}
           >
             <AppIcon
-              name={isInWatchlist ? 'close' : 'add'}
+              name={isInWatchlist ? 'star-filled' : 'star-outline'}
               size={18}
-              color={colors.background}
+              color={isInWatchlist ? '#F59E0B' : colors.background}
             />
-            <Text style={[styles.actionBtnText, { color: colors.background }]}>
+            <Text style={[styles.actionBtnText, { color: isInWatchlist ? '#F59E0B' : colors.background }]}>
               {isInWatchlist ? 'Remover da Watchlist' : 'Adicionar à Watchlist'}
             </Text>
           </TouchableOpacity>

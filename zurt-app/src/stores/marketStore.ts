@@ -1,6 +1,10 @@
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { brapiService } from '../services/brapiService';
 import type { BrapiQuote, BrapiCrypto, BrapiCurrency, InflationEntry, PrimeRateEntry, StockListItem } from '../types/brapi';
+
+const WATCHLIST_KEY = '@zurt_watchlist';
+const DEFAULT_USER_WATCHLIST = ['PETR4', 'VALE3', 'ITUB4'];
 
 // ---------------------------------------------------------------------------
 // Curated ticker lists (BRAPI /api/quote/list endpoint no longer works on
@@ -60,7 +64,8 @@ type FilterKey = 'all' | 'stock' | 'fund' | 'bdr';
 
 interface MarketState {
   // Dados
-  watchlist: BrapiQuote[];
+  userWatchlist: string[];
+  watchlistQuotes: BrapiQuote[];
   searchResults: StockListItem[];
   selectedQuote: BrapiQuote | null;
   cryptos: BrapiCrypto[];
@@ -89,7 +94,7 @@ interface MarketState {
 
   // Actions
   loadMarketOverview: () => Promise<void>;
-  loadWatchlist: () => Promise<void>;
+  loadUserWatchlist: () => Promise<void>;
   searchAssets: (query: string) => Promise<void>;
   loadQuoteDetail: (ticker: string) => Promise<void>;
   loadAllStocks: (page?: number, filter?: FilterKey) => Promise<void>;
@@ -98,16 +103,16 @@ interface MarketState {
   loadInflation: () => Promise<void>;
   loadSelic: () => Promise<void>;
   loadIbovespa: () => Promise<void>;
-  addToWatchlist: (ticker: string) => void;
-  removeFromWatchlist: (ticker: string) => void;
+  addToWatchlist: (ticker: string) => Promise<void>;
+  removeFromWatchlist: (ticker: string) => Promise<void>;
+  isInWatchlist: (ticker: string) => boolean;
   setFilter: (filter: FilterKey) => void;
   clearSearch: () => void;
 }
 
-const DEFAULT_WATCHLIST = ['PETR4', 'VALE3', 'ITUB4', 'BBAS3', 'WEGE3', 'MGLU3'];
-
 export const useMarketStore = create<MarketState>((set, get) => ({
-  watchlist: [],
+  userWatchlist: [],
+  watchlistQuotes: [],
   searchResults: [],
   selectedQuote: null,
   cryptos: [],
@@ -139,7 +144,6 @@ export const useMarketStore = create<MarketState>((set, get) => ({
         brapiService.getCryptos({ coin: 'BTC', currency: 'BRL' }),
         brapiService.getPrimeRate({ country: 'brazil' }),
         brapiService.getInflation({ country: 'brazil' }),
-        brapiService.getMultipleQuotes(DEFAULT_WATCHLIST),
       ]);
 
       const ibovespa = results[0].status === 'fulfilled' ? results[0].value : null;
@@ -147,7 +151,6 @@ export const useMarketStore = create<MarketState>((set, get) => ({
       const cryptos = results[2].status === 'fulfilled' ? results[2].value : [];
       const selicData = results[3].status === 'fulfilled' ? results[3].value : null;
       const inflationData = results[4].status === 'fulfilled' ? results[4].value : null;
-      const watchlistQuotes = results[5].status === 'fulfilled' ? results[5].value : [];
 
       const usdBrl = currencies.find((c: BrapiCurrency) => c.fromCurrency === 'USD') || null;
       const eurBrl = currencies.find((c: BrapiCurrency) => c.fromCurrency === 'EUR') || null;
@@ -169,7 +172,6 @@ export const useMarketStore = create<MarketState>((set, get) => ({
         currentInflation: Number(currentInflation) || null,
         selic: selicArr,
         inflation: inflationArr,
-        watchlist: watchlistQuotes,
         isLoading: false,
       });
     } catch (error) {
@@ -178,10 +180,15 @@ export const useMarketStore = create<MarketState>((set, get) => ({
     }
   },
 
-  loadWatchlist: async () => {
+  loadUserWatchlist: async () => {
     try {
-      const quotes = await brapiService.getMultipleQuotes(DEFAULT_WATCHLIST);
-      set({ watchlist: quotes });
+      const saved = await AsyncStorage.getItem(WATCHLIST_KEY);
+      const tickers: string[] = saved ? JSON.parse(saved) : DEFAULT_USER_WATCHLIST;
+      set({ userWatchlist: tickers });
+      if (tickers.length > 0) {
+        const quotes = await fetchQuotesBatched(tickers);
+        set({ watchlistQuotes: quotes });
+      }
     } catch (error) {
       console.error('[Market] Watchlist error:', error);
     }
@@ -328,16 +335,31 @@ export const useMarketStore = create<MarketState>((set, get) => ({
     }
   },
 
-  addToWatchlist: (ticker: string) => {
-    // TODO: persist to AsyncStorage
-    console.log('[Market] Add to watchlist:', ticker);
+  addToWatchlist: async (ticker: string) => {
+    const current = get().userWatchlist;
+    if (current.includes(ticker)) return;
+    const updated = [...current, ticker];
+    await AsyncStorage.setItem(WATCHLIST_KEY, JSON.stringify(updated));
+    set({ userWatchlist: updated });
+    // Reload quotes for the full list
+    try {
+      const quotes = await fetchQuotesBatched(updated);
+      set({ watchlistQuotes: quotes });
+    } catch (error) {
+      console.error('[Market] Watchlist reload error:', error);
+    }
   },
 
-  removeFromWatchlist: (ticker: string) => {
-    set((state) => ({
-      watchlist: state.watchlist.filter((q) => q.symbol !== ticker),
-    }));
+  removeFromWatchlist: async (ticker: string) => {
+    const updated = get().userWatchlist.filter((t) => t !== ticker);
+    await AsyncStorage.setItem(WATCHLIST_KEY, JSON.stringify(updated));
+    set({
+      userWatchlist: updated,
+      watchlistQuotes: get().watchlistQuotes.filter((q) => q.symbol !== ticker),
+    });
   },
+
+  isInWatchlist: (ticker: string) => get().userWatchlist.includes(ticker),
 
   setFilter: (filter: FilterKey) => {
     set({ activeFilter: filter, allStocks: [], currentPage: 1, hasMore: true });

@@ -29,6 +29,8 @@ import { AppIcon, type AppIconName } from '../../src/hooks/useIcon';
 import { BankLogo } from '../../src/components/icons/BankLogo';
 import { logger } from '../../src/utils/logger';
 import { demoBenchmarks } from '../../src/data/demo';
+import { usePlanStore } from '../../src/stores/planStore';
+import { exportService, type PortfolioExportRow } from '../../src/services/exportService';
 import type { BenchmarkData } from '../../src/services/benchmarks';
 import { brapiService } from '../../src/services/brapiService';
 
@@ -146,6 +148,7 @@ export default function WalletScreen() {
   const { valuesHidden, isDemoMode } = useAuthStore();
   const { t, currency } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
+  const checkLimit = usePlanStore((s) => s.checkLimit);
   const router = useRouter();
 
   const { width: screenWidth } = useWindowDimensions();
@@ -304,6 +307,40 @@ export default function WalletScreen() {
   const handleRefresh = useCallback(() => {
     refresh();
   }, [refresh]);
+
+  const handleExportXLSX = useCallback(async () => {
+    if (!checkLimit('exportData')) {
+      Alert.alert(
+        t('export.proRequired'),
+        t('export.upgradeMessage'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('export.seePlans'), onPress: () => router.push('/plans') },
+        ],
+      );
+      return;
+    }
+    try {
+      const rows: PortfolioExportRow[] = assets.map((a) => ({
+        ticker: a.ticker || a.name,
+        name: a.name,
+        quantity: a.quantity,
+        avgPrice: a.averagePrice,
+        currentPrice: a.currentPrice,
+        totalValue: a.currentValue,
+        profitLoss: a.currentValue - a.investedValue,
+        profitPct: a.variation,
+      }));
+      const total = assets.reduce((s, a) => s + a.currentValue, 0);
+      await exportService.exportPortfolioXLSX({
+        assets: rows,
+        totalValue: total,
+        date: new Date().toISOString().split('T')[0],
+      });
+    } catch (err: any) {
+      Alert.alert(t('common.error'), err?.message ?? 'Export failed');
+    }
+  }, [assets, checkLimit, t, router]);
 
   // Value display helper
   const displayValue = useCallback(
@@ -582,6 +619,12 @@ export default function WalletScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('wallet.title')}</Text>
+        {assets.length > 0 && (
+          <TouchableOpacity style={styles.exportBtn} onPress={handleExportXLSX} activeOpacity={0.7}>
+            <AppIcon name="share" size={18} color={colors.accent} />
+            <Text style={styles.exportBtnText}>XLSX</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Toggle */}
@@ -784,6 +827,8 @@ const createStyles = (colors: ThemeColors) =>
       backgroundColor: colors.background,
     },
     header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
       alignItems: 'center',
       paddingVertical: spacing.lg,
       paddingHorizontal: spacing.xl,
@@ -792,6 +837,22 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 20,
       fontWeight: '700',
       color: colors.text.primary,
+    },
+    exportBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs + 2,
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: colors.accent + '40',
+      backgroundColor: colors.accent + '10',
+    },
+    exportBtnText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.accent,
     },
 
     // Toggle
