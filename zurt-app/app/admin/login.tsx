@@ -46,7 +46,7 @@ export default function AdminLoginScreen() {
       const success = await adminLogin(email, password);
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace('/admin/(tabs)');
+        router.replace('/admin/panel');
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         setError('Credenciais invalidas');
