@@ -1555,6 +1555,123 @@ export async function fetchStripeSubscriptionStatus(): Promise<any> {
 }
 
 // =============================================================================
+// Market Data (backend proxy for BRAPI — server-side cache, no token on device)
+// =============================================================================
+
+export interface MarketIndicators {
+  ibovespa: { points: number; changePercent: number };
+  currencies: Array<{
+    fromCurrency: string;
+    toCurrency: string;
+    name: string;
+    bidPrice: string;
+    askPrice: string;
+    percentageChange: string;
+    updatedAt: string;
+  }>;
+  crypto: Array<{
+    coin: string;
+    coinName: string;
+    regularMarketPrice: number;
+    regularMarketChangePercent: number;
+    marketCap: number;
+    logoUrl: string;
+  }>;
+  selic: { value: number; date: string };
+  inflation: { value: number; date: string };
+}
+
+export async function fetchMarketIndicators(): Promise<MarketIndicators> {
+  if (_isDemoMode) {
+    return {
+      ibovespa: { points: 126842, changePercent: 0.82 },
+      currencies: [
+        { fromCurrency: 'USD', toCurrency: 'BRL', name: 'Dólar/Real', bidPrice: '5.94', askPrice: '5.95', percentageChange: '0.12', updatedAt: new Date().toISOString() },
+        { fromCurrency: 'EUR', toCurrency: 'BRL', name: 'Euro/Real', bidPrice: '6.42', askPrice: '6.43', percentageChange: '-0.05', updatedAt: new Date().toISOString() },
+      ],
+      crypto: [
+        { coin: 'BTC', coinName: 'Bitcoin', regularMarketPrice: 550000, regularMarketChangePercent: 2.1, marketCap: 0, logoUrl: '' },
+      ],
+      selic: { value: 13.25, date: new Date().toISOString() },
+      inflation: { value: 4.87, date: new Date().toISOString() },
+    };
+  }
+  return apiRequest<MarketIndicators>('/market-data/indicators');
+}
+
+export async function fetchMarketCrypto(): Promise<any[]> {
+  if (_isDemoMode) return [];
+  const data = await apiRequest<any>('/market-data/crypto');
+  return data.coins ?? data ?? [];
+}
+
+export async function fetchCurrencyQuote(pair: string): Promise<any> {
+  if (_isDemoMode) return {};
+  return apiRequest<any>(`/market-data/currency/${encodeURIComponent(pair)}`);
+}
+
+export async function fetchQuoteBatch(tickers: string[]): Promise<any[]> {
+  if (_isDemoMode) return [];
+  const data = await apiRequest<any>(
+    `/market-data/quote/batch?tickers=${encodeURIComponent(tickers.join(','))}`,
+  );
+  return data.results ?? data ?? [];
+}
+
+export async function fetchQuoteFull(ticker: string): Promise<any> {
+  if (_isDemoMode) return null;
+  const data = await apiRequest<any>(
+    `/market-data/quote/${encodeURIComponent(ticker)}/full`,
+  );
+  return data.results?.[0] ?? data ?? null;
+}
+
+export async function fetchTrending(): Promise<any[]> {
+  if (_isDemoMode) return [];
+  const data = await apiRequest<any>('/market-data/trending');
+  return data.stocks ?? data ?? [];
+}
+
+export async function fetchPortfolioConsolidated(): Promise<any> {
+  if (_isDemoMode) {
+    return {
+      patrimonio: {
+        total: portfolioSummary.totalValue,
+        investido: portfolioSummary.investedValue,
+        rendimento: portfolioSummary.totalValue - portfolioSummary.investedValue,
+        rentabilidade: portfolioSummary.variation12m,
+      },
+      allocation: demoAllocations.map((a) => ({
+        class: a.class,
+        value: a.value,
+        percentage: a.percentage,
+      })),
+      positions: demoAssets.map((a) => ({
+        id: a.id,
+        name: a.name,
+        ticker: a.ticker,
+        class: a.class,
+        institution: a.institution,
+        quantity: a.quantity,
+        averagePrice: a.averagePrice,
+        currentPrice: a.currentPrice,
+        investedValue: a.investedValue,
+        currentValue: a.currentValue,
+        variation: a.variation,
+      })),
+      connections: demoInstitutions.map((i) => ({
+        id: i.id,
+        name: i.name,
+        status: 'connected',
+        lastSync: new Date().toISOString(),
+      })),
+      lastSync: new Date().toISOString(),
+    };
+  }
+  return apiRequest<any>('/portfolio/summary');
+}
+
+// =============================================================================
 // Health Check
 // =============================================================================
 

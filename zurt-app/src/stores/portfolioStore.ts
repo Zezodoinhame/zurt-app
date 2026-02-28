@@ -7,7 +7,7 @@ import type {
   AssetClass,
   Insight,
 } from '../types';
-import { fetchDashboardSummary } from '../services/api';
+import { fetchDashboardSummary, fetchPortfolioConsolidated } from '../services/api';
 import { useCardsStore } from './cardsStore';
 import { logger } from '../utils/logger';
 import { fetchBenchmarks, type BenchmarkData } from '../services/benchmarks';
@@ -28,6 +28,7 @@ interface PortfolioState {
   selectedAssetClass: AssetClass | null;
 
   loadPortfolio: () => Promise<void>;
+  loadConsolidated: () => Promise<void>;
   refresh: () => Promise<void>;
   loadBenchmarks: () => Promise<void>;
   setTimeRange: (range: TimeRange) => void;
@@ -119,6 +120,75 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => {
         isLoading: false,
         error: err?.message ?? 'Erro ao carregar portfolio',
       });
+    }
+  },
+
+  loadConsolidated: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const data = await fetchPortfolioConsolidated();
+
+      const summary: PortfolioSummary = {
+        totalValue: data.patrimonio?.total ?? 0,
+        investedValue: data.patrimonio?.investido ?? 0,
+        profit: data.patrimonio?.rendimento ?? 0,
+        variation1m: 0,
+        variation12m: data.patrimonio?.rentabilidade ?? 0,
+        history: [],
+      };
+
+      const positions: Asset[] = (data.positions ?? []).map((p: any) => ({
+        id: String(p.id ?? ''),
+        name: p.name ?? '',
+        ticker: p.ticker ?? '',
+        class: p.class ?? p.asset_class ?? 'other',
+        institution: p.institution ?? '',
+        quantity: p.quantity ?? 0,
+        averagePrice: p.averagePrice ?? p.average_price ?? 0,
+        currentPrice: p.currentPrice ?? p.current_price ?? 0,
+        investedValue: p.investedValue ?? p.invested_value ?? 0,
+        currentValue: p.currentValue ?? p.current_value ?? 0,
+        variation: p.variation ?? 0,
+        priceHistory: p.priceHistory ?? [],
+      }));
+
+      const allocations: Allocation[] = (data.allocation ?? []).map((a: any) => ({
+        class: a.class,
+        value: a.value ?? 0,
+        percentage: a.percentage ?? 0,
+        color: a.color ?? '#888',
+      }));
+
+      const institutions: Institution[] = (data.connections ?? []).map((c: any) => ({
+        id: String(c.id ?? ''),
+        name: c.name ?? '',
+        logo: c.logo ?? '',
+        type: c.type ?? 'bank',
+        assetCount: 0,
+        totalValue: 0,
+      }));
+
+      set({
+        summary,
+        assets: positions,
+        allocations,
+        institutions,
+        isLoading: false,
+        error: null,
+      });
+    } catch (err: any) {
+      logger.log('[Portfolio] loadConsolidated error, falling back to dashboard:', err?.message);
+      // Fall back to standard dashboard endpoint
+      try {
+        const dashboardData = await fetchDashboardSummary();
+        processDashboardData(dashboardData);
+        set({ isLoading: false });
+      } catch (err2: any) {
+        set({
+          isLoading: false,
+          error: err2?.message ?? 'Erro ao carregar portfolio',
+        });
+      }
     }
   },
 

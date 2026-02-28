@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { useMarketStore } from '../../stores/marketStore';
 import { type ThemeColors } from '../../theme/colors';
 
 interface TickerItem {
@@ -18,24 +19,105 @@ interface TickerItem {
   neutral?: boolean;
 }
 
-// TODO: connect to real market data from benchmarks.ts / brapi
-const TICKER_DATA: TickerItem[] = [
-  { symbol: 'IBOV', value: '126.842', change: '+0,82%', up: true },
-  { symbol: 'USD/BRL', value: '5,94', change: '+0,12%', up: true },
-  { symbol: 'BTC', value: '$97.420', change: '+2,1%', up: true },
-  { symbol: 'ETH', value: '$2.741', change: '-0,8%', up: false },
-  { symbol: 'SELIC', value: '13,25%', change: '', neutral: true },
-  { symbol: 'IPCA', value: '4,87%', change: '', neutral: true },
-  { symbol: 'CDI', value: '13,15%', change: '', neutral: true },
-  { symbol: 'S&P500', value: '5.983', change: '+0,45%', up: true },
+// Fallback data shown while loading
+const FALLBACK_TICKER: TickerItem[] = [
+  { symbol: 'IBOV', value: '---', change: '', neutral: true },
+  { symbol: 'USD/BRL', value: '---', change: '', neutral: true },
+  { symbol: 'BTC', value: '---', change: '', neutral: true },
+  { symbol: 'SELIC', value: '---', change: '', neutral: true },
+  { symbol: 'IPCA', value: '---', change: '', neutral: true },
 ];
 
 const GREEN = '#4ade80';
 const RED = '#f87171';
 
+function formatNumber(n: number, decimals = 2): string {
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+function formatPercent(n: number): string {
+  const sign = n >= 0 ? '+' : '';
+  return `${sign}${n.toFixed(2).replace('.', ',')}%`;
+}
+
 export function MarketTicker() {
   const colors = useSettingsStore((s) => s.colors);
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const ibovespa = useMarketStore((s) => s.ibovespa);
+  const usdBrl = useMarketStore((s) => s.usdBrl);
+  const btcBrl = useMarketStore((s) => s.btcBrl);
+  const currentSelic = useMarketStore((s) => s.currentSelic);
+  const currentInflation = useMarketStore((s) => s.currentInflation);
+  const isLoading = useMarketStore((s) => s.isLoading);
+  const loadMarketOverview = useMarketStore((s) => s.loadMarketOverview);
+
+  // Load market data on mount if not already loaded
+  useEffect(() => {
+    if (!ibovespa && !isLoading) {
+      loadMarketOverview();
+    }
+  }, []);
+
+  // Build ticker items from live data
+  const tickerData: TickerItem[] = useMemo(() => {
+    if (!ibovespa && !usdBrl && !btcBrl) return FALLBACK_TICKER;
+
+    const items: TickerItem[] = [];
+
+    if (ibovespa) {
+      const points = ibovespa.regularMarketPrice ?? 0;
+      const change = ibovespa.regularMarketChangePercent ?? 0;
+      items.push({
+        symbol: 'IBOV',
+        value: formatNumber(points, 0),
+        change: formatPercent(change),
+        up: change >= 0,
+      });
+    }
+
+    if (usdBrl) {
+      const bid = usdBrl.bidPrice ?? 0;
+      const change = usdBrl.regularMarketChangePercent ?? 0;
+      items.push({
+        symbol: 'USD/BRL',
+        value: formatNumber(bid),
+        change: formatPercent(change),
+        up: change >= 0,
+      });
+    }
+
+    if (btcBrl) {
+      const price = btcBrl.regularMarketPrice ?? 0;
+      const change = btcBrl.regularMarketChangePercent ?? 0;
+      items.push({
+        symbol: 'BTC',
+        value: `R$${formatNumber(price, 0)}`,
+        change: formatPercent(change),
+        up: change >= 0,
+      });
+    }
+
+    if (currentSelic != null) {
+      items.push({
+        symbol: 'SELIC',
+        value: `${formatNumber(currentSelic)}%`,
+        change: '',
+        neutral: true,
+      });
+    }
+
+    if (currentInflation != null) {
+      items.push({
+        symbol: 'IPCA',
+        value: `${formatNumber(currentInflation)}%`,
+        change: '',
+        neutral: true,
+      });
+    }
+
+    return items.length > 0 ? items : FALLBACK_TICKER;
+  }, [ibovespa, usdBrl, btcBrl, currentSelic, currentInflation]);
 
   const scrollRef = useRef<ScrollView>(null);
   const [isPaused, setIsPaused] = useState(false);
@@ -61,7 +143,7 @@ export function MarketTicker() {
     ).start();
   }, [pulseAnim]);
 
-  const duplicated = useMemo(() => [...TICKER_DATA, ...TICKER_DATA], []);
+  const duplicated = useMemo(() => [...tickerData, ...tickerData], [tickerData]);
   const halfWidth = contentWidth / 2;
 
   // Auto-scroll animation

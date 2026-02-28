@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { brapiService } from '../services/brapiService';
+import {
+  fetchMarketIndicators,
+  fetchMarketCrypto,
+  fetchCurrencyQuote,
+  fetchQuoteBatch,
+  fetchQuoteFull,
+} from '../services/api';
+import { logger } from '../utils/logger';
 import type { BrapiQuote, BrapiCrypto, BrapiCurrency, InflationEntry, PrimeRateEntry, StockListItem } from '../types/brapi';
 
 const WATCHLIST_KEY = '@zurt_watchlist';
@@ -58,6 +66,22 @@ async function fetchQuotesBatched(tickers: string[], batchSize = 20): Promise<Br
     if (r.status === 'fulfilled') all.push(...r.value);
   }
   return all;
+}
+
+/**
+ * Try backend batch endpoint first, fall back to direct BRAPI.
+ * Returns BrapiQuote[] in both paths.
+ */
+async function fetchQuotesWithFallback(tickers: string[]): Promise<BrapiQuote[]> {
+  try {
+    const backendResults = await fetchQuoteBatch(tickers);
+    if (backendResults && backendResults.length > 0) {
+      return backendResults as BrapiQuote[];
+    }
+  } catch {
+    // Backend unavailable — fall through
+  }
+  return fetchQuotesBatched(tickers);
 }
 
 type FilterKey = 'all' | 'stock' | 'fund' | 'bdr';
@@ -138,28 +162,51 @@ export const useMarketStore = create<MarketState>((set, get) => ({
   loadMarketOverview: async () => {
     set({ isLoading: true, error: null });
     try {
-      const results = await Promise.allSettled([
-        brapiService.getIbovespa(),
-        brapiService.getCurrencies({ currency: 'USD-BRL,EUR-BRL' }),
-        brapiService.getCryptos({ coin: 'BTC', currency: 'BRL' }),
-        brapiService.getPrimeRate({ country: 'brazil' }),
-        brapiService.getInflation({ country: 'brazil' }),
-      ]);
+      // Try backend first — single request with server-side cache
+      const data = await fetchMarketIndicators();
 
-      const ibovespa = results[0].status === 'fulfilled' ? results[0].value : null;
-      const currencies = results[1].status === 'fulfilled' ? results[1].value : [];
-      const cryptos = results[2].status === 'fulfilled' ? results[2].value : [];
-      const selicData = results[3].status === 'fulfilled' ? results[3].value : null;
-      const inflationData = results[4].status === 'fulfilled' ? results[4].value : null;
+      // Map backend response to store state
+      const ibovespa: BrapiQuote = {
+        symbol: '^BVSP',
+        shortName: 'IBOVESPA',
+        regularMarketPrice: data.ibovespa.points,
+        regularMarketChangePercent: data.ibovespa.changePercent,
+      } as BrapiQuote;
 
-      const usdBrl = currencies.find((c: BrapiCurrency) => c.fromCurrency === 'USD') || null;
-      const eurBrl = currencies.find((c: BrapiCurrency) => c.fromCurrency === 'EUR') || null;
+      const currencies: BrapiCurrency[] = (data.currencies ?? []).map((c: any) => ({
+        fromCurrency: c.fromCurrency ?? '',
+        toCurrency: c.toCurrency ?? '',
+        name: c.name ?? '',
+        bidPrice: parseFloat(c.bidPrice) || 0,
+        askPrice: parseFloat(c.askPrice) || 0,
+        regularMarketChange: 0,
+        regularMarketChangePercent: parseFloat(c.percentageChange) || 0,
+        regularMarketDayHigh: 0,
+        regularMarketDayLow: 0,
+        regularMarketTime: c.updatedAt ?? '',
+        currencyRateFromUSD: 0,
+      }));
+
+      const cryptos: BrapiCrypto[] = (data.crypto ?? []).map((c: any) => ({
+        coin: c.coin ?? '',
+        coinName: c.coinName ?? '',
+        currency: 'BRL',
+        currencyRateFromUSD: 0,
+        regularMarketChange: 0,
+        regularMarketPrice: c.regularMarketPrice ?? 0,
+        regularMarketChangePercent: c.regularMarketChangePercent ?? 0,
+        regularMarketDayHigh: 0,
+        regularMarketDayLow: 0,
+        regularMarketVolume: 0,
+        marketCap: c.marketCap ?? 0,
+        coinImageUrl: c.logoUrl ?? '',
+      }));
+
+      const usdBrl = currencies.find((c) => c.fromCurrency === 'USD') || null;
+      const eurBrl = currencies.find((c) => c.fromCurrency === 'EUR') || null;
       const btcBrl = cryptos[0] || null;
-
-      const selicArr = selicData?.['prime-rate'] || selicData?.prime_rate || [];
-      const inflationArr = inflationData?.inflation || [];
-      const currentSelic = selicArr[0]?.value ?? null;
-      const currentInflation = inflationArr[0]?.value ?? null;
+      const currentSelic = data.selic?.value ?? null;
+      const currentInflation = data.inflation?.value ?? null;
 
       set({
         ibovespa,
@@ -170,13 +217,54 @@ export const useMarketStore = create<MarketState>((set, get) => ({
         btcBrl,
         currentSelic: Number(currentSelic) || null,
         currentInflation: Number(currentInflation) || null,
-        selic: selicArr,
-        inflation: inflationArr,
+        selic: currentSelic != null ? [{ value: currentSelic, date: data.selic.date, epochDate: new Date(data.selic.date).getTime() / 1000 }] : [],
+        inflation: currentInflation != null ? [{ value: currentInflation, date: data.inflation.date, epochDate: new Date(data.inflation.date).getTime() / 1000 }] : [],
         isLoading: false,
       });
-    } catch (error) {
-      console.error('[Market] Overview error:', error);
-      set({ isLoading: false, error: 'Erro ao carregar dados do mercado' });
+    } catch {
+      // Backend failed — fall back to direct BRAPI calls
+      logger.log('[Market] Backend indicators failed, falling back to BRAPI');
+      try {
+        const results = await Promise.allSettled([
+          brapiService.getIbovespa(),
+          brapiService.getCurrencies({ currency: 'USD-BRL,EUR-BRL' }),
+          brapiService.getCryptos({ coin: 'BTC', currency: 'BRL' }),
+          brapiService.getPrimeRate({ country: 'brazil' }),
+          brapiService.getInflation({ country: 'brazil' }),
+        ]);
+
+        const ibovespa = results[0].status === 'fulfilled' ? results[0].value : null;
+        const currencies = results[1].status === 'fulfilled' ? results[1].value : [];
+        const cryptos = results[2].status === 'fulfilled' ? results[2].value : [];
+        const selicData = results[3].status === 'fulfilled' ? results[3].value : null;
+        const inflationData = results[4].status === 'fulfilled' ? results[4].value : null;
+
+        const usdBrl = currencies.find((c: BrapiCurrency) => c.fromCurrency === 'USD') || null;
+        const eurBrl = currencies.find((c: BrapiCurrency) => c.fromCurrency === 'EUR') || null;
+        const btcBrl = cryptos[0] || null;
+
+        const selicArr = selicData?.['prime-rate'] || selicData?.prime_rate || [];
+        const inflationArr = inflationData?.inflation || [];
+        const currentSelic = selicArr[0]?.value ?? null;
+        const currentInflation = inflationArr[0]?.value ?? null;
+
+        set({
+          ibovespa,
+          currencies,
+          cryptos,
+          usdBrl,
+          eurBrl,
+          btcBrl,
+          currentSelic: Number(currentSelic) || null,
+          currentInflation: Number(currentInflation) || null,
+          selic: selicArr,
+          inflation: inflationArr,
+          isLoading: false,
+        });
+      } catch (error) {
+        logger.log('[Market] BRAPI fallback also failed:', error);
+        set({ isLoading: false, error: 'Erro ao carregar dados do mercado' });
+      }
     }
   },
 
@@ -186,11 +274,11 @@ export const useMarketStore = create<MarketState>((set, get) => ({
       const tickers: string[] = saved ? JSON.parse(saved) : DEFAULT_USER_WATCHLIST;
       set({ userWatchlist: tickers });
       if (tickers.length > 0) {
-        const quotes = await fetchQuotesBatched(tickers);
+        const quotes = await fetchQuotesWithFallback(tickers);
         set({ watchlistQuotes: quotes });
       }
     } catch (error) {
-      console.error('[Market] Watchlist error:', error);
+      logger.log('[Market] Watchlist error:', error);
     }
   },
 
@@ -201,14 +289,14 @@ export const useMarketStore = create<MarketState>((set, get) => ({
     }
     set({ isSearching: true, searchQuery: query });
     try {
-      // Use /api/available to find matching tickers, then fetch their quotes
+      // Use BRAPI /api/available to find matching tickers (no backend equivalent)
       const available: string[] = await brapiService.getAvailable(query);
       const matches = available.slice(0, 20);
       if (matches.length === 0) {
         set({ searchResults: [], isSearching: false });
         return;
       }
-      const quotes = await fetchQuotesBatched(matches);
+      const quotes = await fetchQuotesWithFallback(matches);
       const items: StockListItem[] = quotes.map((q) => {
         const sym = q.symbol || '';
         const type = sym.endsWith('34') ? 'bdr' : sym.endsWith('11') ? 'fund' : 'stock';
@@ -216,7 +304,7 @@ export const useMarketStore = create<MarketState>((set, get) => ({
       });
       set({ searchResults: items, isSearching: false });
     } catch (error) {
-      console.error('[Market] Search error:', error);
+      logger.log('[Market] Search error:', error);
       set({ isSearching: false, searchResults: [] });
     }
   },
@@ -224,10 +312,20 @@ export const useMarketStore = create<MarketState>((set, get) => ({
   loadQuoteDetail: async (ticker: string) => {
     set({ isLoadingDetail: true, selectedQuote: null });
     try {
+      // Try backend full quote first
+      const backendQuote = await fetchQuoteFull(ticker);
+      if (backendQuote) {
+        set({ selectedQuote: backendQuote as BrapiQuote, isLoadingDetail: false });
+        return;
+      }
+    } catch {
+      // Fall through to BRAPI
+    }
+    try {
       const quote = await brapiService.getDetailedQuote(ticker);
       set({ selectedQuote: quote, isLoadingDetail: false });
     } catch (error) {
-      console.error('[Market] Detail error:', error);
+      logger.log('[Market] Detail error:', error);
       set({ isLoadingDetail: false });
     }
   },
@@ -266,7 +364,7 @@ export const useMarketStore = create<MarketState>((set, get) => ({
         return;
       }
 
-      const quotes = await fetchQuotesBatched(slice);
+      const quotes = await fetchQuotesWithFallback(slice);
 
       // Convert to StockListItem
       const items: StockListItem[] = quotes.map((q) => {
@@ -285,53 +383,112 @@ export const useMarketStore = create<MarketState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      console.error('[Market] loadAllStocks error:', error);
+      logger.log('[Market] loadAllStocks error:', error);
       set({ isLoading: false, hasMore: false, error: 'Erro ao carregar ativos' });
     }
   },
 
   loadCryptos: async () => {
     try {
+      // Try backend first
+      const backendCryptos = await fetchMarketCrypto();
+      if (backendCryptos && backendCryptos.length > 0) {
+        set({ cryptos: backendCryptos as BrapiCrypto[] });
+        return;
+      }
+    } catch {
+      // Fall through
+    }
+    try {
       const cryptos = await brapiService.getCryptos();
       set({ cryptos });
     } catch (error) {
-      console.error('[Market] Cryptos error:', error);
+      logger.log('[Market] Cryptos error:', error);
     }
   },
 
   loadCurrencies: async () => {
     try {
+      // Try backend first
+      const data = await fetchCurrencyQuote('USD-BRL,EUR-BRL,GBP-BRL,JPY-BRL,CNY-BRL,ARS-BRL,BTC-BRL');
+      const backendCurrencies = data?.currency ?? data;
+      if (Array.isArray(backendCurrencies) && backendCurrencies.length > 0) {
+        set({ currencies: backendCurrencies as BrapiCurrency[] });
+        return;
+      }
+    } catch {
+      // Fall through
+    }
+    try {
       const currencies = await brapiService.getCurrencies();
       set({ currencies });
     } catch (error) {
-      console.error('[Market] Currencies error:', error);
+      logger.log('[Market] Currencies error:', error);
     }
   },
 
   loadInflation: async () => {
     try {
+      // Try backend indicators for latest value, fall back to BRAPI for historical
+      const data = await fetchMarketIndicators();
+      if (data?.inflation?.value != null) {
+        // Backend only returns latest — for historical we still need BRAPI
+        const brapiData = await brapiService.getInflation({ historical: true }).catch(() => null);
+        set({ inflation: brapiData?.inflation || [{ value: data.inflation.value, date: data.inflation.date }] });
+        return;
+      }
+    } catch {
+      // Fall through
+    }
+    try {
       const data = await brapiService.getInflation({ historical: true });
       set({ inflation: data?.inflation || [] });
     } catch (error) {
-      console.error('[Market] Inflation error:', error);
+      logger.log('[Market] Inflation error:', error);
     }
   },
 
   loadSelic: async () => {
     try {
+      const data = await fetchMarketIndicators();
+      if (data?.selic?.value != null) {
+        const brapiData = await brapiService.getPrimeRate({ historical: true }).catch(() => null);
+        set({ selic: brapiData?.['prime-rate'] || [{ value: data.selic.value, date: data.selic.date }] });
+        return;
+      }
+    } catch {
+      // Fall through
+    }
+    try {
       const data = await brapiService.getPrimeRate({ historical: true });
       set({ selic: data?.['prime-rate'] || [] });
     } catch (error) {
-      console.error('[Market] Selic error:', error);
+      logger.log('[Market] Selic error:', error);
     }
   },
 
   loadIbovespa: async () => {
     try {
+      const data = await fetchMarketIndicators();
+      if (data?.ibovespa) {
+        set({
+          ibovespa: {
+            symbol: '^BVSP',
+            shortName: 'IBOVESPA',
+            regularMarketPrice: data.ibovespa.points,
+            regularMarketChangePercent: data.ibovespa.changePercent,
+          } as BrapiQuote,
+        });
+        return;
+      }
+    } catch {
+      // Fall through
+    }
+    try {
       const ibovespa = await brapiService.getIbovespa();
       set({ ibovespa });
     } catch (error) {
-      console.error('[Market] Ibovespa error:', error);
+      logger.log('[Market] Ibovespa error:', error);
     }
   },
 
@@ -343,10 +500,10 @@ export const useMarketStore = create<MarketState>((set, get) => ({
     set({ userWatchlist: updated });
     // Reload quotes for the full list
     try {
-      const quotes = await fetchQuotesBatched(updated);
+      const quotes = await fetchQuotesWithFallback(updated);
       set({ watchlistQuotes: quotes });
     } catch (error) {
-      console.error('[Market] Watchlist reload error:', error);
+      logger.log('[Market] Watchlist reload error:', error);
     }
   },
 

@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { CryptoPortfolio, CryptoHolding } from '../types';
 import { useAuthStore } from './authStore';
 import { demoCryptoPortfolio } from '../data/demo';
+import { fetchMarketCrypto } from '../services/api';
 import { logger } from '../utils/logger';
 
 const STORAGE_KEY = '@zurt:crypto';
@@ -95,12 +96,42 @@ async function fetchFromCoinGecko(): Promise<CryptoHolding[]> {
   });
 }
 
+async function fetchFromBackend(): Promise<CryptoHolding[]> {
+  const coins = await fetchMarketCrypto();
+  if (!coins || coins.length === 0) throw new Error('No backend crypto data');
+
+  return coins.map((coin: any, index: number) => {
+    const symbol = (coin.coin || coin.symbol || '').toUpperCase();
+    return {
+      id: `backend-${symbol.toLowerCase()}`,
+      symbol,
+      name: coin.coinName || coin.name || symbol,
+      quantity: 0,
+      avgPrice: 0,
+      currentPrice: coin.regularMarketPrice ?? 0,
+      currentValue: 0,
+      change24h: coin.regularMarketChangePercent ?? 0,
+      change7d: 0,
+      change30d: 0,
+      sparkline: [],
+      color: COIN_COLORS[symbol] || `hsl(${(index * 37) % 360}, 65%, 55%)`,
+      icon: COIN_ICONS[symbol] || symbol.charAt(0),
+      marketCap: coin.marketCap ?? 0,
+      image: coin.logoUrl ?? '',
+    } as CryptoHolding & { marketCap: number; image: string };
+  });
+}
+
 async function fetchMarketDataFromAPI(): Promise<CryptoHolding[]> {
-  // Try BRAPI first, fall back to CoinGecko
+  // Try Backend → BRAPI → CoinGecko
   try {
-    return await fetchFromBRAPI();
+    return await fetchFromBackend();
   } catch {
-    return await fetchFromCoinGecko();
+    try {
+      return await fetchFromBRAPI();
+    } catch {
+      return await fetchFromCoinGecko();
+    }
   }
 }
 
