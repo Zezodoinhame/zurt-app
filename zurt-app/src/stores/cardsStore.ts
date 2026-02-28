@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { CreditCard, CategorySpending } from '../types';
 import type { DashboardTransaction } from '../services/api';
-import { fetchCardsApi, fetchTransactions } from '../services/api';
+import { fetchCardsApi, fetchTransactions, clearCardCaches } from '../services/api';
 import { logger } from '../utils/logger';
 
 interface CardsState {
@@ -44,6 +44,11 @@ export const useCardsStore = create<CardsState>((set, get) => ({
       isLoading: false,
       error: null,
     });
+    // When backend confirms no cards, purge stale caches so fetchWithFallback
+    // won't restore old data on a future network failure.
+    if (cards.length === 0) {
+      clearCardCaches();
+    }
   },
 
   loadTransactions: async () => {
@@ -94,6 +99,9 @@ export const useCardsStore = create<CardsState>((set, get) => ({
         isLoading: false,
         error: null,
       });
+      if (data.cards.length === 0) {
+        clearCardCaches();
+      }
     } catch (err: any) {
       set({
         isLoading: false,
@@ -113,6 +121,9 @@ export const useCardsStore = create<CardsState>((set, get) => ({
         isRefreshing: false,
         error: null,
       });
+      if (data.cards.length === 0) {
+        clearCardCaches();
+      }
     } catch (err: any) {
       set({
         isRefreshing: false,

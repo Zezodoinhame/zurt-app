@@ -61,6 +61,29 @@ export async function setCache(key: string, data: unknown): Promise<void> {
   }
 }
 
+/**
+ * Remove all card-related caches from AsyncStorage.
+ * Covers static keys and dynamic keys (invoices per card, transactions with
+ * query params) that cannot be listed in a static array.
+ */
+export async function clearCardCaches(): Promise<void> {
+  try {
+    const allKeys = await AsyncStorage.getAllKeys();
+    const cardKeys = allKeys.filter(
+      (k) =>
+        k === 'cache:finance:cards' ||
+        k === 'cache:dashboard:finance' ||
+        k.startsWith('cache:cards:invoices:') ||
+        k.startsWith('cache:finance:transactions:'),
+    );
+    if (cardKeys.length > 0) {
+      await AsyncStorage.multiRemove(cardKeys);
+    }
+  } catch {
+    // best-effort cleanup
+  }
+}
+
 // =============================================================================
 // Demo mode flag (set by authStore)
 // =============================================================================

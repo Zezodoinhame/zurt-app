@@ -9,6 +9,7 @@ import {
   getToken,
   setDemoMode,
   setOnUnauthorized,
+  clearCardCaches,
 } from '../services/api';
 import { clearSession } from '../services/auth';
 import { logger } from '../utils/logger';
@@ -87,6 +88,9 @@ function resetDataStores() {
 
   // 2. Clear all user-specific AsyncStorage data + API cache
   AsyncStorage.multiRemove(USER_DATA_STORAGE_KEYS).catch(() => {});
+
+  // 3. Clear dynamic card/transaction cache keys (not in the static list)
+  clearCardCaches();
 }
 
 interface AuthState {
