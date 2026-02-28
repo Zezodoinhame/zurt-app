@@ -320,7 +320,7 @@ export default function HomeScreen() {
   // =========================================================================
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top + 8 }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]}
