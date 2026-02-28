@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,136 +6,452 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
-  Alert,
   useWindowDimensions,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
+import Svg, {
+  Circle,
+  Path,
+  Defs,
+  LinearGradient as SvgLinearGradient,
+  Stop,
+} from 'react-native-svg';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 
-import { type ThemeColors } from '../../src/theme/colors';
-import { spacing, radius } from '../../src/theme/spacing';
 import { usePortfolioStore } from '../../src/stores/portfolioStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
-import { AssetCard } from '../../src/components/cards/AssetCard';
-import { BottomSheet } from '../../src/components/shared/BottomSheet';
-import { MiniLineChart } from '../../src/components/charts/MiniLineChart';
+import { useCardsStore } from '../../src/stores/cardsStore';
+import { fetchMarketIndicators, fetchTransactions } from '../../src/services/api';
+import { formatCurrency, maskValue, formatPct } from '../../src/utils/formatters';
 import { SkeletonList } from '../../src/components/skeletons/Skeleton';
 import { ErrorState } from '../../src/components/shared/ErrorState';
-import { formatPct, maskValue, formatCurrency } from '../../src/utils/formatters';
-import type { Asset, AssetClass, InstitutionId } from '../../src/types';
-import { AppIcon, type AppIconName } from '../../src/hooks/useIcon';
-import { BankLogo } from '../../src/components/icons/BankLogo';
-import { logger } from '../../src/utils/logger';
-import { demoBenchmarks } from '../../src/data/demo';
-import { usePlanStore } from '../../src/stores/planStore';
-import { exportService, type PortfolioExportRow } from '../../src/services/exportService';
-import type { BenchmarkData } from '../../src/services/benchmarks';
-import { brapiService } from '../../src/services/brapiService';
+import { AppIcon } from '../../src/hooks/useIcon';
+import { LinearGradient } from 'expo-linear-gradient';
+import type { Asset } from '../../src/types';
 
 // ---------------------------------------------------------------------------
-// Label Maps
+// Theme Constants
 // ---------------------------------------------------------------------------
 
-// assetClassLabels — resolved dynamically via t(`class.${cls}`) in the component
+const C = {
+  bg: '#0A0E14',
+  card: '#111820',
+  cardBorder: '#1A2332',
+  accent: '#00D4AA',
+  accentDim: '#00D4AA20',
+  red: '#FF4757',
+  orange: '#FF8C42',
+  yellow: '#F5A623',
+  blue: '#3B82F6',
+  purple: '#8B5CF6',
+  purpleDark: '#6D28D9',
+  text: '#F1F5F9',
+  textSec: '#64748B',
+  textDim: '#334155',
+};
 
-const institutionNames: Record<InstitutionId, string> = {
-  xp: 'XP Investimentos',
-  btg: 'BTG Pactual',
-  nubank: 'Nubank',
-  inter: 'Inter',
-  binance: 'Binance',
+const ALLOC_COLORS: Record<string, string> = {
+  fixedIncome: C.accent,
+  stocks: C.purple,
+  fiis: C.blue,
+  crypto: C.orange,
+  international: C.yellow,
+  pension: '#EC4899',
+};
+
+const ALLOC_LABELS: Record<string, string> = {
+  fixedIncome: 'Renda Fixa',
+  stocks: 'Renda Variavel',
+  fiis: 'FIIs',
+  crypto: 'Cripto',
+  international: 'Internacional',
+  pension: 'Previdencia',
 };
 
 // ---------------------------------------------------------------------------
-// Tools Hub
+// Sub-components
 // ---------------------------------------------------------------------------
 
-type ToolItem = {
-  icon: AppIconName;
-  labelKey: string;
-  route: string;
-  isTodo?: boolean;
-};
-
-type ToolCategory = {
-  titleKey: string;
-  emoji: string;
-  items: ToolItem[];
-};
-
-const TOOL_CATEGORIES: ToolCategory[] = [
-  {
-    titleKey: 'wallet.categoryAnalysis',
-    emoji: '\uD83D\uDCCA',
-    items: [
-      { icon: 'backtest', labelKey: 'tools.backtest', route: '/backtest', isTodo: true },
-      { icon: 'comparison', labelKey: 'tools.comparison', route: '/comparison', isTodo: true },
-      { icon: 'correlation', labelKey: 'tools.correlation', route: '/correlation-matrix', isTodo: true },
-      { icon: 'scenario', labelKey: 'tools.scenario', route: '/scenario-planner', isTodo: true },
-    ],
-  },
-  {
-    titleKey: 'wallet.categoryFinance',
-    emoji: '\uD83D\uDCB0',
-    items: [
-      { icon: 'budget', labelKey: 'tools.budget', route: '/budget' },
-      { icon: 'billReminder', labelKey: 'tools.bills', route: '/bills' },
-      { icon: 'debt', labelKey: 'tools.debt', route: '/debt-manager' },
-      { icon: 'cashFlow', labelKey: 'tools.cashFlow', route: '/cash-flow', isTodo: true },
-    ],
-  },
-  {
-    titleKey: 'wallet.categoryInvestments',
-    emoji: '\uD83D\uDCC8',
-    items: [
-      { icon: 'dividend', labelKey: 'tools.dividends', route: '/dividends', isTodo: true },
-      { icon: 'rebalance', labelKey: 'tools.rebalance', route: '/rebalance', isTodo: true },
-      { icon: 'crypto', labelKey: 'tools.crypto', route: '/crypto' },
-      { icon: 'priceAlert', labelKey: 'tools.priceAlerts', route: '/price-alerts' },
-      { icon: 'trending', labelKey: 'tools.market', route: '/market' },
-    ],
-  },
-  {
-    titleKey: 'wallet.categoryPlanning',
-    emoji: '\uD83C\uDFE0',
-    items: [
-      { icon: 'fire', labelKey: 'tools.fire', route: '/fire' },
-      { icon: 'compound', labelKey: 'tools.compound', route: '/compound' },
-      { icon: 'realEstate', labelKey: 'tools.realEstate', route: '/real-estate' },
-      { icon: 'emergency', labelKey: 'tools.emergency', route: '/emergency-fund' },
-    ],
-  },
-  {
-    titleKey: 'wallet.categoryFamily',
-    emoji: '\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67',
-    items: [
-      { icon: 'family', labelKey: 'tools.family', route: '/family' },
-    ],
-  },
-  {
-    titleKey: 'wallet.categoryOther',
-    emoji: '\uD83D\uDCDD',
-    items: [
-      { icon: 'diary', labelKey: 'tools.diary', route: '/diary' },
-      { icon: 'challenge', labelKey: 'tools.challenges', route: '/savings-challenges' },
-      { icon: 'report', labelKey: 'tools.report', route: '/report' },
-    ],
-  },
-];
+function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {subtitle ? <Text style={styles.sectionSubtitle}>{subtitle}</Text> : null}
+    </View>
+  );
+}
 
 // ---------------------------------------------------------------------------
-// Component
+// Orbit Rings — animated concentric arcs
 // ---------------------------------------------------------------------------
 
-type ViewMode = 'class' | 'institution';
+interface OrbitData {
+  label: string;
+  value: number;
+  pct: number;
+  color: string;
+}
+
+function OrbitRings({
+  data,
+  size,
+  hidden,
+  currency,
+}: {
+  data: OrbitData[];
+  size: number;
+  hidden: boolean;
+  currency: any;
+}) {
+  const cx = size / 2;
+  const cy = size / 2;
+  const baseRadius = size * 0.18;
+  const ringGap = size * 0.085;
+  const strokeW = size * 0.045;
+
+  // Animated rotations
+  const rotations = useRef(
+    data.map((_, i) => new Animated.Value(0))
+  ).current;
+
+  // Pulse for glowing dots
+  const pulse = useRef(new Animated.Value(0.6)).current;
+
+  useEffect(() => {
+    // Start rotation for each ring
+    rotations.forEach((anim, i) => {
+      Animated.loop(
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: 20000 + i * 12000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+    });
+
+    // Pulse animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 1500,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0.6,
+          duration: 1500,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  if (data.length === 0) {
+    return (
+      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ color: C.textSec, fontSize: 13 }}>Sem dados</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ width: size, height: size }}>
+      {data.map((item, i) => {
+        const r = baseRadius + i * ringGap;
+        const circumference = 2 * Math.PI * r;
+        const arcLength = circumference * Math.min(item.pct / 100, 1);
+        const gapLength = circumference - arcLength;
+
+        const rotation = rotations[i]?.interpolate({
+          inputRange: [0, 1],
+          outputRange: i % 2 === 0 ? ['0deg', '360deg'] : ['360deg', '0deg'],
+        });
+
+        return (
+          <Animated.View
+            key={item.label}
+            style={{
+              position: 'absolute',
+              width: size,
+              height: size,
+              transform: [{ rotate: rotation || '0deg' }],
+            }}
+          >
+            <Svg width={size} height={size}>
+              {/* Background ring */}
+              <Circle
+                cx={cx}
+                cy={cy}
+                r={r}
+                stroke={C.cardBorder}
+                strokeWidth={strokeW}
+                fill="none"
+                opacity={0.4}
+              />
+              {/* Colored arc */}
+              <Circle
+                cx={cx}
+                cy={cy}
+                r={r}
+                stroke={item.color}
+                strokeWidth={strokeW}
+                fill="none"
+                strokeDasharray={`${arcLength} ${gapLength}`}
+                strokeDashoffset={circumference * 0.25}
+                strokeLinecap="round"
+                opacity={0.9}
+              />
+            </Svg>
+          </Animated.View>
+        );
+      })}
+
+      {/* Center label */}
+      <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
+        <Animated.View style={{ opacity: pulse }}>
+          <View style={{
+            width: size * 0.2,
+            height: size * 0.2,
+            borderRadius: size * 0.1,
+            backgroundColor: C.accent + '15',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <View style={{
+              width: 8,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: C.accent,
+            }} />
+          </View>
+        </Animated.View>
+      </View>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Evolution Chart — SVG line chart with gradient fill
+// ---------------------------------------------------------------------------
+
+function EvolutionChart({
+  data,
+  width,
+  height,
+  hidden,
+}: {
+  data: { label: string; value: number }[];
+  width: number;
+  height: number;
+  hidden: boolean;
+}) {
+  if (data.length < 2) {
+    return (
+      <View style={{ width, height, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ color: C.textSec, fontSize: 13 }}>Dados insuficientes</Text>
+      </View>
+    );
+  }
+
+  const padX = 10;
+  const padTop = 15;
+  const padBot = 25;
+  const chartW = width - padX * 2;
+  const chartH = height - padTop - padBot;
+
+  const values = data.map((d) => d.value);
+  const minV = Math.min(...values) * 0.98;
+  const maxV = Math.max(...values) * 1.02;
+  const rangeV = maxV - minV || 1;
+
+  const points = data.map((d, i) => ({
+    x: padX + (i / (data.length - 1)) * chartW,
+    y: padTop + chartH - ((d.value - minV) / rangeV) * chartH,
+  }));
+
+  // Line path
+  const linePath = points
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+    .join(' ');
+
+  // Fill path (closed to bottom)
+  const fillPath =
+    linePath +
+    ` L ${points[points.length - 1].x.toFixed(1)} ${(height - padBot).toFixed(1)}` +
+    ` L ${points[0].x.toFixed(1)} ${(height - padBot).toFixed(1)} Z`;
+
+  return (
+    <View style={{ opacity: hidden ? 0.3 : 1 }}>
+      <Svg width={width} height={height}>
+        <Defs>
+          <SvgLinearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor={C.accent} stopOpacity={0.3} />
+            <Stop offset="100%" stopColor={C.accent} stopOpacity={0.02} />
+          </SvgLinearGradient>
+        </Defs>
+
+        {/* Gradient fill */}
+        <Path d={fillPath} fill="url(#chartGrad)" />
+
+        {/* Line */}
+        <Path d={linePath} stroke={C.accent} strokeWidth={2.5} fill="none" strokeLinejoin="round" />
+
+        {/* Dots */}
+        {points.map((p, i) => (
+          <Circle key={i} cx={p.x} cy={p.y} r={3} fill={C.accent} />
+        ))}
+      </Svg>
+
+      {/* X labels */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: padX, marginTop: -padBot + 5 }}>
+        {data.map((d, i) => (
+          <Text key={i} style={{ color: C.textSec, fontSize: 10, fontWeight: '500' }}>
+            {d.label}
+          </Text>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Flow Bar — income vs expense
+// ---------------------------------------------------------------------------
+
+function FlowBar({
+  income,
+  expense,
+  hidden,
+  currency,
+}: {
+  income: number;
+  expense: number;
+  hidden: boolean;
+  currency: any;
+}) {
+  const total = income + expense || 1;
+  const incomePct = (income / total) * 100;
+  const expensePct = (expense / total) * 100;
+
+  const display = (v: number) =>
+    hidden ? maskValue(formatCurrency(v, currency), currency) : formatCurrency(v, currency);
+
+  return (
+    <View style={styles.flowContainer}>
+      <View style={styles.flowBarTrack}>
+        <View style={[styles.flowBarSegment, { width: `${incomePct}%`, backgroundColor: C.accent }]} />
+        <View style={[styles.flowBarSegment, { width: `${expensePct}%`, backgroundColor: C.red }]} />
+      </View>
+      <View style={styles.flowLabels}>
+        <View style={styles.flowLabelItem}>
+          <View style={[styles.flowDot, { backgroundColor: C.accent }]} />
+          <Text style={styles.flowLabelText}>Receita</Text>
+          <Text style={[styles.flowValue, { color: C.accent }]}>{display(income)}</Text>
+        </View>
+        <View style={styles.flowLabelItem}>
+          <View style={[styles.flowDot, { backgroundColor: C.red }]} />
+          <Text style={styles.flowLabelText}>Despesa</Text>
+          <Text style={[styles.flowValue, { color: C.red }]}>{display(expense)}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Macro Card — single indicator
+// ---------------------------------------------------------------------------
+
+function MacroCard({
+  label,
+  value,
+  change,
+  color,
+  icon,
+}: {
+  label: string;
+  value: string;
+  change?: string;
+  color: string;
+  icon: string;
+}) {
+  return (
+    <View style={[styles.macroCard, { borderLeftColor: color, borderLeftWidth: 3 }]}>
+      <Text style={styles.macroIcon}>{icon}</Text>
+      <Text style={styles.macroLabel}>{label}</Text>
+      <Text style={styles.macroValue}>{value}</Text>
+      {change ? (
+        <Text style={[styles.macroChange, { color: change.startsWith('+') ? C.accent : change.startsWith('-') ? C.red : C.textSec }]}>
+          {change}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Position Item — single investment row
+// ---------------------------------------------------------------------------
+
+function PositionItem({
+  asset,
+  hidden,
+  currency,
+  onPress,
+}: {
+  asset: Asset;
+  hidden: boolean;
+  currency: any;
+  onPress: (a: Asset) => void;
+}) {
+  const classColor = ALLOC_COLORS[asset.class] ?? C.textSec;
+  const classLabel = ALLOC_LABELS[asset.class] ?? asset.class;
+  const isPositive = asset.variation >= 0;
+
+  return (
+    <TouchableOpacity
+      style={styles.positionRow}
+      onPress={() => onPress(asset)}
+      activeOpacity={0.7}
+    >
+      <View style={[styles.positionDot, { backgroundColor: classColor }]} />
+      <View style={styles.positionInfo}>
+        <Text style={styles.positionName} numberOfLines={1}>
+          {asset.ticker || asset.name}
+        </Text>
+        <Text style={styles.positionClass}>{classLabel}</Text>
+      </View>
+      <View style={styles.positionValues}>
+        <Text style={styles.positionValue}>
+          {hidden ? maskValue(formatCurrency(asset.currentValue, currency), currency) : formatCurrency(asset.currentValue, currency)}
+        </Text>
+        <Text style={[styles.positionChange, { color: isPositive ? C.accent : C.red }]}>
+          {hidden ? '****' : formatPct(asset.variation)}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main Component
+// ---------------------------------------------------------------------------
 
 export default function WalletScreen() {
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
+  const router = useRouter();
 
   // Stores
   const {
+    summary,
     assets,
     allocations,
     institutions,
@@ -145,673 +461,415 @@ export default function WalletScreen() {
     loadPortfolio,
     refresh,
   } = usePortfolioStore();
-  const { valuesHidden, isDemoMode } = useAuthStore();
+  const { valuesHidden, toggleValuesHidden } = useAuthStore();
   const { t, currency } = useSettingsStore();
   const colors = useSettingsStore((s) => s.colors);
-  const checkLimit = usePlanStore((s) => s.checkLimit);
-  const router = useRouter();
-
-  const { width: screenWidth } = useWindowDimensions();
-
-  // Memoised styles
-  const styles = useMemo(() => createStyles(colors), [colors]);
-
-  // 4 columns with 3 gaps
-  const toolCardWidth = (screenWidth - spacing.xl * 2 - spacing.sm * 3) / 4;
+  const dashboardTransactions = useCardsStore((s) => s.dashboardTransactions);
 
   // Local state
-  const [viewMode, setViewMode] = useState<ViewMode>('class');
-  const [expandedClasses, setExpandedClasses] = useState<Set<AssetClass>>(
-    new Set()
-  );
-  const [expandedInstitutions, setExpandedInstitutions] = useState<
-    Set<InstitutionId>
-  >(new Set());
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
-  const [sheetVisible, setSheetVisible] = useState(false);
-  const [benchmarkPeriod, setBenchmarkPeriod] = useState<'1M' | '3M' | '6M' | '12M'>('1M');
-  const [dailyChanges, setDailyChanges] = useState<Record<string, number>>({});
+  const [indicators, setIndicators] = useState<any>(null);
 
-  const summary = usePortfolioStore((s) => s.summary);
+  // ---------------------------------------------------------------------------
+  // Data loading
+  // ---------------------------------------------------------------------------
 
-  // Load data on mount & expand first group
   useEffect(() => {
     loadPortfolio();
-  }, []);
-
-  // Fetch BRAPI daily changes for portfolio tickers
-  useEffect(() => {
-    if (assets.length === 0) return;
-    const tickers = assets
-      .filter((a) => a.ticker && (a.class === 'stocks' || a.class === 'fiis'))
-      .map((a) => a.ticker);
-    if (tickers.length === 0) return;
-
-    const unique = [...new Set(tickers)];
-    brapiService
-      .getMultipleQuotes(unique.slice(0, 20))
-      .then((quotes) => {
-        const map: Record<string, number> = {};
-        for (const q of quotes) {
-          if (q.symbol && q.regularMarketChangePercent != null) {
-            map[q.symbol] = q.regularMarketChangePercent;
-          }
-        }
-        setDailyChanges(map);
-      })
-      .catch(() => {
-        // silently fail — daily changes are optional enrichment
-      });
-  }, [assets]);
-
-  // When allocations load, expand the first class group
-  useEffect(() => {
-    if (allocations.length > 0 && expandedClasses.size === 0) {
-      setExpandedClasses(new Set([allocations[0].class]));
-    }
-  }, [allocations]);
-
-  // When institutions load, expand the first institution group
-  useEffect(() => {
-    if (institutions.length > 0 && expandedInstitutions.size === 0) {
-      setExpandedInstitutions(new Set([institutions[0].id]));
-    }
-  }, [institutions]);
-
-  // Derived data: assets grouped by institution
-  const assetsByInstitution = useMemo(() => {
-    const map: Record<string, Asset[]> = {};
-    for (const asset of assets) {
-      if (!map[asset.institution]) map[asset.institution] = [];
-      map[asset.institution].push(asset);
-    }
-    return map;
-  }, [assets]);
-
-  // Derived data: assets grouped by class
-  const assetsByClass = useMemo(() => {
-    const map: Record<string, Asset[]> = {};
-    for (const asset of assets) {
-      if (!map[asset.class]) map[asset.class] = [];
-      map[asset.class].push(asset);
-    }
-    return map;
-  }, [assets]);
-
-  // Handlers
-  const handleToggleViewMode = useCallback(
-    (mode: ViewMode) => {
-      if (mode !== viewMode) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        setViewMode(mode);
-      }
-    },
-    [viewMode]
-  );
-
-  const handleToggleClass = useCallback(
-    (assetClass: AssetClass) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setExpandedClasses((prev) => {
-        const next = new Set(prev);
-        if (next.has(assetClass)) {
-          next.delete(assetClass);
-        } else {
-          next.add(assetClass);
-        }
-        return next;
-      });
-    },
-    []
-  );
-
-  const handleToggleInstitution = useCallback(
-    (institutionId: InstitutionId) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setExpandedInstitutions((prev) => {
-        const next = new Set(prev);
-        if (next.has(institutionId)) {
-          next.delete(institutionId);
-        } else {
-          next.add(institutionId);
-        }
-        return next;
-      });
-    },
-    []
-  );
-
-  const handleAssetPress = useCallback((asset: Asset) => {
-    logger.log('ASSET PRESS:', asset.name, 'ticker:', asset.ticker, 'class:', asset.class);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    // Block detail navigation for Renda Fixa and Previdência
-    if (asset.class === 'fixedIncome' || asset.class === 'pension') {
-      Alert.alert('', t('wallet.comingSoonDetail'));
-      return;
-    }
-    // Navigate to full asset detail if ticker exists
-    if (asset.ticker) {
-      router.push({ pathname: '/asset-detail', params: { ticker: asset.ticker } });
-      return;
-    }
-    // Fallback to bottom sheet for assets without ticker
-    setSelectedAsset(asset);
-    setSheetVisible(true);
-  }, [router, t]);
-
-  const handleCloseSheet = useCallback(() => {
-    setSheetVisible(false);
-    setSelectedAsset(null);
+    fetchMarketIndicators().then(setIndicators).catch(() => {});
   }, []);
 
   const handleRefresh = useCallback(() => {
     refresh();
+    fetchMarketIndicators().then(setIndicators).catch(() => {});
   }, [refresh]);
 
-  const handleExportXLSX = useCallback(async () => {
-    if (!checkLimit('exportData')) {
-      Alert.alert(
-        t('export.proRequired'),
-        t('export.upgradeMessage'),
-        [
-          { text: t('common.cancel'), style: 'cancel' },
-          { text: t('export.seePlans'), onPress: () => router.push('/plans') },
-        ],
-      );
-      return;
-    }
-    try {
-      const rows: PortfolioExportRow[] = assets.map((a) => ({
-        ticker: a.ticker || a.name,
-        name: a.name,
-        quantity: a.quantity,
-        avgPrice: a.averagePrice,
-        currentPrice: a.currentPrice,
-        totalValue: a.currentValue,
-        profitLoss: a.currentValue - a.investedValue,
-        profitPct: a.variation,
+  // ---------------------------------------------------------------------------
+  // Derived: allocations for orbit
+  // ---------------------------------------------------------------------------
+
+  const orbitData: OrbitData[] = useMemo(() => {
+    if (!allocations || allocations.length === 0) return [];
+    const total = allocations.reduce((s, a) => s + a.value, 0) || 1;
+    return allocations
+      .filter((a) => a.value > 0)
+      .sort((a, b) => a.value - b.value) // inner = smallest
+      .map((a) => ({
+        label: a.label || ALLOC_LABELS[a.class] || a.class,
+        value: a.value,
+        pct: (a.value / total) * 100,
+        color: a.color || ALLOC_COLORS[a.class] || C.textSec,
       }));
-      const total = assets.reduce((s, a) => s + a.currentValue, 0);
-      await exportService.exportPortfolioXLSX({
-        assets: rows,
-        totalValue: total,
-        date: new Date().toISOString().split('T')[0],
-      });
-    } catch (err: any) {
-      Alert.alert(t('common.error'), err?.message ?? 'Export failed');
+  }, [allocations]);
+
+  // ---------------------------------------------------------------------------
+  // Derived: evolution chart from summary.history
+  // ---------------------------------------------------------------------------
+
+  const chartData = useMemo(() => {
+    const MONTH_LABELS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    if (summary?.history && summary.history.length >= 2) {
+      return summary.history.slice(-6).map((h) => ({
+        label: h.month || MONTH_LABELS[parseInt(h.date?.split('-')[1] || '1', 10) - 1] || '',
+        value: h.value,
+      }));
     }
-  }, [assets, checkLimit, t, router]);
+    // Placeholder
+    return MONTH_LABELS.slice(-6).map((m, i) => ({
+      label: m,
+      value: (summary?.totalValue ?? 100000) * (0.92 + i * 0.016),
+    }));
+  }, [summary]);
 
-  // Value display helper
-  const displayValue = useCallback(
-    (formatted: string) => (valuesHidden ? maskValue(formatted) : formatted),
-    [valuesHidden]
+  // ---------------------------------------------------------------------------
+  // Derived: monthly flow from dashboardTransactions
+  // ---------------------------------------------------------------------------
+
+  const flow = useMemo(() => {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    let income = 0;
+    let expense = 0;
+    for (const tx of dashboardTransactions) {
+      const txDate = new Date(tx.date);
+      if (txDate >= firstDay) {
+        if (tx.amount > 0) income += tx.amount;
+        else expense += Math.abs(tx.amount);
+      }
+    }
+    return { income, expense };
+  }, [dashboardTransactions]);
+
+  // ---------------------------------------------------------------------------
+  // Handlers
+  // ---------------------------------------------------------------------------
+
+  const handleAssetPress = useCallback(
+    (asset: Asset) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      if (asset.ticker) {
+        router.push({ pathname: '/asset-detail', params: { ticker: asset.ticker } });
+      }
+    },
+    [router]
   );
 
-  // -------------------------------------------------------------------------
-  // Render helpers
-  // -------------------------------------------------------------------------
+  const handleToggleHidden = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    toggleValuesHidden();
+  }, [toggleValuesHidden]);
 
-  const renderToggle = () => (
-    <View style={styles.toggleContainer}>
-      <TouchableOpacity
-        style={[
-          styles.toggleButton,
-          viewMode === 'class' && styles.toggleButtonActive,
-        ]}
-        onPress={() => handleToggleViewMode('class')}
-        activeOpacity={0.7}
-        accessibilityLabel={t('wallet.byClass')}
-        accessibilityRole="button"
-      >
-        <Text
-          style={[
-            styles.toggleText,
-            viewMode === 'class' && styles.toggleTextActive,
-          ]}
-        >
-          {t('wallet.byClass')}
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[
-          styles.toggleButton,
-          viewMode === 'institution' && styles.toggleButtonActive,
-        ]}
-        onPress={() => handleToggleViewMode('institution')}
-        activeOpacity={0.7}
-        accessibilityLabel={t('wallet.byInstitution')}
-        accessibilityRole="button"
-      >
-        <Text
-          style={[
-            styles.toggleText,
-            viewMode === 'institution' && styles.toggleTextActive,
-          ]}
-        >
-          {t('wallet.byInstitution')}
-        </Text>
-      </TouchableOpacity>
-    </View>
+  // ---------------------------------------------------------------------------
+  // Display helpers
+  // ---------------------------------------------------------------------------
+
+  const display = useCallback(
+    (v: number) =>
+      valuesHidden
+        ? maskValue(formatCurrency(v, currency), currency)
+        : formatCurrency(v, currency),
+    [valuesHidden, currency]
   );
 
-  const renderClassView = () =>
-    allocations.map((allocation, index) => {
-      const isExpanded = expandedClasses.has(allocation.class);
-      const groupAssets = assetsByClass[allocation.class] ?? [];
+  // ---------------------------------------------------------------------------
+  // Macro indicators
+  // ---------------------------------------------------------------------------
 
-      return (
-        <View key={`${allocation.class}-${index}`}>
-          <TouchableOpacity
-            style={styles.groupHeader}
-            onPress={() => handleToggleClass(allocation.class)}
-            activeOpacity={0.7}
-            accessibilityLabel={`${allocation.label}, ${groupAssets.length} ativos, ${formatCurrency(allocation.value, currency)}`}
-          >
-            <View style={styles.groupHeaderLeft}>
-              <View
-                style={[
-                  styles.colorDot,
-                  { backgroundColor: allocation.color },
-                ]}
-              />
-              <View style={styles.groupHeaderInfo}>
-                <View style={styles.groupHeaderTopRow}>
-                  <Text style={styles.groupLabel}>{allocation.label}</Text>
-                  <Text style={styles.groupCount}>
-                    {groupAssets.length}{' '}
-                    {groupAssets.length === 1 ? t('wallet.asset') : t('wallet.assets')}
-                  </Text>
-                </View>
-                <View style={styles.groupHeaderBottomRow}>
-                  <Text style={styles.groupValue}>
-                    {displayValue(formatCurrency(allocation.value, currency))}
-                  </Text>
-                  <Text style={styles.groupPercentage}>
-                    {formatPct(allocation.percentage, false)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-            <Text style={styles.expandIndicator}>
-              {isExpanded ? '\u25BC' : '\u25B6'}
-            </Text>
-          </TouchableOpacity>
+  const macroCards = useMemo(() => {
+    const cards: { label: string; value: string; change?: string; color: string; icon: string }[] = [];
 
-          {isExpanded &&
-            groupAssets.map((asset, index) => (
-              <AssetCard
-                key={asset.id}
-                asset={asset}
-                index={index}
-                onPress={handleAssetPress}
-                showInstitution
-                dailyChange={dailyChanges[asset.ticker]}
-              />
-            ))}
-        </View>
+    if (indicators?.selic) {
+      const selic = Array.isArray(indicators.selic) ? indicators.selic[0] : indicators.selic;
+      const selicVal = selic?.value ?? selic?.rate ?? selic;
+      cards.push({
+        label: 'SELIC',
+        value: typeof selicVal === 'number' ? `${selicVal.toFixed(2)}%` : `${selicVal}%`,
+        change: 'mantida',
+        color: C.accent,
+        icon: '\uD83C\uDFE6',
+      });
+    }
+
+    if (indicators?.inflation) {
+      const inf = Array.isArray(indicators.inflation) ? indicators.inflation[0] : indicators.inflation;
+      const infVal = inf?.value ?? inf?.rate ?? inf;
+      cards.push({
+        label: 'IPCA',
+        value: typeof infVal === 'number' ? `${infVal.toFixed(2)}%` : `${infVal}%`,
+        color: C.orange,
+        icon: '\uD83D\uDCC8',
+      });
+    }
+
+    if (indicators?.currencies) {
+      const usd = Array.isArray(indicators.currencies)
+        ? indicators.currencies.find((c: any) => c.fromCurrency === 'USD' || c.symbol === 'USD')
+        : indicators.currencies?.USD;
+      if (usd) {
+        const price = usd.bidPrice ?? usd.price ?? usd.regularMarketPrice ?? 0;
+        const change = usd.regularMarketChangePercent ?? usd.pctChange ?? 0;
+        cards.push({
+          label: 'USD/BRL',
+          value: `R$ ${Number(price).toFixed(2)}`,
+          change: `${change >= 0 ? '+' : ''}${Number(change).toFixed(2)}%`,
+          color: C.blue,
+          icon: '\uD83D\uDCB5',
+        });
+      }
+    }
+
+    if (indicators?.ibovespa) {
+      const ibov = indicators.ibovespa;
+      const price = ibov.regularMarketPrice ?? ibov.price ?? 0;
+      const change = ibov.regularMarketChangePercent ?? 0;
+      cards.push({
+        label: 'IBOV',
+        value: Number(price).toLocaleString('pt-BR', { maximumFractionDigits: 0 }),
+        change: `${change >= 0 ? '+' : ''}${Number(change).toFixed(2)}%`,
+        color: C.purple,
+        icon: '\uD83D\uDCCA',
+      });
+    }
+
+    // Fill to at least 4 cards
+    if (cards.length === 0) {
+      cards.push(
+        { label: 'SELIC', value: '---', color: C.accent, icon: '\uD83C\uDFE6' },
+        { label: 'IPCA', value: '---', color: C.orange, icon: '\uD83D\uDCC8' },
+        { label: 'USD/BRL', value: '---', color: C.blue, icon: '\uD83D\uDCB5' },
+        { label: 'IBOV', value: '---', color: C.purple, icon: '\uD83D\uDCCA' }
       );
-    });
+    }
 
-  const renderInstitutionView = () =>
-    institutions.map((institution) => {
-      const isExpanded = expandedInstitutions.has(institution.id);
-      const groupAssets = assetsByInstitution[institution.id] ?? [];
-      const totalValue = groupAssets.reduce(
-        (sum, a) => sum + a.currentValue,
-        0
-      );
+    return cards;
+  }, [indicators]);
 
-      return (
-        <View key={institution.id}>
-          <TouchableOpacity
-            style={styles.groupHeader}
-            onPress={() => handleToggleInstitution(institution.id)}
-            activeOpacity={0.7}
-            accessibilityLabel={`${institution.name}, ${groupAssets.length} ativos, ${formatCurrency(totalValue, currency)}`}
-          >
-            <View style={styles.groupHeaderLeft}>
-              <View style={{ marginRight: spacing.md }}>
-                <BankLogo institutionName={institution.name} imageUrl={institution.imageUrl} size={36} />
-              </View>
-              <View style={styles.groupHeaderInfo}>
-                <View style={styles.groupHeaderTopRow}>
-                  <Text style={styles.groupLabel}>{institution.name}</Text>
-                  <Text style={styles.groupCount}>
-                    {groupAssets.length}{' '}
-                    {groupAssets.length === 1 ? t('wallet.asset') : t('wallet.assets')}
-                  </Text>
-                </View>
-                <View style={styles.groupHeaderBottomRow}>
-                  <Text style={styles.groupValue}>
-                    {displayValue(formatCurrency(totalValue, currency))}
-                  </Text>
-                </View>
-              </View>
-            </View>
-            <Text style={styles.expandIndicator}>
-              {isExpanded ? '\u25BC' : '\u25B6'}
-            </Text>
-          </TouchableOpacity>
+  // ---------------------------------------------------------------------------
+  // Orbit chart sizing
+  // ---------------------------------------------------------------------------
 
-          {isExpanded &&
-            groupAssets.map((asset, index) => (
-              <AssetCard
-                key={asset.id}
-                asset={asset}
-                index={index}
-                onPress={handleAssetPress}
-                showInstitution={false}
-                dailyChange={dailyChanges[asset.ticker]}
-              />
-            ))}
-        </View>
-      );
-    });
+  const orbitSize = Math.min(screenWidth * 0.48, 200);
+  const chartWidth = screenWidth - 40;
 
-  const renderAssetDetail = () => {
-    if (!selectedAsset) return null;
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
 
-    const isPositive = selectedAsset.variation >= 0;
-    const institutionName =
-      institutionNames[selectedAsset.institution] ??
-      selectedAsset.institution;
-    const classLabel = t(`class.${selectedAsset.class}`);
-    const classColor =
-      colors.assetClasses[selectedAsset.class] ?? colors.accent;
-
+  if (isLoading && !summary) {
     return (
-      <View style={styles.detailContent}>
-        {/* Ticker + class badge */}
-        <View style={styles.detailTickerRow}>
-          <Text style={styles.detailTicker}>{selectedAsset.ticker}</Text>
-          <View
-            style={[styles.classBadge, { backgroundColor: classColor + '20' }]}
-          >
-            <Text style={[styles.classBadgeText, { color: classColor }]}>
-              {classLabel}
-            </Text>
-          </View>
+      <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
+        <View style={styles.headerRow}>
+          <Text style={styles.screenTitle}>{t('wallet.title')}</Text>
         </View>
-
-        {/* Chart */}
-        <View style={styles.detailChartContainer}>
-          <MiniLineChart
-            data={selectedAsset.priceHistory}
-            width={280}
-            height={100}
-            strokeWidth={2}
-          />
-        </View>
-
-        {/* Info rows */}
-        <View style={styles.detailInfoGrid}>
-          <View style={styles.detailInfoRow}>
-            <Text style={styles.detailInfoLabel}>{t('wallet.avgPrice')}</Text>
-            <Text style={styles.detailInfoValue}>
-              {displayValue(formatCurrency(selectedAsset.averagePrice, currency))}
-            </Text>
-          </View>
-
-          <View style={styles.detailInfoRow}>
-            <Text style={styles.detailInfoLabel}>{t('wallet.currentPrice')}</Text>
-            <Text style={styles.detailInfoValue}>
-              {displayValue(formatCurrency(selectedAsset.currentPrice, currency))}
-            </Text>
-          </View>
-
-          <View style={styles.detailInfoRow}>
-            <Text style={styles.detailInfoLabel}>{t('wallet.quantity')}</Text>
-            <Text style={styles.detailInfoValue}>
-              {valuesHidden
-                ? '\u2022\u2022\u2022\u2022'
-                : selectedAsset.quantity < 1
-                  ? selectedAsset.quantity.toFixed(4)
-                  : selectedAsset.quantity.toLocaleString('pt-BR')}
-            </Text>
-          </View>
-
-          <View style={styles.detailInfoRow}>
-            <Text style={styles.detailInfoLabel}>{t('wallet.investedValue')}</Text>
-            <Text style={styles.detailInfoValue}>
-              {displayValue(formatCurrency(selectedAsset.investedValue, currency))}
-            </Text>
-          </View>
-
-          <View style={styles.detailInfoRow}>
-            <Text style={styles.detailInfoLabel}>{t('wallet.currentValue')}</Text>
-            <Text style={styles.detailInfoValue}>
-              {displayValue(formatCurrency(selectedAsset.currentValue, currency))}
-            </Text>
-          </View>
-
-          <View style={styles.detailInfoRow}>
-            <Text style={styles.detailInfoLabel}>{t('wallet.profitability')}</Text>
-            <Text
-              style={[
-                styles.detailInfoValue,
-                {
-                  color: isPositive ? colors.positive : colors.negative,
-                },
-              ]}
-            >
-              {valuesHidden
-                ? '\u2022\u2022\u2022\u2022'
-                : formatPct(selectedAsset.variation)}
-            </Text>
-          </View>
-
-          <View style={styles.detailInfoRow}>
-            <Text style={styles.detailInfoLabel}>{t('wallet.institution')}</Text>
-            <Text style={styles.detailInfoValue}>{institutionName}</Text>
-          </View>
+        <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
+          <SkeletonList count={6} />
         </View>
       </View>
     );
-  };
+  }
 
-  // -------------------------------------------------------------------------
-  // Main render
-  // -------------------------------------------------------------------------
+  if (error && !summary && assets.length === 0) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
+        <View style={styles.headerRow}>
+          <Text style={styles.screenTitle}>{t('wallet.title')}</Text>
+        </View>
+        <ErrorState message={error} onRetry={loadPortfolio} />
+      </View>
+    );
+  }
+
+  const totalValue = summary?.totalValue ?? 0;
+  const monthVar = summary?.variation1m ?? 0;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t('wallet.title')}</Text>
-        {assets.length > 0 && (
-          <TouchableOpacity style={styles.exportBtn} onPress={handleExportXLSX} activeOpacity={0.7}>
-            <AppIcon name="share" size={18} color={colors.accent} />
-            <Text style={styles.exportBtnText}>XLSX</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={C.accent}
+            colors={[C.accent]}
+            progressBackgroundColor={C.card}
+          />
+        }
+      >
+        {/* ============================================================= */}
+        {/* SECTION 1: HERO — Patrimonio                                  */}
+        {/* ============================================================= */}
 
-      {/* Toggle */}
-      {renderToggle()}
-
-      {/* Content */}
-      {isLoading ? (
-        <View style={styles.skeletonContainer}>
-          <SkeletonList count={6} />
-        </View>
-      ) : error && assets.length === 0 ? (
-        <ErrorState message={error} onRetry={loadPortfolio} />
-      ) : assets.length === 0 ? (
-        <View style={styles.emptyState}>
-          <AppIcon name="briefcase" size={48} color={colors.text.secondary} />
-          <Text style={styles.emptyTitle}>{t('wallet.emptyTitle')}</Text>
-          <Text style={styles.emptyDescription}>{t('wallet.emptyDescription')}</Text>
-          <TouchableOpacity
-            style={styles.emptyButton}
-            onPress={() => router.push('/connect-bank')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.emptyButtonText}>{t('wallet.emptyButton')}</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={handleRefresh}
-              tintColor={colors.accent}
-              colors={[colors.accent]}
-              progressBackgroundColor={colors.card}
-            />
-          }
-        >
-          {/* Performance Comparison */}
-          {summary && (
-            <View style={styles.comparisonSection}>
-              <Text style={styles.comparisonTitle}>{t('comparison.title')}</Text>
-
-              {/* Period pills */}
-              <View style={styles.compPillRow}>
-                {(['1M', '3M', '6M', '12M'] as const).map((p) => {
-                  const sel = benchmarkPeriod === p;
-                  return (
-                    <TouchableOpacity
-                      key={p}
-                      style={[styles.compPill, sel && styles.compPillSel]}
-                      onPress={() => {
-                        Haptics.selectionAsync();
-                        setBenchmarkPeriod(p);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.compPillText, sel && styles.compPillTextSel]}>
-                        {p}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {/* Bars */}
-              {(() => {
-                const storeBenchmarks = usePortfolioStore.getState().benchmarks;
-                const bench = storeBenchmarks?.[benchmarkPeriod] ?? demoBenchmarks[benchmarkPeriod];
-                const portfolioVar = benchmarkPeriod === '1M'
-                  ? (summary.variation1m ?? 0)
-                  : benchmarkPeriod === '12M'
-                    ? (summary.variation12m ?? 0)
-                    : benchmarkPeriod === '3M'
-                      ? (summary.variation1m ?? 0) * 3
-                      : (summary.variation1m ?? 0) * 6;
-
-                const bars = [
-                  { label: t('comparison.portfolio'), value: portfolioVar, color: colors.accent },
-                  { label: t('comparison.cdi'), value: bench.cdi, color: colors.info },
-                  { label: t('comparison.ipca'), value: bench.ipca, color: colors.warning },
-                  { label: t('comparison.ibov'), value: bench.ibov, color: '#A855F7' },
-                ];
-
-                const maxVal = Math.max(...bars.map((b) => Math.abs(b.value)), 1);
-
-                return bars.map((bar) => (
-                  <View key={bar.label} style={styles.compBarRow}>
-                    <Text style={styles.compBarLabel} numberOfLines={1}>{bar.label}</Text>
-                    <View style={styles.compBarTrack}>
-                      <View
-                        style={[
-                          styles.compBarFill,
-                          {
-                            width: `${(Math.abs(bar.value) / maxVal) * 100}%`,
-                            backgroundColor: bar.color,
-                          },
-                        ]}
-                      />
-                    </View>
-                    <Text style={[styles.compBarValue, { color: bar.value >= 0 ? colors.positive : colors.negative }]}>
-                      {valuesHidden ? '••••' : `${bar.value >= 0 ? '+' : ''}${bar.value.toFixed(1)}%`}
-                    </Text>
-                  </View>
-                ));
-              })()}
+        <View style={styles.heroSection}>
+          <View style={styles.heroTopRow}>
+            <Text style={styles.heroLabel}>Patrimonio consolidado</Text>
+            <TouchableOpacity onPress={handleToggleHidden} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+              <AppIcon name={valuesHidden ? 'eyeOff' : 'eye'} size={20} color={C.textSec} />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.heroValue}>
+            {display(totalValue)}
+          </Text>
+          {monthVar !== 0 && (
+            <View style={[styles.heroBadge, { backgroundColor: monthVar >= 0 ? C.accent + '18' : C.red + '18' }]}>
+              <Text style={[styles.heroBadgeText, { color: monthVar >= 0 ? C.accent : C.red }]}>
+                {formatPct(monthVar)} no mes
+              </Text>
             </View>
           )}
+        </View>
 
-          {/* Risk Health + Rebalance CTA */}
-          <TouchableOpacity
-            style={styles.riskMiniCard}
-            onPress={() => router.push('/risk-metrics')}
-            activeOpacity={0.7}
-          >
-            <AppIcon name="health" size={20} color={colors.accent} />
-            <View style={styles.riskMiniInfo}>
-              <Text style={styles.riskMiniLabel}>{t('risk.healthScore')}</Text>
-              <Text style={[styles.riskMiniScore, { color: colors.accent }]}>72</Text>
-            </View>
-            <AppIcon name="chevron" size={16} color={colors.text.muted} />
-          </TouchableOpacity>
+        {/* ============================================================= */}
+        {/* SECTION 2: ORBITS — Allocation                                */}
+        {/* ============================================================= */}
 
-          <TouchableOpacity
-            style={styles.rebalanceCta}
-            onPress={() => router.push('/rebalance')}
-            activeOpacity={0.7}
-          >
-            <AppIcon name="rebalance" size={20} color={colors.accent} />
-            <Text style={styles.rebalanceCtaText}>{t('rebalance.ctaShort')}</Text>
-            <AppIcon name="chevron" size={16} color={colors.text.muted} />
-          </TouchableOpacity>
-
-          {viewMode === 'class' ? renderClassView() : renderInstitutionView()}
-
-          {/* Tools Hub */}
-          <View style={styles.toolsSection}>
-            <Text style={styles.toolsSectionTitle}>{t('wallet.toolsHub')}</Text>
-            {TOOL_CATEGORIES.map((category) => (
-              <View key={category.titleKey} style={styles.toolsCategory}>
-                <Text style={styles.toolsCategoryTitle}>
-                  {category.emoji} {t(category.titleKey)}
-                </Text>
-                <View style={styles.toolsGrid}>
-                  {category.items.map((tool) => (
-                    <TouchableOpacity
-                      key={tool.labelKey}
-                      style={[styles.toolCard, { width: toolCardWidth }]}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        router.push(tool.route as any);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <AppIcon name={tool.icon} size={22} color={colors.accent} />
-                      <Text
-                        style={styles.toolName}
-                        numberOfLines={2}
-                        adjustsFontSizeToFit
-                        minimumFontScale={0.7}
-                      >
-                        {t(tool.labelKey)}
+        {orbitData.length > 0 && (
+          <View style={styles.section}>
+            <SectionHeader title="Alocacao" />
+            <View style={styles.orbitRow}>
+              <OrbitRings data={orbitData} size={orbitSize} hidden={valuesHidden} currency={currency} />
+              <View style={styles.orbitLegend}>
+                {orbitData.map((item) => (
+                  <View key={item.label} style={styles.legendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+                    <View style={styles.legendTextCol}>
+                      <Text style={styles.legendLabel} numberOfLines={1}>{item.label}</Text>
+                      <Text style={styles.legendValue}>
+                        {valuesHidden ? '****' : `${item.pct.toFixed(1)}%`}
                       </Text>
-                      {tool.isTodo && !isDemoMode && (
-                        <View style={styles.toolBadge}>
-                          <Text style={styles.toolBadgeText}>{t('common.comingSoon')}</Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                    </View>
+                  </View>
+                ))}
               </View>
+            </View>
+          </View>
+        )}
+
+        {/* ============================================================= */}
+        {/* SECTION 3: EVOLUTION — 6-month chart                          */}
+        {/* ============================================================= */}
+
+        <View style={styles.section}>
+          <SectionHeader title="Evolucao" subtitle="Ultimos 6 meses" />
+          <View style={styles.chartCard}>
+            <EvolutionChart
+              data={chartData}
+              width={chartWidth}
+              height={160}
+              hidden={valuesHidden}
+            />
+          </View>
+        </View>
+
+        {/* ============================================================= */}
+        {/* SECTION 4: POSITIONS — Investments                            */}
+        {/* ============================================================= */}
+
+        <View style={styles.section}>
+          <SectionHeader title="Posicoes" subtitle={assets.length > 0 ? `${assets.length} ativos` : undefined} />
+          {assets.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <AppIcon name="briefcase" size={32} color={C.textSec} />
+              <Text style={styles.emptyText}>Conecte seu banco para ver seus investimentos</Text>
+            </View>
+          ) : (
+            <View style={styles.positionsCard}>
+              {assets.slice(0, 15).map((asset) => (
+                <PositionItem
+                  key={asset.id}
+                  asset={asset}
+                  hidden={valuesHidden}
+                  currency={currency}
+                  onPress={handleAssetPress}
+                />
+              ))}
+              {assets.length > 15 && (
+                <TouchableOpacity
+                  style={styles.seeAllBtn}
+                  onPress={() => router.push('/market')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.seeAllText}>Ver todos ({assets.length})</Text>
+                  <AppIcon name="chevron" size={14} color={C.accent} />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        </View>
+
+        {/* ============================================================= */}
+        {/* SECTION 5: FLOW — Income vs Expense                           */}
+        {/* ============================================================= */}
+
+        {(flow.income > 0 || flow.expense > 0) && (
+          <View style={styles.section}>
+            <SectionHeader title="Fluxo do mes" />
+            <View style={styles.cardContainer}>
+              <FlowBar income={flow.income} expense={flow.expense} hidden={valuesHidden} currency={currency} />
+            </View>
+          </View>
+        )}
+
+        {/* ============================================================= */}
+        {/* SECTION 6: MARKET — Macro Indicators                          */}
+        {/* ============================================================= */}
+
+        <View style={styles.section}>
+          <SectionHeader title="Mercado" />
+          <View style={styles.macroGrid}>
+            {macroCards.map((card, i) => (
+              <MacroCard key={card.label + i} {...card} />
             ))}
           </View>
-        </ScrollView>
-      )}
+        </View>
 
-      {/* Bottom Sheet - Asset Detail */}
-      <BottomSheet
-        visible={sheetVisible}
-        onClose={handleCloseSheet}
-        title={selectedAsset?.name}
-      >
-        {renderAssetDetail()}
-      </BottomSheet>
+        {/* ============================================================= */}
+        {/* SECTION 7: B3 — Coming Soon Banner                            */}
+        {/* ============================================================= */}
+
+        <View style={styles.section}>
+          <LinearGradient
+            colors={[C.purple, C.purpleDark]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.b3Banner}
+          >
+            <Text style={styles.b3Icon}>{'\uD83D\uDE80'}</Text>
+            <View style={styles.b3TextCol}>
+              <Text style={styles.b3Title}>Portal do Investidor B3</Text>
+              <Text style={styles.b3Subtitle}>Posicoes detalhadas por ticker — EM BREVE</Text>
+            </View>
+          </LinearGradient>
+        </View>
+
+        {/* ============================================================= */}
+        {/* SECTION 8: CTA — Open Finance                                 */}
+        {/* ============================================================= */}
+
+        {assets.length === 0 && institutions.length === 0 && (
+          <View style={styles.section}>
+            <View style={styles.ctaCard}>
+              <AppIcon name="link" size={28} color={C.accent} />
+              <Text style={styles.ctaTitle}>Conectar banco via Open Finance</Text>
+              <Text style={styles.ctaSubtitle}>Importe investimentos, contas e cartoes automaticamente</Text>
+              <TouchableOpacity
+                style={styles.ctaButton}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  router.push('/connect-bank');
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.ctaButtonText}>Conectar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Bottom spacing */}
+        <View style={{ height: 100 }} />
+      </ScrollView>
     </View>
   );
 }
@@ -820,406 +878,352 @@ export default function WalletScreen() {
 // Styles
 // ---------------------------------------------------------------------------
 
-const createStyles = (colors: ThemeColors) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: spacing.lg,
-      paddingHorizontal: spacing.xl,
-    },
-    headerTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: colors.text.primary,
-    },
-    exportBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.xs + 2,
-      borderRadius: radius.sm,
-      borderWidth: 1,
-      borderColor: colors.accent + '40',
-      backgroundColor: colors.accent + '10',
-    },
-    exportBtnText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: colors.accent,
-    },
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: C.bg,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+  },
 
-    // Toggle
-    toggleContainer: {
-      flexDirection: 'row',
-      marginHorizontal: spacing.xl,
-      marginBottom: spacing.lg,
-      backgroundColor: colors.elevated,
-      borderRadius: radius.md,
-      padding: spacing.xs,
-    },
-    toggleButton: {
-      flex: 1,
-      alignItems: 'center',
-      paddingVertical: spacing.sm,
-      borderRadius: radius.sm,
-    },
-    toggleButtonActive: {
-      backgroundColor: colors.accent,
-    },
-    toggleText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.text.secondary,
-    },
-    toggleTextActive: {
-      color: colors.background,
-    },
+  // Header
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  screenTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: C.text,
+  },
 
-    // Scroll
-    scrollView: {
-      flex: 1,
-    },
-    scrollContent: {
-      paddingHorizontal: spacing.xl,
-      paddingBottom: 100,
-    },
+  // Section
+  section: {
+    marginTop: 28,
+  },
+  sectionHeader: {
+    marginBottom: 14,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: C.text,
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    color: C.textSec,
+    marginTop: 2,
+  },
 
-    // Skeleton
-    skeletonContainer: {
-      paddingHorizontal: spacing.xl,
-      paddingTop: spacing.lg,
-    },
+  // Hero
+  heroSection: {
+    paddingTop: 28,
+    paddingBottom: 8,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  heroLabel: {
+    fontSize: 14,
+    color: C.textSec,
+    fontWeight: '500',
+  },
+  heroValue: {
+    fontSize: 34,
+    fontWeight: '800',
+    color: C.text,
+    fontVariant: ['tabular-nums'],
+    letterSpacing: -0.5,
+  },
+  heroBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 10,
+  },
+  heroBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
 
-    // Group header
-    groupHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: colors.card,
-      borderRadius: radius.md,
-      padding: spacing.lg,
-      marginBottom: spacing.sm,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    groupHeaderLeft: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    colorDot: {
-      width: 12,
-      height: 12,
-      borderRadius: 6,
-      marginRight: spacing.md,
-    },
-    institutionIcon: {
-      width: 36,
-      height: 36,
-      borderRadius: radius.sm,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginRight: spacing.md,
-    },
-    institutionIconText: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: colors.background,
-    },
-    groupHeaderInfo: {
-      flex: 1,
-    },
-    groupHeaderTopRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    groupLabel: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.text.primary,
-    },
-    groupCount: {
-      fontSize: 12,
-      color: colors.text.muted,
-    },
-    groupHeaderBottomRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginTop: spacing.xs,
-    },
-    groupValue: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.text.secondary,
-      fontVariant: ['tabular-nums'],
-    },
-    groupPercentage: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.text.muted,
-      fontVariant: ['tabular-nums'],
-    },
-    expandIndicator: {
-      fontSize: 12,
-      color: colors.text.muted,
-      marginLeft: spacing.sm,
-    },
+  // Orbit
+  orbitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  orbitLegend: {
+    flex: 1,
+    gap: 10,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  legendTextCol: {
+    flex: 1,
+  },
+  legendLabel: {
+    fontSize: 12,
+    color: C.textSec,
+    fontWeight: '500',
+  },
+  legendValue: {
+    fontSize: 13,
+    color: C.text,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
 
-    // Bottom sheet detail
-    detailContent: {
-      paddingBottom: spacing.xl,
-    },
-    detailTickerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.md,
-      marginBottom: spacing.lg,
-    },
-    detailTicker: {
-      fontSize: 24,
-      fontWeight: '700',
-      color: colors.text.primary,
-    },
-    classBadge: {
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.xs,
-      borderRadius: radius.sm,
-    },
-    classBadgeText: {
-      fontSize: 12,
-      fontWeight: '600',
-    },
-    detailChartContainer: {
-      alignItems: 'center',
-      marginBottom: spacing.xl,
-      paddingVertical: spacing.md,
-      backgroundColor: colors.card,
-      borderRadius: radius.md,
-    },
-    detailInfoGrid: {
-      gap: spacing.xs,
-    },
-    detailInfoRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: spacing.md,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border + '40',
-    },
-    detailInfoLabel: {
-      fontSize: 14,
-      color: colors.text.secondary,
-    },
-    detailInfoValue: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.text.primary,
-      fontVariant: ['tabular-nums'],
-    },
+  // Chart
+  chartCard: {
+    backgroundColor: C.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: C.cardBorder,
+    padding: 16,
+    paddingBottom: 8,
+  },
 
-    // Performance comparison
-    comparisonSection: {
-      marginBottom: spacing.xl,
-    },
-    comparisonTitle: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: colors.text.primary,
-      marginBottom: spacing.md,
-    },
-    compPillRow: {
-      flexDirection: 'row',
-      marginBottom: spacing.lg,
-      gap: spacing.sm,
-    },
-    compPill: {
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.xs + 2,
-      borderRadius: radius.full,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    compPillSel: {
-      backgroundColor: colors.accent,
-      borderColor: colors.accent,
-    },
-    compPillText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: colors.text.secondary,
-    },
-    compPillTextSel: {
-      color: colors.background,
-    },
-    compBarRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: spacing.md,
-    },
-    compBarLabel: {
-      width: 90,
-      fontSize: 12,
-      color: colors.text.secondary,
-    },
-    compBarTrack: {
-      flex: 1,
-      height: 12,
-      backgroundColor: colors.border,
-      borderRadius: 6,
-      marginHorizontal: spacing.sm,
-      overflow: 'hidden',
-    },
-    compBarFill: {
-      height: 12,
-      borderRadius: 6,
-    },
-    compBarValue: {
-      width: 52,
-      fontSize: 12,
-      fontWeight: '600',
-      textAlign: 'right',
-      fontVariant: ['tabular-nums'],
-    },
+  // Positions
+  positionsCard: {
+    backgroundColor: C.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: C.cardBorder,
+    overflow: 'hidden',
+  },
+  positionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: C.cardBorder,
+  },
+  positionDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  positionInfo: {
+    flex: 1,
+  },
+  positionName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: C.text,
+  },
+  positionClass: {
+    fontSize: 11,
+    color: C.textSec,
+    marginTop: 2,
+  },
+  positionValues: {
+    alignItems: 'flex-end',
+  },
+  positionValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: C.text,
+    fontVariant: ['tabular-nums'],
+  },
+  positionChange: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+    marginTop: 2,
+  },
+  seeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    gap: 6,
+  },
+  seeAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: C.accent,
+  },
 
-    // Risk mini-card & Rebalance CTA
-    riskMiniCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.card,
-      borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      padding: spacing.lg,
-      marginBottom: spacing.sm,
-      gap: spacing.sm,
-    },
-    riskMiniInfo: {
-      flex: 1,
-    },
-    riskMiniLabel: {
-      fontSize: 12,
-      color: colors.text.secondary,
-    },
-    riskMiniScore: {
-      fontSize: 18,
-      fontWeight: '800',
-      fontVariant: ['tabular-nums'],
-    },
-    rebalanceCta: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.card,
-      borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      padding: spacing.lg,
-      marginBottom: spacing.xl,
-      gap: spacing.sm,
-    },
-    rebalanceCtaText: {
-      flex: 1,
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.text.primary,
-    },
+  // Flow
+  cardContainer: {
+    backgroundColor: C.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: C.cardBorder,
+    padding: 16,
+  },
+  flowContainer: {
+    gap: 12,
+  },
+  flowBarTrack: {
+    flexDirection: 'row',
+    height: 12,
+    borderRadius: 6,
+    overflow: 'hidden',
+    backgroundColor: C.cardBorder,
+  },
+  flowBarSegment: {
+    height: 12,
+  },
+  flowLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  flowLabelItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  flowDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  flowLabelText: {
+    fontSize: 12,
+    color: C.textSec,
+  },
+  flowValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
 
-    // Tools Hub
-    toolsSection: {
-      marginTop: spacing.xxl,
-      paddingTop: spacing.xl,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-    },
-    toolsSectionTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: colors.text.primary,
-      marginBottom: spacing.xl,
-    },
-    toolsCategory: {
-      marginBottom: spacing.xl,
-    },
-    toolsCategoryTitle: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.text.secondary,
-      marginBottom: spacing.md,
-    },
-    toolsGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: spacing.sm,
-    },
-    toolCard: {
-      backgroundColor: colors.card,
-      borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.xs,
-      alignItems: 'center',
-      gap: spacing.xs,
-    },
-    toolName: {
-      fontSize: 11,
-      fontWeight: '500',
-      color: colors.text.primary,
-      textAlign: 'center',
-      lineHeight: 15,
-      alignSelf: 'stretch',
-    },
-    toolBadge: {
-      backgroundColor: colors.warning + '20',
-      paddingHorizontal: spacing.xs + 2,
-      paddingVertical: 1,
-      borderRadius: radius.sm,
-    },
-    toolBadgeText: {
-      fontSize: 8,
-      fontWeight: '600',
-      color: colors.warning,
-    },
+  // Macro
+  macroGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  macroCard: {
+    flexGrow: 1,
+    flexShrink: 0,
+    flexBasis: '45%',
+    backgroundColor: C.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: C.cardBorder,
+    padding: 14,
+    gap: 4,
+  },
+  macroIcon: {
+    fontSize: 18,
+    marginBottom: 4,
+  },
+  macroLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: C.textSec,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  macroValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: C.text,
+    fontVariant: ['tabular-nums'],
+  },
+  macroChange: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
 
-    // Empty state
-    emptyState: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 80,
-      paddingHorizontal: spacing.xl,
-    },
-    emptyTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: colors.text.primary,
-      textAlign: 'center',
-      marginBottom: spacing.sm,
-    },
-    emptyDescription: {
-      fontSize: 14,
-      color: colors.text.secondary,
-      textAlign: 'center',
-      marginBottom: spacing.xl,
-    },
-    emptyButton: {
-      backgroundColor: colors.accent,
-      paddingHorizontal: spacing.xxl,
-      paddingVertical: spacing.md,
-      borderRadius: radius.md,
-    },
-    emptyButtonText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.background,
-    },
-  });
+  // B3 Banner
+  b3Banner: {
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  b3Icon: {
+    fontSize: 28,
+  },
+  b3TextCol: {
+    flex: 1,
+  },
+  b3Title: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  b3Subtitle: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 4,
+  },
+
+  // CTA
+  ctaCard: {
+    backgroundColor: C.card,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: C.cardBorder,
+    borderStyle: 'dashed',
+    padding: 28,
+    alignItems: 'center',
+    gap: 12,
+  },
+  ctaTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: C.text,
+    textAlign: 'center',
+  },
+  ctaSubtitle: {
+    fontSize: 13,
+    color: C.textSec,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  ctaButton: {
+    backgroundColor: C.accent,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 4,
+  },
+  ctaButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: C.bg,
+  },
+
+  // Empty
+  emptyCard: {
+    backgroundColor: C.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: C.cardBorder,
+    padding: 32,
+    alignItems: 'center',
+    gap: 12,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: C.textSec,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+});
