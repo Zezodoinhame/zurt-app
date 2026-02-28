@@ -84,51 +84,6 @@ const CAT_EMOJI: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Placeholder data (used when store is empty)
-// ---------------------------------------------------------------------------
-
-const FALLBACK_CARDS: CardDisplay[] = [
-  {
-    id: 'fb1',
-    name: 'BTG Pactual',
-    lastFour: '4921',
-    brand: 'Mastercard',
-    invoice: 66.2,
-    limit: 15000,
-    dueDate: '15 Mar',
-    color: '#001845',
-    gradientEnd: '#001845CC',
-    accentColor: '#0066FF',
-  },
-  {
-    id: 'fb2',
-    name: 'Itaú',
-    lastFour: '8834',
-    brand: 'Visa',
-    invoice: 21498.36,
-    limit: 45000,
-    dueDate: '22 Mar',
-    color: '#FF6B00',
-    gradientEnd: '#FF6B00CC',
-    accentColor: '#FF8C00',
-  },
-];
-
-const FALLBACK_CATEGORIES: CategoryDisplay[] = [
-  { name: 'Alimentação', icon: '\uD83C\uDF55', value: 2847.3, pct: 28, color: '#F59E0B' },
-  { name: 'Transporte', icon: '\uD83D\uDE97', value: 1890.0, pct: 19, color: '#3B82F6' },
-  { name: 'Assinaturas', icon: '\uD83D\uDCF1', value: 1245.6, pct: 12, color: '#8B5CF6' },
-  { name: 'Compras', icon: '\uD83D\uDECD\uFE0F', value: 3100.0, pct: 31, color: '#EC4899' },
-];
-
-const FALLBACK_TX: TxDisplay[] = [
-  { name: 'iFood', value: 45.9, time: 'Hoje, 13:42', icon: '\uD83C\uDF55' },
-  { name: 'Uber', value: 23.5, time: 'Hoje, 10:15', icon: '\uD83D\uDE97' },
-  { name: 'Amazon Prime', value: 14.9, time: 'Ontem', icon: '\uD83D\uDCF1' },
-  { name: 'Mercado Livre', value: 189.9, time: '24 Fev', icon: '\uD83D\uDECD\uFE0F' },
-];
-
-// ---------------------------------------------------------------------------
 // Date helpers
 // ---------------------------------------------------------------------------
 
@@ -226,46 +181,37 @@ export default function CardsScreen() {
 
   // ---- Derived data -------------------------------------------------------
   const displayCards: CardDisplay[] = useMemo(() => {
-    if (cards.length > 0) {
-      return cards.map((c) => ({
-        id: c.id,
-        name: c.name,
-        lastFour: c.lastFour,
-        brand: c.brand,
-        invoice: Math.abs(c.currentInvoice),
-        limit: c.limit,
-        dueDate: formatCardDate(c.dueDate),
-        color: c.color || '#0D1520',
-        gradientEnd: c.secondaryColor || (c.color ? c.color + 'CC' : '#0D1520CC'),
-        accentColor: c.color || '#00D4AA',
-      }));
-    }
-    return FALLBACK_CARDS;
+    return cards.map((c) => ({
+      id: c.id,
+      name: c.name,
+      lastFour: c.lastFour,
+      brand: c.brand,
+      invoice: Math.abs(c.currentInvoice),
+      limit: c.limit,
+      dueDate: formatCardDate(c.dueDate),
+      color: c.color || '#0D1520',
+      gradientEnd: c.secondaryColor || (c.color ? c.color + 'CC' : '#0D1520CC'),
+      accentColor: c.color || '#00D4AA',
+    }));
   }, [cards]);
 
   const displayCategories: CategoryDisplay[] = useMemo(() => {
-    if (categorySpending.length > 0) {
-      return categorySpending.map((c) => ({
-        name: c.label,
-        icon: CAT_EMOJI[c.category] || c.icon || '\uD83D\uDCCA',
-        value: c.total,
-        pct: c.percentage,
-        color: c.color,
-      }));
-    }
-    return FALLBACK_CATEGORIES;
+    return categorySpending.map((c) => ({
+      name: c.label,
+      icon: CAT_EMOJI[c.category] || c.icon || '\uD83D\uDCCA',
+      value: c.total,
+      pct: c.percentage,
+      color: c.color,
+    }));
   }, [categorySpending]);
 
   const displayTx: TxDisplay[] = useMemo(() => {
-    if (dashboardTransactions.length > 0) {
-      return dashboardTransactions.slice(0, 5).map((tx) => ({
-        name: tx.description || tx.merchant || 'Transação',
-        time: formatTxDate(tx.date),
-        value: Math.abs(tx.amount),
-        icon: CAT_EMOJI[tx.category || ''] || '\uD83D\uDCB3',
-      }));
-    }
-    return FALLBACK_TX;
+    return dashboardTransactions.slice(0, 5).map((tx) => ({
+      name: tx.description || tx.merchant || 'Transação',
+      time: formatTxDate(tx.date),
+      value: Math.abs(tx.amount),
+      icon: CAT_EMOJI[tx.category || ''] || '\uD83D\uDCB3',
+    }));
   }, [dashboardTransactions]);
 
   const totalInvoice = displayCards.reduce((s, c) => s + c.invoice, 0);
@@ -316,6 +262,21 @@ export default function CardsScreen() {
         ) : error && cards.length === 0 ? (
           <View style={styles.padH}>
             <ErrorState message={error} onRetry={loadCards} />
+          </View>
+        ) : displayCards.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>{'\uD83D\uDCB3'}</Text>
+            <Text style={styles.emptyTitle}>Nenhum cartão encontrado</Text>
+            <Text style={styles.emptySubtitle}>
+              Conecte uma instituição financeira para visualizar seus cartões de crédito.
+            </Text>
+            <TouchableOpacity
+              style={[styles.emptyBtn, { backgroundColor: colors.accent }]}
+              activeOpacity={0.7}
+              onPress={() => router.push('/connect-bank')}
+            >
+              <Text style={styles.emptyBtnText}>Conectar banco</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <>
@@ -430,6 +391,7 @@ export default function CardsScreen() {
             {/* -------------------------------------------------------------- */}
             {/* Gastos por Categoria                                           */}
             {/* -------------------------------------------------------------- */}
+            {displayCategories.length > 0 && (
             <View style={styles.catSection}>
               <View style={styles.secHeader}>
                 <Text style={styles.secTitle}>Gastos por categoria</Text>
@@ -467,10 +429,12 @@ export default function CardsScreen() {
                 </View>
               ))}
             </View>
+            )}
 
             {/* -------------------------------------------------------------- */}
             {/* Transações Recentes                                          */}
             {/* -------------------------------------------------------------- */}
+            {displayTx.length > 0 && (
             <View style={styles.txSection}>
               <Text style={styles.txTitle}>Transações recentes</Text>
 
@@ -487,6 +451,7 @@ export default function CardsScreen() {
                 </View>
               ))}
             </View>
+            )}
           </>
         )}
       </ScrollView>
@@ -506,6 +471,39 @@ const createStyles = (colors: ThemeColors) =>
     },
     padH: {
       paddingHorizontal: 20,
+    },
+    emptyState: {
+      alignItems: 'center',
+      paddingHorizontal: 32,
+      paddingTop: 60,
+    },
+    emptyIcon: {
+      fontSize: 48,
+      marginBottom: 16,
+    },
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text.primary,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    emptySubtitle: {
+      fontSize: 14,
+      color: colors.text.secondary,
+      textAlign: 'center',
+      lineHeight: 20,
+      marginBottom: 24,
+    },
+    emptyBtn: {
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+    emptyBtnText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: '#FFFFFF',
     },
 
     // -- Header ---------------------------------------------------------------
