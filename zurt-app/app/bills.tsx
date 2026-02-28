@@ -279,7 +279,7 @@ export default function BillsScreen() {
   // =========================================================================
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity

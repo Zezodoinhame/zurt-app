@@ -57,7 +57,7 @@ export default function CorrelationMatrixScreen() {
   const diversColor = diversScore >= 70 ? colors.positive : diversScore >= 40 ? colors.warning : colors.negative;
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity

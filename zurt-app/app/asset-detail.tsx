@@ -240,7 +240,7 @@ export default function AssetDetailScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
         <View style={styles.headerBar}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Text style={styles.backIcon}>{'\u2190'}</Text>
@@ -258,7 +258,7 @@ export default function AssetDetailScreen() {
 
   if (error || !data) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
         <View style={styles.headerBar}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Text style={styles.backIcon}>{'\u2190'}</Text>
@@ -295,7 +295,7 @@ export default function AssetDetailScreen() {
   };
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
       {/* Header bar */}
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>

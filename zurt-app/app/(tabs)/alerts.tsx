@@ -154,7 +154,7 @@ export default function AlertsScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
+      <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
         <Text style={styles.screenTitle}>{t('alerts.title')}</Text>
         <View style={{ paddingHorizontal: spacing.xl }}>
           <SkeletonList count={8} />
@@ -165,7 +165,7 @@ export default function AlertsScreen() {
 
   if (error && notifications.length === 0) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
+      <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
         <Text style={styles.screenTitle}>{t('alerts.title')}</Text>
         <ErrorState message={error} onRetry={loadNotifications} />
       </View>
@@ -173,7 +173,7 @@ export default function AlertsScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
       <View style={styles.header}>
         <Text style={styles.screenTitle}>{t('alerts.title')}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

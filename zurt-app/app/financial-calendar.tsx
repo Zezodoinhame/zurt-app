@@ -114,7 +114,7 @@ export default function FinancialCalendarScreen() {
   }, [newTitle, newAmount, newType, newDay, selectedMonth, addEvent]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.back(); }} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <AppIcon name="back" size={24} color={colors.text.primary} />

@@ -88,7 +88,7 @@ export default function AlertPreferencesScreen() {
   }, [router]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <AppIcon name="back" size={24} color={colors.text.primary} />

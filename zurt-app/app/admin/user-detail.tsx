@@ -98,7 +98,7 @@ export default function UserDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={20} color={C.text} />
@@ -115,7 +115,7 @@ export default function UserDetailScreen() {
 
   if (error || !user) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={20} color={C.text} />
@@ -238,7 +238,7 @@ export default function UserDetailScreen() {
   };
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>

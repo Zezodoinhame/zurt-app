@@ -491,7 +491,7 @@ export default function MarketScreen() {
   const listData = isSearchMode ? searchResults : allStocks;
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
       {/* Drag indicator */}
       <View style={{ alignItems: 'center', paddingTop: 8, paddingBottom: 4 }}>
         <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border }} />

@@ -243,7 +243,7 @@ export default function FamilyDashboardScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <AppIcon name="back" size={22} color={colors.text.primary} />
@@ -265,7 +265,7 @@ export default function FamilyDashboardScreen() {
 
   if (error && !group) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <AppIcon name="back" size={22} color={colors.text.primary} />
@@ -285,7 +285,7 @@ export default function FamilyDashboardScreen() {
   if (!group) {
     return (
       <UpgradeGate feature="familyGroup">
-        <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
           <View style={styles.header}>
             <TouchableOpacity onPress={handleBack} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <AppIcon name="back" size={22} color={colors.text.primary} />
@@ -366,7 +366,7 @@ export default function FamilyDashboardScreen() {
   // ---------------------------------------------------------------------------
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>

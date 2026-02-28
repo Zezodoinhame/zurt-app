@@ -212,7 +212,7 @@ export default function SavingsChallengesScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => {
@@ -241,7 +241,7 @@ export default function SavingsChallengesScreen() {
   const activeCount = getActiveCount();
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity

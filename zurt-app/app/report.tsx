@@ -688,7 +688,7 @@ export default function ReportScreen() {
   // ---- Loading State ----
   if (generating) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
         <View style={styles.headerBar}>
           <View style={styles.backBtn} />
           <Text style={styles.headerBarTitle}>{t('report.title')}</Text>
@@ -709,7 +709,7 @@ export default function ReportScreen() {
 
   // ---- Main UI ----
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
           <AppIcon name="back" size={22} color={colors.text.primary} />

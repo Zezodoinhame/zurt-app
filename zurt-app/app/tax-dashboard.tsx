@@ -49,7 +49,7 @@ export default function TaxDashboardScreen() {
   const taxablePct = totalBar > 0 ? (summary.taxableAmount / totalBar) * 100 : 0;
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>

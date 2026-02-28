@@ -150,7 +150,7 @@ export default function TickerDetailScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.screen, styles.center, { paddingTop: insets.top }]}>
+      <View style={[styles.screen, styles.center, { paddingTop: insets.top + 24 }]}>
         <ActivityIndicator size="large" color={colors.accent} />
         <Text style={styles.loadingText}>Carregando {ticker}...</Text>
       </View>
@@ -159,7 +159,7 @@ export default function TickerDetailScreen() {
 
   if (!quote) {
     return (
-      <View style={[styles.screen, styles.center, { paddingTop: insets.top }]}>
+      <View style={[styles.screen, styles.center, { paddingTop: insets.top + 24 }]}>
         <AppIcon name="warning" size={40} color={colors.text.muted} />
         <Text style={styles.errorText}>Ativo não encontrado</Text>
         <TouchableOpacity onPress={() => router.back()} style={styles.errorBtn}>
@@ -170,7 +170,7 @@ export default function TickerDetailScreen() {
   }
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
       {/* Drag indicator */}
       <View style={{ alignItems: 'center', paddingTop: 8, paddingBottom: 4 }}>
         <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border }} />

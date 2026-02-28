@@ -873,7 +873,7 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView
-      style={[styles.container, { paddingTop: insets.top }]}
+      style={[styles.container, { paddingTop: insets.top + 24 }]}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >

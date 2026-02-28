@@ -86,7 +86,7 @@ export default function ConsultantScreen() {
   // Client detail view
   if (selectedClient && clientPortfolio) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
         <View style={styles.headerBar}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <AppIcon name="back" size={24} color={colors.text.primary} />
@@ -173,7 +173,7 @@ export default function ConsultantScreen() {
   // Loading detail
   if (selectedClient && isLoading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
         <View style={styles.headerBar}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <AppIcon name="back" size={24} color={colors.text.primary} />
@@ -190,7 +190,7 @@ export default function ConsultantScreen() {
 
   // Client list view
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <AppIcon name="back" size={24} color={colors.text.primary} />

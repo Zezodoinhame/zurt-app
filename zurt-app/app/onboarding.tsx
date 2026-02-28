@@ -319,7 +319,7 @@ export default function OnboardingScreen() {
   );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom }]}>
       {/* Skip button (hidden on last page) */}
       {!isLastPage && (
         <TouchableOpacity

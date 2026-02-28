@@ -70,7 +70,7 @@ export default function AdminLoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.screen, { paddingTop: insets.top }]}
+      style={[styles.screen, { paddingTop: insets.top + 24 }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       {/* Header */}

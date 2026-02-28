@@ -102,7 +102,7 @@ export default function SpendingInsightsScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <AppIcon name="back" size={24} color={colors.text.primary} />
@@ -120,7 +120,7 @@ export default function SpendingInsightsScreen() {
 
   if (!insights) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <AppIcon name="back" size={24} color={colors.text.primary} />
@@ -165,7 +165,7 @@ export default function SpendingInsightsScreen() {
   ];
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>

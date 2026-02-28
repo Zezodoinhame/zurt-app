@@ -362,7 +362,7 @@ export default function StockTaxScreen() {
   // =========================================================================
 
   return (
-    <View style={[s.bg, { paddingTop: insets.top }]}>
+    <View style={[s.bg, { paddingTop: insets.top + 24 }]}>
       {/* Header */}
       <View style={s.header}>
         <View style={s.headerLeft}>

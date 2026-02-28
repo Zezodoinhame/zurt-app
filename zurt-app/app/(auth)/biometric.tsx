@@ -57,7 +57,7 @@ export default function BiometricScreen() {
 
   if (showPin) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      <View style={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom }]}>
         <PinPad
           onSuccess={handlePinSuccess}
           onForgotPin={() => router.replace('/(auth)/login')}
@@ -71,7 +71,7 @@ export default function BiometricScreen() {
     <View
       style={[
         styles.container,
-        { paddingTop: insets.top, paddingBottom: insets.bottom },
+        { paddingTop: insets.top + 24, paddingBottom: insets.bottom },
       ]}
     >
       <View style={styles.content}>

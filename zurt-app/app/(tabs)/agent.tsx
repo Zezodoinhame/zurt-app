@@ -353,7 +353,7 @@ export default function AgentScreen() {
   const inputBottomPadding = keyboardVisible ? 8 : (insets.bottom > 0 ? 4 : 8);
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
       {/* Header */}
       <View style={styles.header}>
         <AgentAvatar size={36} />

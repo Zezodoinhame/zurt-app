@@ -46,7 +46,7 @@ export default function RiskMetricsScreen() {
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <AppIcon name="back" size={24} color={colors.text.primary} />
@@ -64,7 +64,7 @@ export default function RiskMetricsScreen() {
   // Empty state — no portfolio data
   if (!metrics) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <AppIcon name="back" size={24} color={colors.text.primary} />
@@ -104,7 +104,7 @@ export default function RiskMetricsScreen() {
 
   if (isPlaceholder) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <AppIcon name="back" size={24} color={colors.text.primary} />
@@ -162,7 +162,7 @@ export default function RiskMetricsScreen() {
   ];
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <AppIcon name="back" size={24} color={colors.text.primary} />

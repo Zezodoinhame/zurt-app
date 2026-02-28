@@ -53,14 +53,14 @@ export default function AdminPanel() {
 
   if (checking) {
     return (
-      <View style={[styles.loader, { paddingTop: insets.top }]}>
+      <View style={[styles.loader, { paddingTop: insets.top + 24 }]}>
         <ActivityIndicator color={C.accent} size="large" />
       </View>
     );
   }
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
       {/* Fixed Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>

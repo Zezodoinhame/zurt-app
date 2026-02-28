@@ -146,7 +146,7 @@ export default function TaxesScreen() {
   // ---- Render ----
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top + 24 }]}>
       {/* Header */}
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={handleBack} style={styles.backBtn}>

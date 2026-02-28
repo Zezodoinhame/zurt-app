@@ -615,7 +615,7 @@ export default function WalletScreen() {
   // -------------------------------------------------------------------------
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('wallet.title')}</Text>
