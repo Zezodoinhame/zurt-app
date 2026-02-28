@@ -117,7 +117,7 @@ export const useCardsStore = create<CardsState>((set, get) => ({
       set({
         cards: data.cards,
         categorySpending: data.categorySpending,
-        dashboardTransactions: [],
+        dashboardTransactions: get().dashboardTransactions,
         isRefreshing: false,
         error: null,
       });
