@@ -89,10 +89,10 @@ export default function ManageMembersScreen() {
   const loadFromLocalStore = useCallback(() => {
     const local: any = useFamilyStore.getState().getActiveGroup();
     if (local) {
-      setGroup({ id: local.id, name: local.name, owner_id: local.ownerId });
+      setGroup({ id: local.id, name: local.name, owner_id: local.createdBy });
       setMembers((local.members ?? []).map((m: any) => ({
-        id: m.id,
-        user_id: m.id,
+        id: m.userId || m.id,
+        user_id: m.userId || m.id,
         full_name: m.name,
         invited_email: m.email,
         role: m.role,
@@ -156,73 +156,93 @@ export default function ManageMembersScreen() {
     if (router.canGoBack()) router.back();
   }, [router]);
 
-  const handleMemberPress = useCallback((member: any) => {
-    if (!isOwner && !isAdmin) return;
-    if (member?.role === 'owner') return; // Can't modify owner
+  const handleViewPortfolio = useCallback((member: any) => {
+    const name = getMemberName(member, t);
+    const isActive = member.status === 'accepted' || member.status === 'active';
+    if (!isActive) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push({
+      pathname: '/family/member/[userId]',
+      params: { userId: member.user_id || member.id, name },
+    });
+  }, [router, t]);
 
+  const handleMemberPress = useCallback((member: any) => {
+    const name = getMemberName(member, t);
+    const isActive = member.status === 'accepted' || member.status === 'active';
     const actions: any[] = [];
 
-    if (isOwner) {
-      if (member?.role !== 'admin') {
-        actions.push({
-          text: t('family.promoteAdmin'),
-          onPress: () => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            // Store doesn't support role changes yet, just feedback
-            Alert.alert(t('common.success'), `${getMemberName(member, t)} → Admin`);
-          },
-        });
-      }
-      if (member?.role === 'admin') {
-        actions.push({
-          text: t('family.demoteToMember'),
-          onPress: () => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            Alert.alert(t('common.success'), `${getMemberName(member, t)} → Member`);
-          },
-        });
-      }
-    }
-
-    // Remove action
-    const canRemove = isOwner || (isAdmin && (member?.role === 'member' || member?.role === 'viewer'));
-    if (canRemove) {
+    // View portfolio — always available for active members if owner/admin
+    if (isActive && (isOwner || isAdmin)) {
       actions.push({
-        text: t('family.removeFromGroup'),
-        style: 'destructive',
-        onPress: () => {
-          Alert.alert(
-            t('family.removeMember'),
-            t('family.removeConfirm'),
-            [
-              { text: t('family.cancel'), style: 'cancel' },
-              {
-                text: t('family.removeMember'),
-                style: 'destructive',
-                onPress: async () => {
-                  try {
-                    if (isDemo) {
-                      await removeFamilyMember(member.id);
-                    } else {
-                      const gId = useFamilyStore.getState().activeGroupId;
-                      if (gId) familyStore.removeMember(gId, member.id);
-                    }
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-                    await loadData();
-                  } catch (err: any) {
-                    Alert.alert(t('common.error'), err?.message || t('family.removeError'));
-                  }
-                },
-              },
-            ],
-          );
-        },
+        text: t('family.viewPortfolio'),
+        onPress: () => handleViewPortfolio(member),
       });
     }
 
+    if (member?.role !== 'owner') {
+      if (isOwner) {
+        if (member?.role !== 'admin') {
+          actions.push({
+            text: t('family.promoteAdmin'),
+            onPress: () => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              Alert.alert(t('common.success'), `${name} → Admin`);
+            },
+          });
+        }
+        if (member?.role === 'admin') {
+          actions.push({
+            text: t('family.demoteToMember'),
+            onPress: () => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              Alert.alert(t('common.success'), `${name} → Member`);
+            },
+          });
+        }
+      }
+
+      // Remove action
+      const canRemove = isOwner || (isAdmin && (member?.role === 'member' || member?.role === 'viewer'));
+      if (canRemove) {
+        actions.push({
+          text: t('family.removeFromGroup'),
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              t('family.removeMember'),
+              t('family.removeConfirm'),
+              [
+                { text: t('family.cancel'), style: 'cancel' },
+                {
+                  text: t('family.removeMember'),
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      if (isDemo) {
+                        await removeFamilyMember(member.id);
+                      } else {
+                        const gId = useFamilyStore.getState().activeGroupId;
+                        if (gId) familyStore.removeMember(gId, member.id);
+                      }
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                      await loadData();
+                    } catch (err: any) {
+                      Alert.alert(t('common.error'), err?.message || t('family.removeError'));
+                    }
+                  },
+                },
+              ],
+            );
+          },
+        });
+      }
+    }
+
+    if (actions.length === 0) return;
     actions.push({ text: t('family.cancel'), style: 'cancel' });
-    Alert.alert(getMemberName(member, t), '', actions);
-  }, [isOwner, isAdmin, isDemo, familyStore, loadData, t]);
+    Alert.alert(name, '', actions);
+  }, [isOwner, isAdmin, isDemo, familyStore, loadData, handleViewPortfolio, t]);
 
   const handleShareLink = useCallback(async () => {
     const groupName = group?.name || 'ZURT';
@@ -309,7 +329,7 @@ export default function ManageMembersScreen() {
             const roleColor = ROLE_COLORS[member.role] || ROLE_COLORS.member;
             const avatarBg = member.avatarColor || AVATAR_COLORS[i % AVATAR_COLORS.length];
             const isActive = member.status === 'accepted' || member.status === 'active';
-            const canTap = (isOwner || isAdmin) && member.role !== 'owner';
+            const canTap = isOwner || isAdmin;
 
             return (
               <TouchableOpacity
@@ -340,6 +360,17 @@ export default function ManageMembersScreen() {
                     size="sm"
                   />
                 </View>
+                {/* View portfolio button for active members */}
+                {isActive && (isOwner || isAdmin) && (
+                  <TouchableOpacity
+                    style={styles.viewPortfolioBtn}
+                    onPress={() => handleViewPortfolio(member)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    activeOpacity={0.6}
+                  >
+                    <AppIcon name="chart" size={16} color={colors.accent} />
+                  </TouchableOpacity>
+                )}
               </TouchableOpacity>
             );
           })}
@@ -502,6 +533,15 @@ const createStyles = (colors: ThemeColors) =>
     roleBadgeText: {
       fontSize: 10,
       fontWeight: '600',
+    },
+    viewPortfolioBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: colors.accent + '15',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: spacing.sm,
     },
 
     // FAB

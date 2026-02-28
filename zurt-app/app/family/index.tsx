@@ -125,10 +125,10 @@ export default function FamilyDashboardScreen() {
   const loadFromLocalStore = useCallback(() => {
     const local: any = useFamilyStore.getState().getActiveGroup();
     if (local) {
-      setGroup({ id: local.id, name: local.name, owner_id: local.ownerId, created_at: local.createdAt });
+      setGroup({ id: local.id, name: local.name, owner_id: local.createdBy, created_at: local.createdAt });
       setMembers((local.members ?? []).map((m: any) => ({
-        id: m.id,
-        user_id: m.id,
+        id: m.userId || m.id,
+        user_id: m.userId || m.id,
         full_name: m.name,
         invited_email: m.email,
         role: m.role,
@@ -538,7 +538,7 @@ export default function FamilyDashboardScreen() {
             activeOpacity={0.7}
           >
             <AppIcon name="person" size={22} color={colors.accent} />
-            <Text style={styles.actionLabel}>{t('family.inviteMember')}</Text>
+            <Text style={styles.actionLabel} numberOfLines={1} adjustsFontSizeToFit>{t('family.invite')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionCard}
@@ -546,7 +546,7 @@ export default function FamilyDashboardScreen() {
             activeOpacity={0.7}
           >
             <AppIcon name="family" size={22} color={colors.accent} />
-            <Text style={styles.actionLabel}>{t('family.manageMembers')}</Text>
+            <Text style={styles.actionLabel} numberOfLines={1} adjustsFontSizeToFit>{t('family.members')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionCard}
@@ -554,7 +554,7 @@ export default function FamilyDashboardScreen() {
             activeOpacity={0.7}
           >
             <AppIcon name="settings" size={22} color={colors.accent} />
-            <Text style={styles.actionLabel}>{t('family.settings')}</Text>
+            <Text style={styles.actionLabel} numberOfLines={1} adjustsFontSizeToFit>{t('family.settingsShort')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
