@@ -1530,3 +1530,30 @@ export async function createStripeCustomerPortal(): Promise<{ url: string }> {
 export async function fetchStripeSubscriptionStatus(): Promise<any> {
   return apiRequest<any>('/stripe/subscription-status');
 }
+
+// =============================================================================
+// Health Check
+// =============================================================================
+
+export interface HealthStatus {
+  status: 'ok' | 'error';
+  timestamp: string;
+  uptime?: number;
+  database?: string;
+  version?: string;
+}
+
+export async function checkApiHealth(): Promise<HealthStatus> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`${API_BASE}/health`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (res.ok) return await res.json();
+    return { status: 'error', timestamp: new Date().toISOString() };
+  } catch {
+    return { status: 'error', timestamp: new Date().toISOString() };
+  }
+}

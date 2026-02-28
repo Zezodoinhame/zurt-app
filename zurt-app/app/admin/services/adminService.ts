@@ -3,6 +3,7 @@
 // ---------------------------------------------------------------------------
 
 import { getToken } from '../../../src/services/api';
+import { getAdminToken } from '../data/adminAuth';
 import type {
   AdminUser,
   AdminRole,
@@ -22,7 +23,7 @@ const ADMIN_TIMEOUT = 15000;
 
 async function adminApiRequest<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${path}`;
-  const token = await getToken();
+  const token = await getAdminToken() || await getToken();
 
   const headers: Record<string, string> = {
     Accept: 'application/json',
