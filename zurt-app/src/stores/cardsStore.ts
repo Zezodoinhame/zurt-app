@@ -117,13 +117,14 @@ export const useCardsStore = create<CardsState>((set, get) => ({
       set({
         cards: data.cards,
         categorySpending: data.categorySpending,
-        dashboardTransactions: get().dashboardTransactions,
         isRefreshing: false,
         error: null,
       });
       if (data.cards.length === 0) {
         clearCardCaches();
       }
+      // Reload transactions in background
+      get().loadTransactions();
     } catch (err: any) {
       set({
         isRefreshing: false,

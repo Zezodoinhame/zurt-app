@@ -735,41 +735,49 @@ export async function fetchCardsApi(): Promise<{
       const rawCards: any[] = data.cards ?? data ?? [];
       const cards: CreditCard[] = Array.isArray(rawCards)
         ? rawCards.map((c: any) => {
-            // Resolve name: API returns display_name with "•••• XXXX" already embedded
-            // so extract clean name without the last4 suffix
+            // API returns display_name like "BTGPactual Investimentos •••• 0747"
+            // Extract clean name (without •••• suffix) to avoid duplication in UI
             const rawName = c.name ?? c.display_name ?? '';
             const last4 = c.lastFour ?? c.last_four ?? c.last4 ?? '';
-            // Remove " •••• XXXX" from end of display_name to avoid duplication
-            const cleanName = rawName.replace(/\s*[•·]{2,}\s*\d{4}\s*$/, '').trim();
+            const cleanName = rawName.replace(/\s*[•·]+\s*\d{4}\s*$/, '').trim();
 
-            // Assign card colors based on brand/institution
-            const brandLower = (c.brand ?? '').toLowerCase();
+            // Resolve limit: API sends limit_amount (number in reais)
+            const resolvedLimit = Number(c.limit ?? c.credit_limit ?? c.limit_amount ?? c.limit_cents / 100 ?? 0) || 0;
+
+            // Resolve invoice/used: API sends balance (current invoice amount)
+            const resolvedBalance = Number(c.currentInvoice ?? c.current_invoice ?? c.balance ?? c.used ?? 0) || 0;
+
+            // Assign card colors based on institution_name or brand
             const instLower = (c.institution_name ?? rawName ?? '').toLowerCase();
-            let color = c.color ?? '#1A1A1A';
-            let secondaryColor = c.secondaryColor ?? c.secondary_color ?? '#FFFFFF';
-            if (color === '#1A1A1A') {
+            const brandLower = (c.brand ?? '').toLowerCase();
+            let cardColor = c.color ?? '';
+            let cardSecondary = c.secondaryColor ?? c.secondary_color ?? '';
+
+            if (!cardColor || cardColor === '#1A1A1A') {
               if (instLower.includes('itaú') || instLower.includes('itau')) {
-                color = '#EC7000'; secondaryColor = '#FDB913';
+                cardColor = '#EC7000'; cardSecondary = '#FDB913';
               } else if (instLower.includes('nubank') || instLower.includes('nu ')) {
-                color = '#820AD1'; secondaryColor = '#A83FF0';
+                cardColor = '#820AD1'; cardSecondary = '#A83FF0';
               } else if (instLower.includes('bradesco')) {
-                color = '#CC092F'; secondaryColor = '#E0234E';
+                cardColor = '#CC092F'; cardSecondary = '#E0234E';
               } else if (instLower.includes('santander')) {
-                color = '#EC0000'; secondaryColor = '#FF3333';
+                cardColor = '#EC0000'; cardSecondary = '#FF3333';
               } else if (instLower.includes('btg')) {
-                color = '#1A1A2E'; secondaryColor = '#16213E';
+                cardColor = '#1A1A2E'; cardSecondary = '#16213E';
               } else if (instLower.includes('inter')) {
-                color = '#FF7A00'; secondaryColor = '#FF9933';
-              } else if (instLower.includes('c6') || instLower.includes('c6bank')) {
-                color = '#2A2A2A'; secondaryColor = '#4A4A4A';
+                cardColor = '#FF7A00'; cardSecondary = '#FF9933';
+              } else if (instLower.includes('c6')) {
+                cardColor = '#2A2A2A'; cardSecondary = '#4A4A4A';
               } else if (instLower.includes('caixa')) {
-                color = '#005CA9'; secondaryColor = '#0070CC';
-              } else if (instLower.includes('bb') || instLower.includes('brasil')) {
-                color = '#FFEF00'; secondaryColor = '#005CA9';
+                cardColor = '#005CA9'; cardSecondary = '#0070CC';
+              } else if (instLower.includes('banco do brasil') || instLower.includes(' bb')) {
+                cardColor = '#FFEF00'; cardSecondary = '#005CA9';
               } else if (brandLower === 'mastercard') {
-                color = '#EB001B'; secondaryColor = '#FF5F00';
+                cardColor = '#EB001B'; cardSecondary = '#FF5F00';
               } else if (brandLower === 'visa') {
-                color = '#1A1F71'; secondaryColor = '#2E3192';
+                cardColor = '#1A1F71'; cardSecondary = '#2E3192';
+              } else {
+                cardColor = '#1A1A1A'; cardSecondary = '#333333';
               }
             }
 
@@ -778,17 +786,16 @@ export async function fetchCardsApi(): Promise<{
               name: cleanName || `Cartão ${last4}`,
               lastFour: last4,
               brand: c.brand ?? 'visa',
-              limit: c.limit ?? c.credit_limit ?? c.limit_amount ?? 0,
-              used: c.used ?? c.balance ?? 0,
+              limit: resolvedLimit,
+              used: resolvedBalance,
               dueDate: c.dueDate ?? c.due_date ?? '',
               closingDate: c.closingDate ?? c.closing_date ?? '',
-              color,
-              secondaryColor,
-              currentInvoice: c.currentInvoice ?? c.current_invoice ?? c.balance ?? 0,
-              nextInvoice: c.nextInvoice ?? c.next_invoice ?? 0,
+              color: cardColor,
+              secondaryColor: cardSecondary,
+              currentInvoice: resolvedBalance,
+              nextInvoice: Number(c.nextInvoice ?? c.next_invoice ?? 0) || 0,
               institutionName: c.institution_name ?? '',
               institutionLogo: c.institution_logo ?? '',
-              availableLimit: c.available_limit ?? c.availableLimit ?? null,
               transactions: (c.transactions ?? []).map((t: any) => ({
                 id: String(t.id),
                 date: t.date,
