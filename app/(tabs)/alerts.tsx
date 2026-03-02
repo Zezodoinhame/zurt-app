@@ -1,0 +1,578 @@
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+  ActivityIndicator,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
+import * as Notifications from 'expo-notifications';
+import { type ThemeColors } from '../../src/theme/colors';
+import { spacing, radius } from '../../src/theme/spacing';
+import { useRouter } from 'expo-router';
+import { useNotificationStore } from '../../src/stores/notificationStore';
+import { formatRelativeDate } from '../../src/utils/formatters';
+import { useSettingsStore } from '../../src/stores/settingsStore';
+import { SkeletonList } from '../../src/components/skeletons/Skeleton';
+import { ErrorState } from '../../src/components/shared/ErrorState';
+import { fetchAIAlerts, type AIAlert } from '../../src/services/api';
+import type { NotificationType } from '../../src/types';
+import { AppIcon, type AppIconName } from '../../src/hooks/useIcon';
+import { SmartAlertCard } from '../../src/components/alerts/SmartAlertCard';
+import { AIMarkdown } from '../../src/components/shared/AIMarkdown';
+
+const filterOptions: Array<{ key: NotificationType | 'all'; labelKey: string; iconName?: AppIconName }> = [
+  { key: 'all', labelKey: 'alerts.all' },
+  { key: 'distribution', labelKey: 'alerts.distribution', iconName: 'diamond' },
+  { key: 'maturity', labelKey: 'alerts.maturity', iconName: 'warning' },
+  { key: 'invoice', labelKey: 'alerts.invoice', iconName: 'card' },
+  { key: 'insight', labelKey: 'alerts.insight', iconName: 'idea' },
+  { key: 'system', labelKey: 'alerts.system', iconName: 'notification' },
+];
+
+// Extended filter that includes smart alert types
+const smartFilterOptions: Array<{ key: string; labelKey: string; iconName?: AppIconName }> = [
+  { key: 'portfolio_drift', labelKey: 'alerts.portfolioDrift', iconName: 'rebalance' },
+  { key: 'dividend_received', labelKey: 'alerts.dividendReceived', iconName: 'dividend' },
+  { key: 'goal_milestone', labelKey: 'alerts.goalMilestone', iconName: 'target' },
+  { key: 'tax_deadline', labelKey: 'alerts.taxDeadline', iconName: 'calendar' },
+  { key: 'market_alert', labelKey: 'alerts.marketAlert', iconName: 'trending' },
+];
+
+export default function AlertsScreen() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const {
+    isLoading,
+    isRefreshing,
+    error,
+    filter,
+    smartAlerts,
+    loadNotifications,
+    loadSmartAlerts,
+    refresh,
+    markAsRead,
+    markAllAsRead,
+    dismiss,
+    dismissSmartAlert,
+    setFilter,
+    getUnreadCount,
+    getFilteredNotifications,
+  } = useNotificationStore();
+  const { t } = useSettingsStore();
+  const colors = useSettingsStore((s) => s.colors);
+
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
+  const typeConfig: Record<
+    NotificationType,
+    { iconName: AppIconName; color: string }
+  > = useMemo(() => ({
+    distribution: { iconName: 'token', color: colors.accent },
+    maturity: { iconName: 'warning', color: colors.warning },
+    invoice: { iconName: 'card', color: colors.info },
+    insight: { iconName: 'idea', color: '#A855F7' },
+    system: { iconName: 'notification', color: colors.text.secondary },
+  }), [colors]);
+
+  const aiAlertConfig: Record<string, { iconName: AppIconName; color: string }> = useMemo(() => ({
+    warning: { iconName: 'warning', color: colors.warning },
+    opportunity: { iconName: 'trending', color: colors.positive },
+    info: { iconName: 'idea', color: colors.info },
+  }), [colors]);
+
+  const [aiAlerts, setAiAlerts] = useState<AIAlert[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiCheckedThisSession, setAiCheckedThisSession] = useState(false);
+
+  useEffect(() => {
+    loadNotifications();
+    loadSmartAlerts();
+  }, [loadNotifications, loadSmartAlerts]);
+
+  // Auto-refresh when a push notification arrives while on this screen
+  useEffect(() => {
+    const subscription = Notifications.addNotificationReceivedListener(() => {
+      refresh();
+    });
+    return () => subscription.remove();
+  }, [refresh]);
+
+  // Auto-check AI alerts once per session
+  useEffect(() => {
+    if (!aiCheckedThisSession) {
+      handleCheckAIAlerts(true);
+    }
+  }, []);
+
+  const handleCheckAIAlerts = useCallback(async (silent = false) => {
+    if (!silent) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setAiLoading(true);
+    try {
+      const alerts = await fetchAIAlerts();
+      setAiAlerts(alerts);
+      setAiCheckedThisSession(true);
+    } catch {
+      // Silently fail
+    } finally {
+      setAiLoading(false);
+    }
+  }, []);
+
+  const notifications = getFilteredNotifications();
+  const unreadCount = getUnreadCount();
+
+  const handleDismiss = useCallback(
+    (id: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      dismiss(id);
+    },
+    [dismiss]
+  );
+
+  const handleMarkAllRead = useCallback(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    markAllAsRead();
+  }, [markAllAsRead]);
+
+  const handleNotificationPress = useCallback(
+    (id: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      markAsRead(id);
+    },
+    [markAsRead]
+  );
+
+  const dismissAIAlert = useCallback((id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setAiAlerts((prev) => prev.filter((a) => a.id !== id));
+  }, []);
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
+        <Text style={styles.screenTitle}>{t('alerts.title')}</Text>
+        <View style={{ paddingHorizontal: spacing.xl }}>
+          <SkeletonList count={8} />
+        </View>
+      </View>
+    );
+  }
+
+  if (error && notifications.length === 0) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
+        <Text style={styles.screenTitle}>{t('alerts.title')}</Text>
+        <ErrorState message={error} onRetry={loadNotifications} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.container, { paddingTop: insets.top + 24 }]}>
+      <View style={styles.header}>
+        <Text style={styles.screenTitle}>{t('alerts.title')}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {unreadCount > 0 && (
+            <TouchableOpacity onPress={handleMarkAllRead} style={styles.markAll}>
+              <Text style={styles.markAllText}>{t('alerts.markAllRead')}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={() => router.push('/alert-preferences')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <AppIcon name="settings" size={20} color={colors.text.secondary} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Filter chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterContainer}
+        contentContainerStyle={styles.filterContent}
+      >
+        {filterOptions.map((opt) => (
+          <TouchableOpacity
+            key={opt.key}
+            style={[
+              styles.filterChip,
+              filter === opt.key && styles.filterChipActive,
+            ]}
+            onPress={() => {
+              Haptics.selectionAsync();
+              setFilter(opt.key);
+            }}
+          >
+            <View style={styles.filterChipRow}>
+              {opt.iconName && <AppIcon name={opt.iconName} size={14} color={filter === opt.key ? colors.accent : colors.text.secondary} />}
+              <Text
+                style={[
+                  styles.filterChipText,
+                  filter === opt.key && styles.filterChipTextActive,
+                ]}
+              >
+                {t(opt.labelKey)}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      <ScrollView
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={refresh}
+            tintColor={colors.accent}
+          />
+        }
+      >
+        {/* Smart Alerts Section */}
+        {smartAlerts.length > 0 && (
+          <View style={styles.aiSection}>
+            <View style={styles.aiSectionHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <AppIcon name="notification" size={15} color={colors.accent} />
+                <Text style={styles.aiSectionTitle}>{t('alerts.smart')}</Text>
+              </View>
+            </View>
+            {smartAlerts.map((alert) => (
+              <SmartAlertCard
+                key={alert.id}
+                alert={alert}
+                onDismiss={dismissSmartAlert}
+              />
+            ))}
+          </View>
+        )}
+
+        {/* AI Alerts Section */}
+        <View style={styles.aiSection}>
+          <View style={styles.aiSectionHeader}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <AppIcon name="sparkle" size={15} color={colors.accent} />
+              <Text style={styles.aiSectionTitle}>{t('alerts.aiSection')}</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.aiCheckButton}
+              onPress={() => handleCheckAIAlerts(false)}
+              disabled={aiLoading}
+              activeOpacity={0.7}
+            >
+              {aiLoading ? (
+                <ActivityIndicator size="small" color={colors.accent} />
+              ) : (
+                <Text style={styles.aiCheckText}>{t('alerts.aiCheck')}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {aiAlerts.length > 0 && (
+            <View style={styles.aiAlertsList}>
+              {aiAlerts.map((alert, index) => {
+                const config = aiAlertConfig[alert.type] ?? aiAlertConfig.info;
+                return (
+                  <View key={`ai-alert-${index}-${alert.title}`} style={[styles.aiAlertCard, { borderLeftColor: config.color }]}>
+                    <View style={styles.aiAlertRow}>
+                      <AppIcon name={config.iconName} size={18} color={config.color} />
+                      <View style={styles.aiAlertContent}>
+                        <Text style={styles.aiAlertTitle}>{alert.title}</Text>
+                        <AIMarkdown content={alert.message} />
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => dismissAIAlert(alert.id)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <AppIcon name="close" size={12} color={colors.text.muted} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
+
+        {/* Regular notifications */}
+        {notifications.length === 0 && aiAlerts.length === 0 ? (
+          <View style={styles.empty}>
+            <AppIcon name="notification" size={48} color={colors.text.secondary} />
+            <Text style={styles.emptyText}>{t('alerts.noNotifications')}</Text>
+          </View>
+        ) : (
+          notifications.map((notification, index) => {
+            const config = typeConfig[notification.type];
+
+            return (
+              <View key={`notif-${index}-${notification.id}`}>
+                <TouchableOpacity
+                  style={[
+                    styles.notificationCard,
+                    !notification.read && styles.notificationUnread,
+                  ]}
+                  onPress={() => handleNotificationPress(notification.id)}
+                  activeOpacity={0.7}
+                  accessibilityLabel={`${notification.title}: ${notification.body}`}
+                >
+                  <View style={styles.notificationRow}>
+                    <View
+                      style={[
+                        styles.iconContainer,
+                        { backgroundColor: config.color + '15' },
+                      ]}
+                    >
+                      <AppIcon name={config.iconName} size={18} color={config.color} />
+                    </View>
+
+                    <View style={styles.notificationContent}>
+                      <View style={styles.notificationHeader}>
+                        <Text style={styles.notificationTitle} numberOfLines={1}>
+                          {notification.title}
+                        </Text>
+                        <Text style={styles.notificationTime}>
+                          {formatRelativeDate(notification.date)}
+                        </Text>
+                      </View>
+                      <Text
+                        style={styles.notificationBody}
+                        numberOfLines={2}
+                      >
+                        {notification.body}
+                      </Text>
+                    </View>
+
+                    {!notification.read && (
+                      <View style={styles.unreadDot} />
+                    )}
+                  </View>
+
+                  {/* Dismiss button */}
+                  <TouchableOpacity
+                    style={styles.dismissButton}
+                    onPress={() => handleDismiss(notification.id)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityLabel={t('alerts.dismiss')}
+                  >
+                    <AppIcon name="close" size={14} color={colors.text.muted} />
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              </View>
+            );
+          })
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  screenTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.text.primary,
+  },
+  markAll: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+  },
+  markAllText: {
+    fontSize: 12,
+    color: colors.accent,
+    fontWeight: '600',
+  },
+  filterContainer: {
+    maxHeight: 44,
+    marginBottom: spacing.md,
+  },
+  filterContent: {
+    paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
+  },
+  filterChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginRight: spacing.sm,
+  },
+  filterChipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  filterChipActive: {
+    backgroundColor: colors.accent + '20',
+    borderColor: colors.accent,
+  },
+  filterChipText: {
+    fontSize: 12,
+    color: colors.text.secondary,
+    fontWeight: '500',
+  },
+  filterChipTextActive: {
+    color: colors.accent,
+    fontWeight: '600',
+  },
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: 100,
+  },
+
+  // AI Alerts section
+  aiSection: {
+    marginBottom: spacing.lg,
+  },
+  aiSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  aiSectionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text.primary,
+  },
+  aiCheckButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  aiCheckText: {
+    fontSize: 12,
+    color: colors.accent,
+    fontWeight: '600',
+  },
+  aiAlertsList: {
+    gap: spacing.sm,
+  },
+  aiAlertCard: {
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderLeftWidth: 3,
+  },
+  aiAlertRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  aiAlertContent: {
+    flex: 1,
+  },
+  aiAlertTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: 4,
+  },
+  aiAlertMessage: {
+    fontSize: 13,
+    color: colors.text.secondary,
+    lineHeight: 18,
+  },
+
+  // Notifications
+  notificationCard: {
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  notificationUnread: {
+    borderColor: colors.accent + '30',
+    backgroundColor: colors.accent + '05',
+  },
+  notificationRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  iconContainer: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  notificationContent: {
+    flex: 1,
+  },
+  notificationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  notificationTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text.primary,
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  notificationTime: {
+    fontSize: 11,
+    color: colors.text.muted,
+  },
+  notificationBody: {
+    fontSize: 13,
+    color: colors.text.secondary,
+    lineHeight: 18,
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.accent,
+    marginLeft: spacing.sm,
+    marginTop: 4,
+  },
+  dismissButton: {
+    marginLeft: spacing.sm,
+    padding: spacing.xs,
+  },
+  empty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: colors.text.secondary,
+  },
+});

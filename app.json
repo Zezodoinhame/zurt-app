@@ -1,0 +1,152 @@
+{
+  "expo": {
+    "name": "ZURT",
+    "slug": "zurt-platform",
+    "owner": "zurt",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "zurt",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#080D14"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "br.com.zurt.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "ZURT precisa acessar a câmera para foto de perfil",
+        "NSPhotoLibraryUsageDescription": "ZURT precisa acessar suas fotos para foto de perfil",
+        "UIBackgroundModes": [
+          "remote-notification",
+          "remote-notification"
+        ],
+        "LSApplicationQueriesSchemes": [
+          "santander",
+          "itau",
+          "bradesco",
+          "nubank",
+          "btgpactual",
+          "bancointer",
+          "bb",
+          "caixa",
+          "sicoob",
+          "sicredi",
+          "c6bank",
+          "bancooriginal",
+          "safra",
+          "xpinvestimentos",
+          "rico",
+          "clear",
+          "modalmais",
+          "mercadopago",
+          "picpay",
+          "neon",
+          "next",
+          "pagseguro",
+          "santander",
+          "itau",
+          "bradesco",
+          "nubank",
+          "btgpactual",
+          "bancointer",
+          "bb",
+          "caixa",
+          "sicoob",
+          "sicredi",
+          "c6bank",
+          "bancooriginal",
+          "safra",
+          "xpinvestimentos",
+          "rico",
+          "clear",
+          "modalmais",
+          "mercadopago",
+          "picpay",
+          "neon",
+          "next",
+          "pagseguro"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#080D14"
+      },
+      "package": "br.com.zurt.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "santanderbr"
+            },
+            {
+              "scheme": "itau"
+            },
+            {
+              "scheme": "bradesco"
+            }
+          ],
+          "category": [
+            "DEFAULT",
+            "BROWSABLE"
+          ]
+        }
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "extra": {
+      "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "878759393474-409rju4qa7lnc1s99d0alctsoquhrtr7.apps.googleusercontent.com",
+      "router": {},
+      "eas": {
+        "projectId": "b0b0b7c2-8c37-41f1-a598-25f6adc79edf"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Permitir ZURT usar Face ID para autenticação segura."
+        }
+      ],
+      "expo-font",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Permitir ZURT usar Face ID para login seguro."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "ZURT precisa acessar suas fotos para foto de perfil",
+          "cameraPermission": "ZURT precisa acessar a câmera para foto de perfil"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#00D4AA"
+        }
+      ]
+    ]
+  }
+}

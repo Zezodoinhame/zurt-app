@@ -1,0 +1,189 @@
+import React, { useEffect, useCallback, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { type ThemeColors } from '../../src/theme/colors';
+import { spacing } from '../../src/theme/spacing';
+import { useAuthStore } from '../../src/stores/authStore';
+import { useSettingsStore } from '../../src/stores/settingsStore';
+import {
+  authenticateWithBiometrics,
+  checkBiometricAvailability,
+  hasPin,
+} from '../../src/services/auth';
+import { PinPad } from '../../src/components/ui/PinPad';
+import { AppIcon } from '../../src/hooks/useIcon';
+
+export default function BiometricScreen() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { user } = useAuthStore();
+  const { t } = useSettingsStore();
+  const colors = useSettingsStore((s) => s.colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const [showPin, setShowPin] = useState(false);
+  const [hasPinSetup, setHasPinSetup] = useState(false);
+
+  useEffect(() => {
+    hasPin().then(setHasPinSetup);
+  }, []);
+
+  const authenticate = useCallback(async () => {
+    try {
+      const available = await checkBiometricAvailability();
+      if (!available) {
+        router.replace('/(auth)/login');
+        return;
+      }
+
+      const success = await authenticateWithBiometrics();
+      if (success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        router.replace('/(tabs)');
+      }
+    } catch {
+      // Biometric failed, stay on screen
+    }
+  }, [router]);
+
+  useEffect(() => {
+    authenticate();
+  }, [authenticate]);
+
+  const handlePinSuccess = useCallback(() => {
+    router.replace('/(tabs)');
+  }, [router]);
+
+  if (showPin) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom }]}>
+        <PinPad
+          onSuccess={handlePinSuccess}
+          onForgotPin={() => router.replace('/(auth)/login')}
+          showBiometric
+        />
+      </View>
+    );
+  }
+
+  return (
+    <View
+      style={[
+        styles.container,
+        { paddingTop: insets.top + 24, paddingBottom: insets.bottom },
+      ]}
+    >
+      <View style={styles.content}>
+        <View style={styles.logoCircle}>
+          <Text style={styles.logoText}>Z</Text>
+        </View>
+
+        <Text style={styles.title}>
+          {user ? `${t('greeting.morning').split(' ')[0] || 'Olá'}, ${user.name.split(' ')[0]}` : 'ZURT'}
+        </Text>
+
+        <TouchableOpacity
+          onPress={authenticate}
+          style={styles.biometricButton}
+          activeOpacity={0.7}
+          accessibilityLabel={t('biometric.enablePrompt')}
+        >
+          <View style={styles.fingerprint}>
+            <Text style={styles.fingerprintIcon}>{'\uD83D\uDC46'}</Text>
+          </View>
+        </TouchableOpacity>
+
+        <Text style={styles.hint}>
+          {t('common.loading').replace('...', '') || 'Toque para autenticar'}
+        </Text>
+
+        {hasPinSetup && (
+          <TouchableOpacity
+            onPress={() => setShowPin(true)}
+            style={styles.fallback}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <AppIcon name="keypad" size={16} color={colors.accent} />
+              <Text style={styles.fallbackText}>{t('biometric.usePin')}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          onPress={() => router.replace('/(auth)/login')}
+          style={styles.fallback}
+        >
+          <Text style={styles.fallbackText}>{t('biometric.usePassword') || 'Usar senha'}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoCircle: {
+    width: 70,
+    height: 70,
+    borderRadius: 20,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xxl,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+  logoText: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: colors.text.inverse,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.text.primary,
+    marginBottom: spacing.section,
+  },
+  biometricButton: {
+    marginBottom: spacing.xl,
+  },
+  fingerprint: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.card,
+    borderWidth: 2,
+    borderColor: colors.accent + '40',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fingerprintIcon: {
+    fontSize: 36,
+  },
+  hint: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginBottom: spacing.section,
+  },
+  fallback: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+  },
+  fallbackText: {
+    fontSize: 14,
+    color: colors.accent,
+    fontWeight: '500',
+  },
+});
